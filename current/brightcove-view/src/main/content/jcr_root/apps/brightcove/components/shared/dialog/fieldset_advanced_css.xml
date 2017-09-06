@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Widget"
+    collapsed="{Boolean}false"
+    collapsible="{Boolean}true"
+    hidden="{Boolean}false"
+    title="Advanced CSS"
+    xtype="dialogfieldset">
+    <items jcr:primaryType="cq:WidgetCollection">
+        <inlineCSS
+            jcr:primaryType="cq:Widget"
+            fieldDescription="&lt;strong>Warning: &lt;/strong> Limit the scope of these style rules by using the &lt;strong>Container ID&lt;/strong> or &lt;strong>Container Class&lt;/strong> defined above as Selectors in your CSS."
+            fieldLabel="Inline CSS"
+            height="500px"
+            name="./inlineCSS"
+            xtype="textarea"/>
+    </items>
+</jcr:root>

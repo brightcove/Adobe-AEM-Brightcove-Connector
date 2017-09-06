@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Panel"
+    title="Basic">
+    <items jcr:primaryType="cq:WidgetCollection">
+        <basic
+            jcr:primaryType="cq:Widget"
+            collapsed="{Boolean}false"
+            collapsible="{Boolean}false"
+            xtype="dialogfieldset">
+            <items jcr:primaryType="cq:WidgetCollection">
+                <title
+                    jcr:primaryType="cq:Widget"
+                    fieldLabel="Title"
+                    name="./jcr:title"
+                    xtype="textfield"/>
+                <description
+                    jcr:primaryType="cq:Widget"
+                    fieldLabel="Description"
+                    fieldSubLabel="(For authors)"
+                    name="./jcr:description"
+                    xtype="textarea"/>
+                <hideInNav
+                    jcr:primaryType="cq:Widget"
+                    fieldLabel="Hide in Navigation"
+                    inputValue="{Boolean}true"
+                    name="./hideInNav"
+                    type="checkbox"
+                    xtype="selection"/>
+            </items>
+        </basic>
+        <player_information
+            jcr:primaryType="cq:Widget"
+            collapsed="{Boolean}false"
+            collapsible="{Boolean}true"
+            title="Player Configuration"
+            xtype="dialogfieldset">
+            <items jcr:primaryType="cq:WidgetCollection">
+                <account
+                    jcr:primaryType="cq:Widget"
+                    path="/apps/brightcove/components/shared/dialog/field_account.infinity.json"
+                    xtype="cqinclude"/>
+                <playerID
+                    jcr:primaryType="cq:Widget"
+                    allowBlank="{Boolean}false"
+                    brcAccountFieldName="./account"
+                    fieldDescription="&lt;b>HTML5 Player&lt;/b>: Select a player.&lt;br/>&lt;b>Legacy Player&lt;/b>: Paste a value&lt;/b>"
+                    fieldLabel="Player ID:"
+                    forceSelection="{Boolean}false"
+                    hiddenName="./playerID"
+                    storePath="/bin/brightcove/api?a=players"
+                    xtype="brc_combobox"/>
+                <playerKey
+                    jcr:primaryType="cq:Widget"
+                    allowBlank="{Boolean}true"
+                    fieldLabel="Player Key:"
+                    fieldSubLabel="&lt;i>Legacy Player only&lt;/i>"
+                    name="./playerKey"
+                    xtype="textfield"/>
+            </items>
+        </player_information>
+    </items>
+</jcr:root>

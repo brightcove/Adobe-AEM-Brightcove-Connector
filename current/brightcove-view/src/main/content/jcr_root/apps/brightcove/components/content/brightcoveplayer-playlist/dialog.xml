@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Dialog"
+    height="600"
+    title="Brightcove Playlist"
+    xtype="tabpanel">
+        <items jcr:primaryType="cq:WidgetCollection">
+            <tab-playlist
+                jcr:primaryType="cq:Widget"
+                path="/apps/brightcove/components/shared/dialog/tab_playlist_config.infinity.json"
+                xtype="cqinclude"/>
+            <tab-styles
+                jcr:primaryType="cq:Widget"
+                path="/apps/brightcove/components/shared/dialog/tab_component_styles.infinity.json"
+                xtype="cqinclude"/>
+        </items>
+</jcr:root>

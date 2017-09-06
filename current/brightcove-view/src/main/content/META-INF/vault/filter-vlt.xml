@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ “replace”
+    This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
+“merge”
+    Existing content is not modified, i.e. only new content is added and none is deleted or modified.
+“update”
+    Existing content is updated, new content is added and none is deleted.
+-->
+<workspaceFilter version="1.0">
+    <filter root="/apps/brightcove">
+        <exclude pattern="/apps/brightcove/install/(.*).jar"/>
+        <exclude pattern="/apps/brightcove/runmodes.*"/>
+    </filter>
+    <filter root="/apps/cq/core/content/nav/brightcove"/>
+    <filter root="/etc/clientlibs/brightcove"/>
+	<filter root="/etc/designs/cs/brightcove">
+        <!--<exclude pattern="/etc/designs/cs/brightcove/jcr:content.*"/>-->
+    </filter>
+    <filter root="/libs/cq/gui/content/common/links/brightcove"/>
+
+    <!-- Development Reference-->
+    <filter root="/libs/foundation/global.jsp"/>
+</workspaceFilter>

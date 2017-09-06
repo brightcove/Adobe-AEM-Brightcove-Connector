@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0" xmlns:rep="internal"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        cq:doctype="html_5"
+        cq:lastModified="{Date}2015-04-20T15:23:12.574-04:00"
+        cq:lastModifiedBy="admin"
+        jcr:mixinTypes="[rep:AccessControllable]"
+        jcr:primaryType="nt:unstructured"
+        jcr:title="Brightcove Design"
+        sling:resourceType="wcm/core/components/designer"/>
+    <favicon.ico/>
+    <static.css/>
+    <shared/>
+    <vendor/>
+    <players/>
+</jcr:root>

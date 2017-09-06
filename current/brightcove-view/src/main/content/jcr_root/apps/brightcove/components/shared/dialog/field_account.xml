@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:Widget"
+    allowBlank="{Boolean}false"
+    fieldDescription=""
+    fieldLabel="Account:"
+    fieldSubLabel=""
+    forceSelection="{Boolean}true"
+    name="./account"
+    options="/bin/brightcove/accounts.json"
+    optionsQTipField="text"
+    optionsRoot="accounts"
+    optionsTextField="text"
+    optionsValueField="value"
+    type="select"
+    xtype="selection">
+    <listeners
+        jcr:primaryType="nt:unstructured"
+        loadcontent="function(field, record, path){ Brightcove.Account.initValue(field); }"
+        selectionchanged="function(field,value){ Brightcove.Account.updateValue(field, value); }"/>
+</jcr:root>
