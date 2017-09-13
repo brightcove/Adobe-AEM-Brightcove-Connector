@@ -153,204 +153,227 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                     //LOGGER.trace("FIELDS INCLUDES DESCRIPTION?: " + fields.toString().contains("description"));
                     if (is_authorized) {
                         //FUNCTION CALL FOR THE JSON
-                        JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", 0, 100));
+
+
                         //get total  % a split = n, loop for n - TODO: PAGINATION? I THINK IS ALREADY HANDLED BY DEFAULT BRC
 
-                        try {
 
+
+
+
+
+
+
+
+
+                        try {
+                            int startOffset = 0;
+                            JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0));
 
                             JSONArray itemsArr = (JSONArray) jsonObject.getJSONArray("items");
-                            Boolean videoExists;
 
-                            //FOR EACH VIDEO IN THE ITEMS ARRAY
-                            for (int i = 0; i < itemsArr.length(); i++) {
-                                JSONObject innerObj = itemsArr.getJSONObject(i);
-                                //EACH VIDEO
+                                Boolean videoExists;
+                                //FOR EACH VIDEO IN THE ITEMS ARRAY
+                                for (int i = 0; i < itemsArr.length(); i++) {
+                                    JSONObject innerObj = itemsArr.getJSONObject(i);
+                                    //EACH VIDEO
 
-                                String src = innerObj.has("thumbnailURL") && !innerObj.get("thumbnailURL").equals(null) ? innerObj.getString("thumbnailURL") : "";
-                                //GET THUMBNAIL
+                                    String src = innerObj.has("thumbnailURL") && !innerObj.get("thumbnailURL").equals(null) ? innerObj.getString("thumbnailURL") : "";
+                                    //GET THUMBNAIL
 
-                                //TODO: clean order - this makes up the name
-                                Boolean active = false;
-                                if (innerObj.has("state") && !innerObj.get("state").equals(null)) {
-                                    active = "ACTIVE".equals(innerObj.getString("state")) ? true : false;
-                                }
-                                Boolean condition_one = innerObj.has("original_filename") && !innerObj.get("original_filename").equals(null);
-                                Boolean condition_two = innerObj.has("id") && !innerObj.get("id").equals(null);
+                                    //TODO: clean order - this makes up the name
+                                    Boolean active = false;
+                                    if (innerObj.has("state") && !innerObj.get("state").equals(null)) {
+                                        active = "ACTIVE".equals(innerObj.getString("state")) ? true : false;
+                                    }
+                                    Boolean condition_one = innerObj.has("original_filename") && !innerObj.get("original_filename").equals(null);
+                                    Boolean condition_two = innerObj.has("id") && !innerObj.get("id").equals(null);
 
-                                //TODO - Fix redundant condition three
-                                if (active && condition_one && condition_two) {
-                                    String original_filename = innerObj.getString("original_filename");
+                                    //TODO - Fix redundant condition three
+                                    if (active && condition_one && condition_two) {
+                                        String original_filename = innerObj.getString("name");
 
-                                    String brightcove_filename = innerObj.getString("id") + "__" + original_filename;
-                                    LOGGER.trace("###NAME###>>" + brightcove_filename);
-                                    LOGGER.trace("###ACTIVE###>>" + active);
-
-
-                                    Asset newAsset = null;
-                                    InputStream binary;
-                                    InputStream is;
-
-                                    //TODO:PRINT STATEMENT - DEBUGGER
-                                    //LOGGER.trace(innerObj.toString(1));
-
-                                    if (src != null && !src.equals("")) {
-                                        String confPath = cs.getAssetIntegrationPath();
-                                        String localpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(brightcove_filename);
-                                        String oldpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(original_filename);
-
-                                        LOGGER.trace("CONFPATH : " + confPath);
-                                        LOGGER.trace(">>PATH: " + localpath);
-                                        LOGGER.trace(">>ORIGINAL: " + oldpath);
-                                        //LOGGER.trace("####REQUEST GETS: " + get_response);
-                                        newAsset = resourceResolver.getResource(oldpath) != null ? resourceResolver.getResource(oldpath).adaptTo(Asset.class) : resourceResolver.getResource(localpath) != null ? resourceResolver.getResource(localpath).adaptTo(Asset.class) : null;
-                                        if (newAsset == null) {
-                                            //IF NEW ASSET IS NULL MEANS THAT - Resource At 'localpath'
+                                        String brightcove_filename = original_filename + "__" + innerObj.getString("id")+ ".mp4";
+                                        LOGGER.trace("###NAME###>>" + brightcove_filename);
+                                        LOGGER.trace("###ACTIVE###>>" + active);
 
 
-                                            String mime_type = "";
-                                            //String response_j = "";
+                                        Asset newAsset = null;
+                                        InputStream binary;
+                                        InputStream is;
+
+                                        //TODO:PRINT STATEMENT - DEBUGGER
+                                        //LOGGER.trace(innerObj.toString(1));
+
+                                        if (src != null && !src.equals("")) {
+                                            String confPath = cs.getAssetIntegrationPath();
+                                            String localpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(brightcove_filename);
+                                            String oldpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(original_filename);
+
+                                            LOGGER.trace("CONFPATH : " + confPath);
+                                            LOGGER.trace(">>PATH: " + localpath);
+                                            LOGGER.trace(">>ORIGINAL: " + oldpath);
+                                            //LOGGER.trace("####REQUEST GETS: " + get_response);
+                                            newAsset = resourceResolver.getResource(oldpath) != null ? resourceResolver.getResource(oldpath).adaptTo(Asset.class) : resourceResolver.getResource(localpath) != null ? resourceResolver.getResource(localpath).adaptTo(Asset.class) : null;
+                                            if (newAsset == null) {
+                                                //IF NEW ASSET IS NULL MEANS THAT - Resource At 'localpath'
 
 
-                                            if (src.startsWith("/") && !src.startsWith("//")) //HAS LOCAL THUMB PATH
-                                            {
-                                                //IF LOCAL IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
-                                                LOGGER.trace("\t\t#####>#>#>#>#>>#># INTERNAL");
-                                                LOGGER.trace("->>local/: " + src);
-                                                LOGGER.trace("[INTERNAL] IS: " + localpath);
+                                                String mime_type = "";
+                                                //String response_j = "";
 
 
-                                                Resource thumbRes = resourceResolver.resolve(req, src);
-                                                mime_type = mType.getMimeType(thumbRes.getName());
-                                                LOGGER.trace("MIIIIIIIIIIMEEEE******\t\t" + mime_type + " newRES: " + src);
+                                                if (src.startsWith("/") && !src.startsWith("//")) //HAS LOCAL THUMB PATH
+                                                {
+                                                    //IF LOCAL IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
+                                                    LOGGER.trace("\t\t#####>#>#>#>#>>#># INTERNAL");
+                                                    LOGGER.trace("->>local/: " + src);
+                                                    LOGGER.trace("[INTERNAL] IS: " + localpath);
+
+
+                                                    Resource thumbRes = resourceResolver.resolve(req, src);
+                                                    mime_type = mType.getMimeType(thumbRes.getName());
+                                                    LOGGER.trace("MIIIIIIIIIIMEEEE******\t\t" + mime_type + " newRES: " + src);
+
+
+                                                    try {
+                                                        //READ THUMBNAIL FROM LOCAL ADDRESS
+                                                        binary = JcrUtils.readFile(thumbRes.adaptTo(Node.class));
+
+                                                        //THROWS REPO EXCEPTION OF NOT FOUND
+                                                        //IF IT FAILS TO READ FILE FROM LOCAL, THEN IT MUST CREATE THE DEFAULT THUMBNAIL
+                                                    } catch (RepositoryException e) {
+                                                        LOGGER.error("Local thumbnail could not be read", e);
+                                                        break;
+                                                    }
+                                                } else {
+                                                    LOGGER.trace("->>external/: " + src);
+                                                    LOGGER.trace("[EXTERNAL] LOCALPATH IS: " + localpath);
+                                                    String urlParameters = "";
+                                                    Map<String, String> nullmap = new HashMap<String, String>();
+                                                    LOGGER.trace("[IMAGE-PULL] : " + src + " " + urlParameters + " " + nullmap);
+                                                    JSONObject get_response = HttpServices.executeFullGet(src, urlParameters, nullmap);
+                                                    binary = new ByteArrayInputStream((byte[]) get_response.get("binary"));
+                                                    mime_type = get_response.getString("mime_type"); //<=-==== DOES NOT EXIST?!?!? MIME TYPE?
+                                                    //response_j = get_response.getString("response");
+                                                    LOGGER.trace("MIIIIIIIIIIMEEEE\t\t" + mime_type);
+
+                                                    if (binary == null) //IF REMOTE IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
+                                                    {
+                                                        LOGGER.error("External thumbnail could not be read");
+                                                        break;
+                                                    }
+                                                }
+                                                AssetManager assetManager = resourceResolver.adaptTo(AssetManager.class);
+
+                                                //TODO:Check if asset exists
+
+                                                newAsset = assetManager.createAsset(localpath, binary, mime_type, true);
+                                                resourceResolver.commit();
+
+
+                                                //LOGGER.trace(mime_type);
+                                                //LOGGER.trace(response_j);
+                                                updateAsset(newAsset, innerObj, resourceResolver, requestedAccount);
+
+                                            } else {
+                                                //ASSET HAS BEEN INITIALIZED LOCALLY
+                                                //date check
 
 
                                                 try {
-                                                    //READ THUMBNAIL FROM LOCAL ADDRESS
-                                                    binary = JcrUtils.readFile(thumbRes.adaptTo(Node.class));
+                                                    Date local_mod_date = new Date(newAsset.getLastModified());
+                                                    //LOGGER.trace("UPDATED AT::::::::: " + innerObj.get(x));
 
-                                                    //THROWS REPO EXCEPTION OF NOT FOUND
-                                                    //IF IT FAILS TO READ FILE FROM LOCAL, THEN IT MUST CREATE THE DEFAULT THUMBNAIL
-                                                } catch (RepositoryException e) {
-                                                    LOGGER.error("Local thumbnail could not be read", e);
+
+                                                    //LOGGER.trace("PRE-PARSE>>>>>>>" + innerObj.getString("updated_at") );
+                                                    final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+                                                    SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+                                                    Date remote_date = sdf.parse(innerObj.getString("updated_at"));
+
+                                                    if (local_mod_date.compareTo(remote_date) < 0) {
+                                                        LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
+                                                        LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
+                                                        LOGGER.trace(local_mod_date + " < " + remote_date);
+                                                        LOGGER.trace("MODIFICATION DETECTED");
+                                                        updateAsset(newAsset, innerObj, resourceResolver, requestedAccount);
+
+
+                                                    } else {
+                                                        LOGGER.trace("No Changes to be Made = Asset is equivalent");
+                                                    }
+
+
+                                                    //                                            String formatString = "2014-08-12T17:58:50.916Z";
+                                                    //                                            LOGGER.trace("DATE>>>>>"+formatString);
+                                                    //                                            String[] formatStrings = { "yyyy-MM-dd\'T\'HH:mm:ss.\'SSSXXX\'"};
+                                                    //
+                                                    //                                            //SimpleDateFormat x = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
+                                                    //
+                                                    //
+                                                    //                                            for (String x : formatStrings) {
+                                                    //                                                try {
+                                                    //                                                    Date date = new SimpleDateFormat(formatString).parse(formatString);
+                                                    //                                                    LOGGER.trace("\t\tDATE>>>>>"+date.toString());
+                                                    //
+                                                    //                                                }
+                                                    //                                                catch (ParseException e)
+                                                    //                                                {
+                                                    //                                                    LOGGER.error("ex");
+                                                    //                                                    break;
+                                                    //                                                }
+                                                    //                                            }
+
+
+                                                    //                                            if (local_mod_date.compareTo(remote_mod_date) < 0) {
+                                                    //                                                LOGGER.trace("<MATCHING DATES>>\tLOCAL/OLD " + local_mod_date + " REMOTE/NEW>>" + remote_mod_date);
+                                                    //                                                //updateAsset(newAsset, innerObj, resourceResolver);
+                                                    //
+                                                    //                                            } else {
+                                                    //                                                LOGGER.trace("<UPDATES>>\t " + local_mod_date + " < " + remote_mod_date);
+                                                    //                                            }
+
+                                                } catch (Exception p) {
+                                                    LOGGER.error("Parsing exception", p);
                                                     break;
                                                 }
-                                            } else {
-                                                LOGGER.trace("->>external/: " + src);
-                                                LOGGER.trace("[EXTERNAL] LOCALPATH IS: " + localpath);
-                                                String urlParameters = "";
-                                                Map<String, String> nullmap = new HashMap<String, String>();
-                                                LOGGER.trace("[IMAGE-PULL] : " + src + " " + urlParameters + " " + nullmap);
-                                                JSONObject get_response = HttpServices.executeFullGet(src, urlParameters, nullmap);
-                                                binary = new ByteArrayInputStream((byte[]) get_response.get("binary"));
-                                                mime_type = get_response.getString("mime_type"); //<=-==== DOES NOT EXIST?!?!? MIME TYPE?
-                                                //response_j = get_response.getString("response");
-                                                LOGGER.trace("MIIIIIIIIIIMEEEE\t\t" + mime_type);
 
-                                                if (binary == null) //IF REMOTE IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
-                                                {
-                                                    LOGGER.error("External thumbnail could not be read");
-                                                    break;
-                                                }
                                             }
-                                            AssetManager assetManager = resourceResolver.adaptTo(AssetManager.class);
-
-                                            //TODO:Check if asset exists
-
-                                            newAsset = assetManager.createAsset(localpath, binary, mime_type, true);
-                                            resourceResolver.commit();
-
-
-                                            //LOGGER.trace(mime_type);
-                                            //LOGGER.trace(response_j);
-                                            updateAsset(newAsset, innerObj, resourceResolver, requestedAccount);
-
                                         } else {
-                                            //ASSET HAS BEEN INITIALIZED LOCALLY
-                                            //date check
-
-
-                                            try {
-                                                Date local_mod_date = new Date(newAsset.getLastModified());
-                                                //LOGGER.trace("UPDATED AT::::::::: " + innerObj.get(x));
-
-
-                                                //LOGGER.trace("PRE-PARSE>>>>>>>" + innerObj.getString("updated_at") );
-                                                final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-                                                SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
-                                                Date remote_date = sdf.parse(innerObj.getString("updated_at"));
-
-                                                if (local_mod_date.compareTo(remote_date) < 0) {
-                                                    LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
-                                                    LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
-                                                    LOGGER.trace(local_mod_date + " < " + remote_date);
-                                                    LOGGER.trace("MODIFICATION DETECTED");
-                                                    updateAsset(newAsset, innerObj, resourceResolver, requestedAccount);
-
-
-                                                } else {
-                                                    LOGGER.trace("No Changes to be Made = Asset is equivalent");
-                                                }
-
-
-                                                //                                            String formatString = "2014-08-12T17:58:50.916Z";
-                                                //                                            LOGGER.trace("DATE>>>>>"+formatString);
-                                                //                                            String[] formatStrings = { "yyyy-MM-dd\'T\'HH:mm:ss.\'SSSXXX\'"};
-                                                //
-                                                //                                            //SimpleDateFormat x = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
-                                                //
-                                                //
-                                                //                                            for (String x : formatStrings) {
-                                                //                                                try {
-                                                //                                                    Date date = new SimpleDateFormat(formatString).parse(formatString);
-                                                //                                                    LOGGER.trace("\t\tDATE>>>>>"+date.toString());
-                                                //
-                                                //                                                }
-                                                //                                                catch (ParseException e)
-                                                //                                                {
-                                                //                                                    LOGGER.error("ex");
-                                                //                                                    break;
-                                                //                                                }
-                                                //                                            }
-
-
-                                                //                                            if (local_mod_date.compareTo(remote_mod_date) < 0) {
-                                                //                                                LOGGER.trace("<MATCHING DATES>>\tLOCAL/OLD " + local_mod_date + " REMOTE/NEW>>" + remote_mod_date);
-                                                //                                                //updateAsset(newAsset, innerObj, resourceResolver);
-                                                //
-                                                //                                            } else {
-                                                //                                                LOGGER.trace("<UPDATES>>\t " + local_mod_date + " < " + remote_mod_date);
-                                                //                                            }
-
-                                            } catch (Exception p) {
-                                                LOGGER.error("Parsing exception", p);
-                                                break;
-                                            }
-
+                                            LOGGER.error("SOURCE WAS EMPTY");
+                                            LOGGER.error("INVALID REMOTE ASSET SOURCE: {}", src);
+                                            LOGGER.error("SRC:" + src);
                                         }
+                                        //FOR LOOP
+
+
+                                        LOGGER.trace(">>>>>>>>>>>>>>>>>>>>>");
                                     } else {
-                                        LOGGER.error("SOURCE WAS EMPTY");
-                                        LOGGER.error("INVALID REMOTE ASSET SOURCE: {}", src);
-                                        LOGGER.error("SRC:" + src);
+                                        LOGGER.trace("Video does not have correct initialization (missing core properties) - skipping: " + innerObj.toString(1));
                                     }
-                                    //FOR LOOP
-
-
-                                    LOGGER.trace(">>>>>>>>>>>>>>>>>>>>>");
-                                } else {
-                                    LOGGER.trace("Video does not have correct initialization (missing core properties) - skipping: " + innerObj.toString(1));
+                                    //MAIN VIDEO LOOP
                                 }
-                                //MAIN VIDEO LOOP
-                            }
 
-                            LOGGER.debug("### " + itemsArr.toString(1));
+                                LOGGER.debug("### " + itemsArr.toString(1));
 
 
                         } catch (JSONException j) {
                             LOGGER.error("JSON EXCEPTION", j);
                         } catch (IllegalArgumentException i) {
                             LOGGER.error("IllegalArgumentException", i);
+                        } catch (RepositoryException r) {
+                            LOGGER.error(" javax.jcr.RepositoryException : INVALID TAG CHARS?", r);
+                        } catch (RuntimeException t) {
+                            LOGGER.error(" javax.jcr.RepositoryException : INVALID TAG CHARS?", t);
                         }
+
+                        //HERE WE MAY CATCH THE TAGGING PROBLEM AND ALLOW LOOP TO KEEP TRAVERSING THROUGH ASSETS
+
+
+
+
+
+
 
                     } else {
                         resp.sendError(403);
@@ -503,7 +526,15 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                     try {
                                         if (tagManager.canCreateTag(tagValue)) {
 
-                                            Tag tag = tagManager.createTag(tagValue.trim(), tagValue, "");
+                                            Tag tag = tagManager.createTag(tagValue.replaceAll(": ",":"), tagValue, "");
+
+
+                                            //TODO: We handled this trim as above, to
+
+
+
+
+
                                             //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
                                             resourceResolver.commit();
                                             LOGGER.trace("t> " + tag.toString());

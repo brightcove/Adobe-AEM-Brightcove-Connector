@@ -224,7 +224,10 @@ public class Cms {
                 LOGGER.trace("UPDATE VIDEO DATA OBJECT: " + video.toString(1));
                 video.remove("id");
                 String response = account.platform.patchAPI(targetURL, video.toString(1), headers);
-                if (response != null && !response.isEmpty()) json.put("response",response);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error("IOException", e);
+                e.printStackTrace();
             } catch (JSONException e) {
                 LOGGER.error("JSONException", e);
                 e.printStackTrace();
