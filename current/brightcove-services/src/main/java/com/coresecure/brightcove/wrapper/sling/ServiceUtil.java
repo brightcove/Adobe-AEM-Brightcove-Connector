@@ -147,6 +147,7 @@ public class ServiceUtil {
         LOGGER.debug("getList: " + query);
         JSONObject items = new JSONObject();
         String result = "";
+        limit = limit > 0 ? limit : 100;
         try {
             long totalItems = 0;
             JSONArray videos = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort));
@@ -154,8 +155,6 @@ public class ServiceUtil {
             offset = offset + limit;
             if (videos.length() > 0) {
                 totalItems = brAPI.cms.getVideosCount(query).getLong("count");
-
-                double totalPages = Math.floor(totalItems / limit);
 
                 while (offset < totalItems && full_scroll) {
                     JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort));
@@ -204,13 +203,15 @@ public class ServiceUtil {
     public String searchVideo(String querystr, int offset, int limit) {
         //Fixed the performance issue at the component authoring side.
         //String result = getList(false, offset, limit, true, querystr);
-        String result = getList(false, offset, limit, false, querystr);
+        boolean fullscroll = !(limit >0);
+        String result = getList(false, offset, limit, fullscroll, querystr);
         return result;
     }
     public String searchVideo(String querystr, int offset, int limit, String sort) {
         //Fixed the performance issue at the component authoring side.
         //String result = getList(false, offset, limit, true, querystr);
-        String result = getList(false, offset, limit, false, querystr, sort);
+        boolean fullscroll = !(limit >0);
+        String result = getList(false, offset, limit, fullscroll, querystr, sort);
         return result;
     }
 

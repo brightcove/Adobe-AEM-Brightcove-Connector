@@ -74,6 +74,8 @@ public class Platform {
 
     public String postAPI(String targetURL, String payload, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
+        LOGGER.trace("POST URL: "+URL);
+
         String response = HttpServices.executePost(URL, payload, headers);
         LOGGER.trace(response);
         return response;

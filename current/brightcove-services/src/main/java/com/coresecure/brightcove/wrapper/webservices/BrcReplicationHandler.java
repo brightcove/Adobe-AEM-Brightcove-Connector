@@ -235,6 +235,7 @@ public class BrcReplicationHandler implements TransportHandler {
                                 LOGGER.debug("Not authorized");
                             }
                         }
+                        rr.commit();
                     } catch (LoginException e) {
                         LOGGER.error("LoginException: ", e);
                     } catch (NullPointerException e) {
@@ -332,8 +333,6 @@ public class BrcReplicationHandler implements TransportHandler {
 
         brc_lastsync_map.put("brc_state","ACTIVE");
 
-
-
         LOGGER.trace("0 to long = " + Long.parseLong("0"));
         LOGGER.debug("brc_lastsync: "+ brc_lastsync_map.get("brc_lastsync",""));
 
@@ -346,21 +345,15 @@ public class BrcReplicationHandler implements TransportHandler {
             if (brc_lastsync_time == null || brc_lastsync_time <= 0)
             {
                 LOGGER.trace("brc_lastsync was NULL!!!!!!! OR ZERO");
+                try {
                 InputStream is = _asset.getOriginal().getStream();      //VIDEO ORIGINAL BINARY FOR BC DATABASE
                 //FOR POSTER/THUMBNAIL UPLOAD
-                InputStream poster_rendition = _asset.getRendition("brc_poster.png").getStream();
-                InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png").getStream();
-
-
-
-
-
-
-
+                InputStream poster_rendition = _asset.getRendition("brc_poster.png") != null ? _asset.getRendition("brc_poster.png").getStream() : null;
+                InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png") != null ? _asset.getRendition("brc_thumbnail.png").getStream(): null;
 
 
                 JSONObject api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is); //ACTUAL VIDEO UPLOAD CALL - WITH METADATA
-                try {
+
                     //LOGGER.trace("API-RESP >>" + api_resp.toString(1));
                     boolean sent = api_resp.getBoolean("sent");
                     if (sent) {
@@ -379,63 +372,30 @@ public class BrcReplicationHandler implements TransportHandler {
             }
             else if(jcr_lastmod > brc_lastsync_time)
             {
-
-
-
-
-
-
                 //https://cms.api.brightcove.com/v1/accounts/:account_id/videos/:video_id/assets/poster
-
-
-
-
-
-
-
-
-
                 try
                 {
-
-
                     LOGGER.trace("CREATE VIDEO - THUMBNAIL / POSTER TEST>>");
                     LOGGER.trace(video.toJSON().toString(1));
-
-
-
                     InputStream poster_rendition = _asset.getRendition("brc_poster.png").getStream();
                     InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png").getStream();
-
-
                     JSONObject images = new JSONObject();
                     JSONObject poster = new JSONObject();
                     JSONObject thumbnail = new JSONObject();
-
                     JSONObject poster_src = new JSONObject();
                     poster_src.put("src","null");
                     poster_src.put("remote",false);
                     poster_src.put("width","");
-//                    poster.put()
-//
-//                    brc_lastsync_map.get();
-
-
-
-
-
                     //do update video
                     JSONObject api_resp = serviceUtil.updateVideo(video); //ONLY UPDATE METADATA - DO NOT SEND BINARY
-
-
                     //LOGGER.trace("API-RESP >>"+api_resp.toString(1));
                     boolean sent = api_resp.getBoolean("sent");
                     if (sent)
                     {
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> "+_asset.getPath());
-                        result = ReplicationResult.OK;
                         long current_time_millisec = new java.util.Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
+                        result = ReplicationResult.OK;
                     }
                     else
                     {
@@ -448,8 +408,6 @@ public class BrcReplicationHandler implements TransportHandler {
                     result =  new ReplicationResult(false, 0, "Replication failed: "+e.getMessage());
                 }
             }
-        result = ReplicationResult.OK;
-
         return result;
     }
 
