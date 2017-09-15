@@ -1,5 +1,6 @@
 package com.coresecure.brightcove.wrapper.utils;
 
+import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import org.apache.sling.api.SlingHttpServletRequest;
 
 /**
@@ -9,7 +10,9 @@ public class AccountUtil
 {
     public static String getSelectedAccount(SlingHttpServletRequest req)
     {
-        return "1153191516001";
+        String accountParam = req.getParameter("account_id");
+        String selectedaccount = accountParam != null && !accountParam.isEmpty() ? accountParam : ServiceUtil.getAccountFromCookie(req);
+        return selectedaccount;
     }
 
 

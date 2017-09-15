@@ -198,12 +198,12 @@ permission to convey the resulting work.
                             <td id="tdTwo">
                                 <div name="butDiv" class="butDiv">
                                         <span name="buttonRow"><!--The buttons in buttonRow are hidden in playlist view -->
-                                            <button id="delButton" class="delButton" onClick="openBox('delConfPop')">
-                                                Delete Checked
-                                            </button>
-                                            <button id="uplButton" class="uplButton" onClick="extFormUpload()">Upload
-                                                Video
-                                            </button>
+                                            <%--<button id="delButton" class="delButton" onClick="openBox('delConfPop')">--%>
+                                                <%--Delete Checked--%>
+                                            <%--</button>--%>
+                                            <%--<button id="uplButton" class="uplButton" onClick="extFormUpload()">Upload--%>
+                                                <%--Video--%>
+                                            <%--</button>--%>
                                             <button id="newplstButton" onClick="createPlaylistBox()">Create Playlist
                                             </button>
                                         </span>
@@ -257,12 +257,12 @@ permission to convey the resulting work.
                             <td>
                                 <div name="butDiv" class="butDiv">
                                         <span name="buttonRow"><!--The buttons in buttonRow are hidden in playlist view -->
-                                            <button id="delButton" class="delButton" onClick="openBox('delConfPop')">
-                                                Delete Checked
-                                            </button>
-                                            <button id="uplButton" class="uplButton" onClick="extFormUpload()">Upload
-                                                Video
-                                            </button>
+                                            <%--<button id="delButton" class="delButton" onClick="openBox('delConfPop')">--%>
+                                                <%--Delete Checked--%>
+                                            <%--</button>--%>
+                                            <%--<button id="uplButton" class="uplButton" onClick="extFormUpload()">Upload--%>
+                                                <%--Video--%>
+                                            <%--</button>--%>
                                             <button id="newplstButton" onClick="createPlaylistBox()">Create Playlist
                                             </button>
                                         </span>
@@ -332,9 +332,10 @@ permission to convey the resulting work.
                     <div id="divMeta.referenceId"></div>
                     <br/>
                     <center>
-                        <button id="bmetaEdit" onClick="extMetaEdit()" style="display:block">Edit</button>
+                        <%--<button id="bmetaEdit" onClick="extMetaEdit()" style="display:block">Edit</button>--%>
                         <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload Audio Track</button>
                     </center>
+                    <br>
                 </td>
             </tr>
         </table>

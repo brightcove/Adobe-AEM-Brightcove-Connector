@@ -428,7 +428,7 @@ function syncDB()
     syncStart();
     var url = window.location.origin + "/bin/brightcove/dataload";
     //console.log(url);
-    data = ""
+    data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
         url: url,
