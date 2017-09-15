@@ -25,16 +25,11 @@
 
 
     Resource asset_res = resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
+    String requestedAccount = asset_res.getParent().getName();
+
     Resource metadataRes = asset_res.getChild("jcr:content/metadata");
     ValueMap map = metadataRes.adaptTo(ValueMap.class);
     Logger LOGGER = LoggerFactory.getLogger(CustomAddDialogTabFilter.class); //export log
-
-
-    ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-    String requestedAccount = AccountUtil.getSelectedAccount(slingRequest);
-    ConfigurationService cs = cg.getConfigurationService(requestedAccount);
-
-
 
 
     ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
@@ -62,21 +57,7 @@
 <%--HEADER--%>
 
 <%--<div  class="aem-assets-metadata-form-tab" data-tabid="e445e6bf-6bf8-436b-a069-ac0dc7cbda1b">--%>
-    <div  class="aem-assets-metadata-form-column">
 
-        <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title *</label><input  class="coral-Form-field" aria-required='true' required='true' data-metaType="text" type="text" name="./jcr:content/metadata/brc_name" value="<%=map.get("brc_name","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
-        </div>
-        <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Last Updated</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_updated_at" value="<%=map.get("brc_updated_at","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
-        </div>
-        <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Date Published</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_created_at" value="<%=map.get("brc_created_at","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
-        </div>
-        <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Duration</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_duration" value="<%=map.get("brc_duration","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
-        </div>
-    </div>
 
 
     <div  class="aem-assets-metadata-form-column">
@@ -93,6 +74,19 @@
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/text" value="<%=map.get("brc_link/text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
     </div>
+
+<div  class="aem-assets-metadata-form-column">
+    <div class="foundation-field-editable">
+        <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Last Updated</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_updated_at" value="<%=map.get("brc_updated_at","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+    </div>
+    <div class="foundation-field-editable">
+        <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Date Published</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_created_at" value="<%=map.get("brc_created_at","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+    </div>
+    <div class="foundation-field-editable">
+        <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Duration</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_duration" value="<%=map.get("brc_duration","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+    </div>
+</div>
+
     <div  class="aem-assets-metadata-form-column">
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Video ID</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_id" value="<%=map.get("brc_id","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>

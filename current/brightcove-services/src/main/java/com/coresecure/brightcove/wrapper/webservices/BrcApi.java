@@ -36,6 +36,7 @@ import com.coresecure.brightcove.wrapper.objects.Video;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
@@ -91,7 +92,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result.put("totals", 0);
             result.put("error", -1);
             if (request.getParameter("a") != null && request.getParameter("account_id") != null && !request.getParameter("account_id").trim().isEmpty()) {
-                String requestedAccount = request.getParameter("account_id");
+                String requestedAccount = AccountUtil.getSelectedAccount(request);
                 ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
                 Set<String> services = cg.getAvailableServices();

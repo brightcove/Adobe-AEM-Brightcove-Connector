@@ -110,12 +110,16 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
         {
             //MAIN TRY - CONFIGURATION GRAB SERVICE
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-            String accountParam = req.getParameter("account_id");
-            String selectedaccount = accountParam != null && !accountParam.isEmpty() ? accountParam : ServiceUtil.getAccountFromCookie(req);
-            LOGGER.trace(selectedaccount+ " " + accountParam);
+            String selectedaccount = AccountUtil.getSelectedAccount(req);
+            LOGGER.trace(selectedaccount);
             Set<String> services = new TreeSet<String>();
             if (selectedaccount != null && !selectedaccount.isEmpty()) {
-                services.add(selectedaccount);
+                ConfigurationService cs = cg.getConfigurationService(selectedaccount);
+                if (cs != null) {
+                    services.add(selectedaccount);
+                } else {
+                    services = cg.getAvailableServices(req);
+                }
             } else {
                 services = cg.getAvailableServices(req);
             }
@@ -186,14 +190,14 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                     if (innerObj.has("state") && !innerObj.get("state").equals(null)) {
                                         active = "ACTIVE".equals(innerObj.getString("state")) ? true : false;
                                     }
-                                    Boolean condition_one = innerObj.has("original_filename") && !innerObj.get("original_filename").equals(null);
+                                    //Boolean condition_one = innerObj.has("name") && !innerObj.get("name").equals(null);
                                     Boolean condition_two = innerObj.has("id") && !innerObj.get("id").equals(null);
 
                                     //TODO - Fix redundant condition three
-                                    if (active && condition_one && condition_two) {
+                                    if (active && condition_two) {
                                         String original_filename = innerObj.getString("name");
 
-                                        String brightcove_filename = original_filename + "__" + innerObj.getString("id")+ ".mp4";
+                                        String brightcove_filename = innerObj.getString("id")+ ".mp4";//original_filename + "__" + innerObj.getString("id")+ ".mp4";
                                         LOGGER.trace("###NAME###>>" + brightcove_filename);
                                         LOGGER.trace("###ACTIVE###>>" + active);
 
@@ -439,6 +443,8 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                         //                    }
                         if (x.equals("tags")) {
                             key = "cq:".concat(x);
+                        } else if ("name".equals(x)){
+                            key = "dc:title";
                         } else {
                             key = "brc_".concat(x);
                         }
@@ -526,7 +532,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                     try {
                                         if (tagManager.canCreateTag(tagValue)) {
 
-                                            Tag tag = tagManager.createTag(tagValue.replaceAll(": ",":"), tagValue, "");
+                                            Tag tag = tagManager.createTag(tagValue.replaceAll(": ",":").trim(), tagValue, "");
 
 
                                             //TODO: We handled this trim as above, to

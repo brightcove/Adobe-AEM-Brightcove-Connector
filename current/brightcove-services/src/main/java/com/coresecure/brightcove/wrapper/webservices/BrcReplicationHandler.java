@@ -556,7 +556,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
-        String name = map.get("brc_name", "");
+        String name = map.get("dc:title", "");
         String id = map.get("brc_id", null);
         String referenceId = map.get("brc_reference_id", "");
         String shortDescription = map.get("brc_description","");
