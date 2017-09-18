@@ -172,78 +172,80 @@ public class BrcReplicationHandler implements TransportHandler {
                             LOGGER.trace(account_id);
 
                             cs = configurationGrabber.getConfigurationService(account_id);
-                            List<String> allowedGroups = cs.getAllowedGroupsList();
+                            if (cs != null) {
+                                List<String> allowedGroups = cs.getAllowedGroupsList();
 
-                            //AUTHORIZATION CHECK
-                            boolean is_authorized = false;
-                            UserManager userManager = rr.adaptTo(UserManager.class);
-                            try
-                            {
-                                Authorizable auth = userManager.getAuthorizable(replicationAction.getUserId());
+                                //AUTHORIZATION CHECK
+                                boolean is_authorized = false;
+                                UserManager userManager = rr.adaptTo(UserManager.class);
+                                try {
+                                    Authorizable auth = userManager.getAuthorizable(replicationAction.getUserId());
 
-                                if (auth != null)
-                                {
-                                    Iterator<Group> groups = auth.memberOf();
-                                    while (groups.hasNext() && !is_authorized) {
-                                        Group group = groups.next();
-                                        if (allowedGroups.contains(group.getID())) is_authorized = true; //<-Authorization
+                                    if (auth != null) {
+                                        Iterator<Group> groups = auth.memberOf();
+                                        while (groups.hasNext() && !is_authorized) {
+                                            Group group = groups.next();
+                                            if (allowedGroups.contains(group.getID()))
+                                                is_authorized = true; //<-Authorization
+                                        }
                                     }
+                                } catch (RepositoryException e) {
+                                    LOGGER.error("executeRequest", e);
+                                    result = new ReplicationResult(false, 0, "Replication error: " + e.getMessage());
+
                                 }
-                            }
-                            catch (RepositoryException e) {
-                                LOGGER.error("executeRequest", e);
-                                result = new ReplicationResult(false, 0, "Replication error: "+e.getMessage());
+                                //tag amanger
+                                //get tags
+                                //do check of funciton allreayd implemented
 
-                            }
-                            //tag amanger
-                            //get tags
-                            //do check of funciton allreayd implemented
+                                if (is_authorized) {
+                                    Resource metadataRes = asset_res.getChild("jcr:content/metadata");
 
-                            if (is_authorized) {
-                                Resource metadataRes = asset_res.getChild("jcr:content/metadata");
+                                    String[] tagsList = metadataRes.getValueMap().get("cq:tags", String[].class);
+                                    Collection<String> tags = tagsToCollection(tagsList);
 
-                                String[] tagsList = metadataRes.getValueMap().get("cq:tags", String[].class);
-                                Collection<String> tags = tagsToCollection(tagsList);
+                                    if (assetPaths != null && _asset != null && path.startsWith(cs.getAssetIntegrationPath())) {//isBrightcoveAsset(tags)) {
 
-                                if (assetPaths != null && _asset != null && isBrightcoveAsset(tags)) {
+                                        //ACTION SWITCH
+                                        if (replicationType == ReplicationActionType.TEST) {
+                                            return testVideo();
+                                        } else if (replicationType == ReplicationActionType.ACTIVATE) {
+                                            //TESTING
+                                            result = activateVideo(_asset, account_id);
+                                        } else if (replicationType == ReplicationActionType.DEACTIVATE) {
+                                            result = deactivateVideo(_asset, account_id);
+                                        } else {
+                                            //return ReplicationResult.OK;
+                                            throw new ReplicationException("Replication action type " + replicationType + " not supported.");
+                                        }
 
-                                    //ACTION SWITCH
-                                    if (replicationType == ReplicationActionType.TEST)
-                                    {
-                                        return testVideo();
+                                    } else {
+                                        LOGGER.debug("No Brightcove Tag in cq:tags", Arrays.toString(tagsList));
+
                                     }
-                                    else if (replicationType == ReplicationActionType.ACTIVATE)
-                                    {
-                                        //TESTING
-                                        return activateVideo(_asset, account_id);
-                                    }
-                                    else if (replicationType == ReplicationActionType.DEACTIVATE)
-                                    {
-                                        return deactivateVideo(_asset, account_id);
-                                    }
-                                    else
-                                    {
-                                        //return ReplicationResult.OK;
-                                        throw new ReplicationException("Replication action type " + replicationType + " not supported.");
-                                    }
-
                                 } else {
-                                    LOGGER.debug("No Brightcove Tag in cq:tags", Arrays.toString(tagsList));
-
+                                    LOGGER.debug("Not authorized");
                                 }
                             } else {
-                                LOGGER.debug("Not authorized");
+                                LOGGER.debug("Not Brightcove");
+                                return ReplicationResult.OK;
                             }
                         }
                         rr.commit();
                     } catch (LoginException e) {
                         LOGGER.error("LoginException: ", e);
+                        throw new ReplicationException("Replication action type " + replicationType + " LoginException.");
                     } catch (NullPointerException e) {
                         LOGGER.error("NullPointer RepHandler", e);
+                        throw new ReplicationException("Replication action type " + replicationType + " NullPointer RepHandler.");
+
                     } catch (ReplicationException e) {
                         LOGGER.error("ReplicationException - RepHandler", e);
+                        throw new ReplicationException("Replication action type " + replicationType + " ReplicationException - RepHandler.");
                     } catch (Exception e) {
                         LOGGER.error("Exception RepHandler", e);
+                        throw new ReplicationException("Replication action type " + replicationType + " Exception RepHandler.");
+
                     }
 
                     //END FORLOOP
@@ -252,12 +254,13 @@ public class BrcReplicationHandler implements TransportHandler {
             else
             {
             LOGGER.trace("DELETE REPLICATION NOT SUPPORTED");
+            result =  ReplicationResult.OK;
             }
 
         //END MAIN
         }
         //result =  ReplicationResult.OK; - default ok
-        result =  ReplicationResult.OK;
+        //result =  ReplicationResult.OK;
         return result;
     }
 
@@ -361,6 +364,7 @@ public class BrcReplicationHandler implements TransportHandler {
                         result = ReplicationResult.OK;
                         long current_time_millisec = new java.util.Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
+                        brc_lastsync_map.put("brc_id", api_resp.getString("videoid"));
                         //rr.commit()?
                     } else {
                         replicationLog.error("BC: ACTIVATION FAILED >> " + _asset.getName());
@@ -377,8 +381,6 @@ public class BrcReplicationHandler implements TransportHandler {
                 {
                     LOGGER.trace("CREATE VIDEO - THUMBNAIL / POSTER TEST>>");
                     LOGGER.trace(video.toJSON().toString(1));
-                    InputStream poster_rendition = _asset.getRendition("brc_poster.png").getStream();
-                    InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png").getStream();
                     JSONObject images = new JSONObject();
                     JSONObject poster = new JSONObject();
                     JSONObject thumbnail = new JSONObject();
@@ -545,9 +547,8 @@ public class BrcReplicationHandler implements TransportHandler {
         //****************************************************************************************
 
         //TAGS
-        String[] tagsList = metadataRes.getValueMap().get("cq:tags",String[].class);
+        String[] tagsList = metadataRes.getValueMap().get("cq:tags",new String[]{});
         List<String> list = new ArrayList<String>(Arrays.asList(tagsList));
-        list.remove("brightcove");
         tagsList = list.toArray(new String[0]);
         //REMOVE BRIGHTCOVE TAG BEFORE PUSH
         Collection<String> tags = tagsToCollection(tagsList);
@@ -603,10 +604,10 @@ public class BrcReplicationHandler implements TransportHandler {
         return video;
     }
 
-    private Boolean isBrightcoveAsset(Collection<String> tags)
-    {
-        return tags.contains("brightcove");
-    }
+//    private Boolean isBrightcoveAsset(Collection<String> tags)
+//    {
+//        return tags.contains("brightcove");
+//    }
 
     private Collection<String> tagsToCollection(String[] tag_array)
     {

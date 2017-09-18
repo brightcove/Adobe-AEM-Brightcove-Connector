@@ -445,6 +445,7 @@ public class ServiceUtil {
                 if (videoIngested != null && videoIngested.has("bucket")) {
                     LOGGER.info("New video id: '" + newVideoId + "'.");
                     result.put("bucket", videoIngested.get("bucket"));
+                    result.put("videoid",newVideoId);
                     result.put("object_key", videoIngested.get("object_key"));
                     result.put("api_request_url", videoIngested.get("api_request_url"));
                     result.put("signed_url", videoIngested.get("signed_url"));
