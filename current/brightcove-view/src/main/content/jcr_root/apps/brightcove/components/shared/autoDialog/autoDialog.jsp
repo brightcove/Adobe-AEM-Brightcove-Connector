@@ -24,7 +24,7 @@
 <%
 
 
-    Resource asset_res = resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
+    Resource asset_res = slingRequest.getParameter("item") != null ? resourceResolver.resolve(slingRequest.getParameter("item")) : resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
     String requestedAccount = asset_res.getParent().getName();
 
     Resource metadataRes = asset_res.getChild("jcr:content/metadata");
@@ -59,8 +59,10 @@
 <%--<div  class="aem-assets-metadata-form-tab" data-tabid="e445e6bf-6bf8-436b-a069-ac0dc7cbda1b">--%>
 
 
-
     <div  class="aem-assets-metadata-form-column">
+        <div class="foundation-field-editable">
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/dc:title" value="<%=map.get("dc:title","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+        </div>
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
@@ -68,7 +70,7 @@
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Long Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_long_description" value="<%=map.get("brc_long_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/url" value="<%=map.get("brc_name","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/url" value="<%=map.get("brc_link/url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/text" value="<%=map.get("brc_link/text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>

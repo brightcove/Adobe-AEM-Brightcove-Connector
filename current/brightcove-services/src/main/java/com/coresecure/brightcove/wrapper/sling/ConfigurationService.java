@@ -35,13 +35,6 @@ import java.util.List;
 public interface ConfigurationService {
 
 
-    String getReadToken();
-
-    String getWriteToken();
-
-    String getPreviewPlayerLoc();
-
-    String getPreviewPlayerListLoc();
 
     String getPlayersLoc();
 

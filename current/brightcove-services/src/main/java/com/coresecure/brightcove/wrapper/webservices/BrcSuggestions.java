@@ -30,6 +30,7 @@ permission to convey the resulting work.
 package com.coresecure.brightcove.wrapper.webservices;
 
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -61,7 +62,7 @@ public class BrcSuggestions extends SlingAllMethodsServlet {
         int requestedAPI = 0;
         String requestedAccount = "";
         if (request.getParameter("query") != null && request.getParameter("account_id") != null) {
-            requestedAccount = request.getParameter("account_id");
+            requestedAccount = AccountUtil.getSelectedAccount(request);
             ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
             response.setContentType("application/json");

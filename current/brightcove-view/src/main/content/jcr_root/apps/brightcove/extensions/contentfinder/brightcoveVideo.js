@@ -74,7 +74,8 @@ permission to convey the resulting work.
                 	listeners: {
                     	select: function (combo, record, index ) {
                     		var store = CQ.Ext.getCmp("cfTab-Brightcove").items.get(0);
-                    		var contentfinder_element = CQ.Ext.getCmp("cfTab-Brightcove");
+                            document.cookie = "brc_act="+record.data.value+"; expires=0; path=/";
+                            var contentfinder_element = CQ.Ext.getCmp("cfTab-Brightcove");
                     		contentfinder_element.submitQueryBox(store);
                     	}
                     }

@@ -59,8 +59,8 @@ permission to convey the resulting work.
 
         ConfigurationService cs = cg.getConfigurationService(selectedAccount);
         if (cs != null) {
-            previewPlayerLoc = cs.getPreviewPlayerLoc();
-            previewPlayerListLoc = cs.getPreviewPlayerListLoc();
+            previewPlayerLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?videoId=",cs.getAccountID(),cs.getDefVideoPlayerID());
+            previewPlayerListLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?playlistId=",cs.getAccountID(),cs.getDefPlaylistPlayerID());
         }
 
     }
@@ -89,7 +89,7 @@ permission to convey the resulting work.
     <cq:includeClientLib css="brc.brightcove-api"/>
 
 
-    <title>VideoManager - Brightcove Admin API</title>
+    <title>Brightcove Admin</title>
     <script type="text/javascript">
         var brc_admin = brc_admin || {};
 
@@ -306,6 +306,9 @@ permission to convey the resulting work.
                             </li>
 
                         </ul>
+                        <p><a href="#" onClick="doPreview(document.getElementById('divMeta.id').innerHTML)"
+                              class="btn btn-primary">Video Preview</a>
+                        </p>
                     </div>
                     <br/>Duration:
                     <div id="divMeta.length"></div>
@@ -500,7 +503,7 @@ permission to convey the resulting work.
 
         <!--Player Preview  -->
         <!-- This window is populated by doPreview -->
-        <div id="playerDiv" style="display:none" class="overlay">
+        <div id="playerDiv" style="display:none;height: auto;" class="overlay">
             <div id="playerdrag" class="hLine"></div>
             <div id="playerTitle" style="text-transform:uppercase; font-weight:bold; font-size:14px;"></div>
             <div class="hLine"></div>

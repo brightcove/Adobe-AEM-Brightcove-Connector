@@ -421,14 +421,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
                 map.put("brc_account_id", requestedAccount);
                 List<String> tags = new ArrayList<String>();
-
-                try {
-                    tagManager.createTag("brightcove", "brightcove", "");
-                    tags.add("brightcove");
-                    map.put("cq:tags", tags.toArray());
-                } catch (InvalidTagFormatException e) {
-                    LOGGER.error("Invalid Tag Format", e);
-                }
+                map.put("cq:tags", tags.toArray());
 
                 for (String x : fields) {
                     LOGGER.trace("[X] {} " + innerObj.getString(x), x);
@@ -624,7 +617,25 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
                             }
                         } else {
-                            map.put(key, obj);
+                                    //DURATION SETTING AND CHECK
+                                    try {
+                                        //Check format of brc_duration
+                                        if (key.equals("brc_duration") && obj!=null)
+                                        {
+                                            //LOGGER.trace("*!*!*! current key : " + key.toString() + " value: " + obj.toString());
+                                            //conditional conversion
+                                            int input = Integer.parseInt(obj.toString());
+                                            input = input / 1000 ;
+                                            obj = String.format("%02d:%02d:%02d", input/3600,(input % 3600) / 60,(input % 3600) % 60);
+                                            //LOGGER.trace("*!*!*! is now :" + obj.toString());
+                                        }
+                                        }catch (Exception e)
+                                        {
+                                            LOGGER.error("*!*!*! Duration Check Error:!", e);
+                                        }
+                                    //END DURATION CHECK AND SET
+
+                            map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
                         }
                     }
                 }

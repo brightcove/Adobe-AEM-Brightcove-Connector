@@ -6,6 +6,6 @@
     xtype="dialogfieldset">
     <items
         jcr:primaryType="cq:Widget"
-        path="/libs/dam/content/asseteditors/formitems.overlay.infinity.json"
+        path="/apps/brightcove/components/shared/dialog/formitems.overlay.infinity.json"
         xtype="cqinclude"/>
 </jcr:root>
