@@ -1319,7 +1319,7 @@ function doPreview(id) {
     //if ($("a#allVideos").parent("li").attr("class").indexOf("active") != -1){
 
     // including both query parameters for backwards compatibility.
-    preview.setAttribute('src', brc_admin.previewPlayerLoc + '?bctid=' + id + '&videoId=' + id);
+    preview.setAttribute('src', brc_admin.previewPlayerLoc + id);
     preview.setAttribute('width', 480);
     preview.setAttribute('height', 270);
     /*} else {

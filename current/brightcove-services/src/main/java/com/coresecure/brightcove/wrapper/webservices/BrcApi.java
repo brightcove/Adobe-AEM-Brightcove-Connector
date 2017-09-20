@@ -91,7 +91,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result.put("items", new JSONArray());
             result.put("totals", 0);
             result.put("error", -1);
-            if (request.getParameter("a") != null && request.getParameter("account_id") != null && !request.getParameter("account_id").trim().isEmpty()) {
+            if (request.getParameter("a") != null) {
                 String requestedAccount = AccountUtil.getSelectedAccount(request);
                 ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);

@@ -32,7 +32,6 @@ permission to convey the resulting work.
 
 
  */
-
 {
     "tabTip": CQ.I18n.getMessage("Brightcove Players"),
     "id": "cfTab-Brightcove-Players",
@@ -76,7 +75,8 @@ permission to convey the resulting work.
                 	listeners: {
                     	select: function (combo, record, index ) {
                     		var store = CQ.Ext.getCmp("cfTab-Brightcove-Players").items.get(0);
-                    		var contentfinder_element = CQ.Ext.getCmp("cfTab-Brightcove-Players");
+                            document.cookie = "brc_act="+record.data.value+"; expires=0; path=/";
+                            var contentfinder_element = CQ.Ext.getCmp("cfTab-Brightcove-Players");
                     		contentfinder_element.submitQueryBox(store);
                     	}
                     }

@@ -47,21 +47,16 @@ import java.util.*;
 )
 @Service(value = ConfigurationService.class)
 @Properties({
+        @Property(name = "accountAlias", label = "Account Alias", description = "Text alias for Account ID", value = ""),
+        @Property(name = "key", label = "Account ID", description = "CMS API Account ID", value = ""),
         @Property(name = "client_id", label = "Client ID", description = "CMS API Client ID", value = ""),
         @Property(name = "client_secret", label = "Client Secret", description = "CMS API Client Secret", value = ""),
-        @Property(name = "key", label = "Account ID", description = "CMS API Account ID", value = ""),
-        @Property(name = "accountAlias", label = "Account Alias", description = "Text alias for Account ID", value = ""),
-        @Property(name = "readtoken", label = "Read Token", description = "Read Token", value = ""),
-        @Property(name = "writetoken", label = "Write Token", description = "Write Token", value = ""),
+        @Property(name = "allowed_groups", label = "Allowed Groups", description = "Groups that are allowed to see this account data", value = {"", ""}),
         @Property(name = "playersstore", label = "Players Store Path", description = "Path of the players store locatione", value = "/content/brightcovetools/players"),
-        @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = ""),
+        @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = "default"),
         @Property(name = "defVideoPlayerKey", label="Default Video Player Key", description="Default Video Player Key", value=""),
-        @Property(name = "defVideoPlayerDataEmbedded", label = "Default Data Embedded", description = "Default Data Embedded", value = ""),
         @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = ""),
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key", value = ""),
-        @Property(name = "previewPlayerLoc", label = "Preview Video Player", description = "Preview Player Path (Videos)", value = "http://link.brightcove.com/services/player/bcpid1154829530001"),
-        @Property(name = "previewPlayerListLoc", label = "Preview Playlist Player", description = "Preview Player Path (Playlists)", value = "http://link.brightcove.com/services/player/bcpid1154829529001"),
-        @Property(name = "allowed_groups", label = "Allowed Groups", description = "Groups that are allowed to see this account data", value = {"", ""}),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
         @Property(name = "tempFolder", label = "Video Upload Temp Folder", description = "Temp Folder for video upload", value = ""),
         @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
@@ -106,22 +101,6 @@ public class ConfigurationServiceImpl implements ConfigurationService {
 
     public String getDefaultThumbnailPath(){ return (String) getProperties().get("default_thumbnail_path"); }
 
-    public String getReadToken() {
-        return (String) getProperties().get("readtoken");
-    }
-
-    public String getWriteToken() {
-        return (String) getProperties().get("writetoken");
-    }
-
-    public String getPreviewPlayerLoc() {
-        return (String) getProperties().get("previewPlayerLoc");
-    }
-
-    public String getPreviewPlayerListLoc() {
-        return (String) getProperties().get("previewPlayerListLoc");
-    }
-
     public String getPlayersLoc() {
         return (String) getProperties().get("playersstore");
     }
@@ -135,7 +114,7 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     public String getDefVideoPlayerDataEmbedded() {
-        return (String) getProperties().get("defVideoPlayerDataEmbedded");
+        return "default";
     }
 
     public String getDefPlaylistPlayerID() {

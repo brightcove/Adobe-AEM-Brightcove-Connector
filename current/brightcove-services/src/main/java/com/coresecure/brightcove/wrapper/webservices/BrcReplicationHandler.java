@@ -166,86 +166,94 @@ public class BrcReplicationHandler implements TransportHandler {
 
                         for (String current_path : assetPaths) {
                             asset_res = rr.getResource(current_path);
-                            String account_id = asset_res.getParent().getName();
-                            Asset _asset = asset_res.adaptTo(Asset.class);
+                            if (asset_res != null) {
+                                String account_id = asset_res.getParent().getName();
+                                Asset _asset = asset_res.adaptTo(Asset.class);
 
-                            LOGGER.trace(account_id);
+                                LOGGER.trace(account_id);
 
-                            cs = configurationGrabber.getConfigurationService(account_id);
-                            if (cs != null) {
-                                List<String> allowedGroups = cs.getAllowedGroupsList();
+                                cs = configurationGrabber.getConfigurationService(account_id);
+                                if (cs != null) {
+                                    List<String> allowedGroups = cs.getAllowedGroupsList();
 
-                                //AUTHORIZATION CHECK
-                                boolean is_authorized = false;
-                                UserManager userManager = rr.adaptTo(UserManager.class);
-                                try {
-                                    Authorizable auth = userManager.getAuthorizable(replicationAction.getUserId());
+                                    //AUTHORIZATION CHECK
+                                    boolean is_authorized = false;
+                                    UserManager userManager = rr.adaptTo(UserManager.class);
+                                    try {
+                                        Authorizable auth = userManager.getAuthorizable(replicationAction.getUserId());
 
-                                    if (auth != null) {
-                                        Iterator<Group> groups = auth.memberOf();
-                                        while (groups.hasNext() && !is_authorized) {
-                                            Group group = groups.next();
-                                            if (allowedGroups.contains(group.getID()))
-                                                is_authorized = true; //<-Authorization
+                                        if (auth != null) {
+                                            Iterator<Group> groups = auth.memberOf();
+                                            while (groups.hasNext() && !is_authorized) {
+                                                Group group = groups.next();
+                                                if (allowedGroups.contains(group.getID()))
+                                                    is_authorized = true; //<-Authorization
+                                            }
                                         }
+                                    } catch (RepositoryException e) {
+                                        LOGGER.error("executeRequest", e);
+                                        result = new ReplicationResult(false, 0, "Replication error: " + e.getMessage());
+
                                     }
-                                } catch (RepositoryException e) {
-                                    LOGGER.error("executeRequest", e);
-                                    result = new ReplicationResult(false, 0, "Replication error: " + e.getMessage());
+                                    //tag amanger
+                                    //get tags
+                                    //do check of funciton allreayd implemented
 
-                                }
-                                //tag amanger
-                                //get tags
-                                //do check of funciton allreayd implemented
+                                    if (is_authorized) {
+                                        Resource metadataRes = asset_res.getChild("jcr:content/metadata");
 
-                                if (is_authorized) {
-                                    Resource metadataRes = asset_res.getChild("jcr:content/metadata");
+                                        String[] tagsList = metadataRes.getValueMap().get("cq:tags", String[].class);
+                                        Collection<String> tags = tagsToCollection(tagsList);
 
-                                    String[] tagsList = metadataRes.getValueMap().get("cq:tags", String[].class);
-                                    Collection<String> tags = tagsToCollection(tagsList);
+                                        if (assetPaths != null && _asset != null && path.startsWith(cs.getAssetIntegrationPath())) {//isBrightcoveAsset(tags)) {
 
-                                    if (assetPaths != null && _asset != null && path.startsWith(cs.getAssetIntegrationPath())) {//isBrightcoveAsset(tags)) {
+                                            //ACTION SWITCH
+                                            if (replicationType == ReplicationActionType.TEST) {
+                                                return testVideo();
+                                            } else if (replicationType == ReplicationActionType.ACTIVATE) {
+                                                //TESTING
+                                                result = activateVideo(_asset, account_id);
+                                            } else if (replicationType == ReplicationActionType.DEACTIVATE) {
+                                                result = deactivateVideo(_asset, account_id);
+                                            } else {
+                                                //return ReplicationResult.OK;
+                                                throw new ReplicationException("Replication action type " + replicationType + " not supported.");
+                                            }
 
-                                        //ACTION SWITCH
-                                        if (replicationType == ReplicationActionType.TEST) {
-                                            return testVideo();
-                                        } else if (replicationType == ReplicationActionType.ACTIVATE) {
-                                            //TESTING
-                                            result = activateVideo(_asset, account_id);
-                                        } else if (replicationType == ReplicationActionType.DEACTIVATE) {
-                                            result = deactivateVideo(_asset, account_id);
                                         } else {
-                                            //return ReplicationResult.OK;
-                                            throw new ReplicationException("Replication action type " + replicationType + " not supported.");
+                                            LOGGER.debug("No Brightcove Tag in cq:tags", Arrays.toString(tagsList));
+
                                         }
-
                                     } else {
-                                        LOGGER.debug("No Brightcove Tag in cq:tags", Arrays.toString(tagsList));
-
+                                        LOGGER.debug("Not authorized");
                                     }
                                 } else {
-                                    LOGGER.debug("Not authorized");
+                                    LOGGER.debug("Not Brightcove");
+                                    return ReplicationResult.OK;
                                 }
                             } else {
-                                LOGGER.debug("Not Brightcove");
-                                return ReplicationResult.OK;
+                                LOGGER.warn("Asset removed or not existing");
+                                result = ReplicationResult.OK;
                             }
                         }
                         rr.commit();
                     } catch (LoginException e) {
                         LOGGER.error("LoginException: ", e);
+                        replicationLog.error("Replication action type " + replicationType + " LoginException.");
                         throw new ReplicationException("Replication action type " + replicationType + " LoginException.");
                     } catch (NullPointerException e) {
                         LOGGER.error("NullPointer RepHandler", e);
+                        replicationLog.error("Replication action type " + replicationType + " NullPointer RepHandler.");
                         throw new ReplicationException("Replication action type " + replicationType + " NullPointer RepHandler.");
 
                     } catch (ReplicationException e) {
                         LOGGER.error("ReplicationException - RepHandler", e);
+                        replicationLog.error("Replication action type " + replicationType + " ReplicationException - RepHandler.");
                         throw new ReplicationException("Replication action type " + replicationType + " ReplicationException - RepHandler.");
                     } catch (Exception e) {
                         LOGGER.error("Exception RepHandler", e);
+                        replicationLog.error("Replication action type " + replicationType + " Exception RepHandler.");
                         throw new ReplicationException("Replication action type " + replicationType + " Exception RepHandler.");
-
                     }
 
                     //END FORLOOP
@@ -253,14 +261,16 @@ public class BrcReplicationHandler implements TransportHandler {
             }
             else
             {
-            LOGGER.trace("DELETE REPLICATION NOT SUPPORTED");
-            result =  ReplicationResult.OK;
+                LOGGER.trace("DELETE REPLICATION NOT SUPPORTED");
+                result =  ReplicationResult.OK;
             }
 
         //END MAIN
         }
         //result =  ReplicationResult.OK; - default ok
         //result =  ReplicationResult.OK;
+        replicationLog.info("REPLICATION STATUS >> Code: %s Message: %s Success: %s", result.getCode(), result.getMessage(), result.isSuccess());
+
         return result;
     }
 
