@@ -66,5 +66,4 @@ public interface ConfigurationService {
 
     String getProxy();
 
-    String getTempPath();
 }

@@ -29,7 +29,8 @@ or MIT License, the licensors of this Program grant you additional
 permission to convey the resulting work.
 
 --%>
-
+<%@ page import="com.adobe.granite.license.ProductInfoService" %>
+<%@ page import="com.adobe.granite.license.ProductInfo" %>
 <%@include file="/apps/brightcove/components/shared/global.jsp" %>
 <%--
 
@@ -61,10 +62,10 @@ Brightcove Reference:
       - http://docs.brightcove.com/en/video-cloud/brightcove-player/guides/embed-in-page.html
 
 --%>
-
 <div id="container-${brc_componentID}" class="brightcove-container" data-playerid="${brc_componentID}" data-account="${brc_account}"
      data-player="${brc_playerID}"
      data-embed="${brc_playerDataEmbed}"
+     data-usage="cms:aem${aemversion}:javascript"
      data-video-id="${brc_videoID}"
         <c:if test="${brc_hasSize}">
             data-width="${brc_width}px"

@@ -55,10 +55,9 @@ import java.util.*;
         @Property(name = "playersstore", label = "Players Store Path", description = "Path of the players store locatione", value = "/content/brightcovetools/players"),
         @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = "default"),
         @Property(name = "defVideoPlayerKey", label="Default Video Player Key", description="Default Video Player Key", value=""),
-        @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = ""),
+        @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
-        @Property(name = "tempFolder", label = "Video Upload Temp Folder", description = "Temp Folder for video upload", value = ""),
         @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
         @Property(name = "default_thumbnail_path", label = "Default Asset Thumbnail PNG", description = "Default Stock Image Path", value = "/etc/designs/cs/brightcove/images/default.png")
 
@@ -164,14 +163,6 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         return result;
     }
 
-    public String getTempPath(){
-        String tempPath = (String) getProperties().get("tempFolder");
-        if (tempPath.isEmpty() || !isValidPath(tempPath)) {
-            tempPath = System.getProperty("java.io.tmpdir");
-            loggerVar.warn("Video Upload Temp Folder is invalid; Using system default:"+tempPath);
-        }
-        return tempPath;
-    }
 
     private boolean isValidPath(String filePathString){
         Path path = Paths.get(filePathString);
