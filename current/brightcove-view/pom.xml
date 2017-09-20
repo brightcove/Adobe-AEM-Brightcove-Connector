@@ -12,7 +12,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>parent</artifactId>
-        <version>5.0.4-SNAPSHOT</version>
+        <version>5.0.5-SNAPSHOT</version>
     </parent>
 
 
@@ -233,7 +233,12 @@
             <scope>provided</scope>
             <!-- Widgets-->
         </dependency>
-
+        <dependency>
+            <groupId>com.adobe.granite</groupId>
+            <artifactId>com.adobe.granite.license</artifactId>
+            <version>0.8.2</version>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 

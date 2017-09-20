@@ -7,6 +7,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.day.cq.commons.jcr.JcrUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.AssetManager;
 import com.day.cq.tagging.InvalidTagFormatException;
@@ -127,13 +128,19 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
 
                 if (cg != null && requestedAccount != null && cs != null) {
+                    Session session = req.getResourceResolver().adaptTo(Session.class);
+                    String confPath = cs.getAssetIntegrationPath();
+                    String basePath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount).concat("/");
+
+                    Node accountFolder = JcrUtil.createPath(basePath, "sling:OrderedFolder", session);
+                    accountFolder.setProperty("jcr:title", cs.getAccountAlias());
+                    session.save();
                     //IF NEITHER CONFIGURATION - NOR BRIGHTCOVE SERVICE IS NULL...
                     List<String> allowedGroups = cs.getAllowedGroupsList();
                     ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
                     //AUTHORIZATION CHECK
                     boolean is_authorized = false;
-                    Session session = req.getResourceResolver().adaptTo(Session.class);
                     UserManager userManager = req.getResourceResolver().adaptTo(UserManager.class);
                     try {
                         Authorizable auth = userManager.getAuthorizable(session.getUserID());
@@ -210,7 +217,6 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                         //LOGGER.trace(innerObj.toString(1));
 
                                         if (src != null && !src.equals("")) {
-                                            String confPath = cs.getAssetIntegrationPath();
                                             String localpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(brightcove_filename);
                                             String oldpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(original_filename);
 

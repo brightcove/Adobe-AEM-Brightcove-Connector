@@ -34,9 +34,20 @@ permission to convey the resulting work.
 <%@ page import="com.day.cq.wcm.api.WCMMode" %>
 <%@ page import="java.util.ResourceBundle" %>
 <%@ page import="com.day.cq.wcm.foundation.Placeholder" %>
+<%@ page import="com.adobe.granite.license.ProductInfoService" %>
+<%@ page import="com.adobe.granite.license.ProductInfo" %>
 <%@include file="/libs/foundation/global.jsp" %>
 <%
     // Localization
+    ProductInfoService productInfo = sling.getService(ProductInfoService.class);
+    String version ="";
+    if(productInfo != null) {
+        ProductInfo[] productInfos =  productInfo.getInfos();
+        if (productInfos.length > 0) {
+            version = productInfos[0].getShortVersion();
+        }
+
+    }
 
     final ResourceBundle resourceBundle = slingRequest.getResourceBundle(null);
     I18n i18n = new I18n(resourceBundle);
@@ -52,6 +63,7 @@ permission to convey the resulting work.
 
 
     //Update Page Context
+    pageContext.setAttribute("aemversion", version);
     pageContext.setAttribute("isTouchUI", isTouchUI);
     pageContext.setAttribute("isEditMode", isEditMode);
     pageContext.setAttribute("isDesignMode", isEditMode);

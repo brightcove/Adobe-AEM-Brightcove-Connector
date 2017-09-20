@@ -35,6 +35,8 @@ permission to convey the resulting work.
                  com.coresecure.brightcove.wrapper.sling.ConfigurationService,
                  com.coresecure.brightcove.wrapper.sling.ServiceUtil,
                  java.util.Set" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
 
 <%@include file="/apps/brightcove/components/shared/global.jsp" %>
 
@@ -43,10 +45,12 @@ permission to convey the resulting work.
     String defaultAccount = "";
     String cookieAccount = "";
     String selectedAccount = "";
+    String selectedAccountAlias = "";
     String previewPlayerLoc = "";
     String previewPlayerListLoc = "";
     ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
     Set<String> services = cg.getAvailableServices(slingRequest);
+
     if (services.size() > 0) {
         defaultAccount = (String) services.toArray()[0];
         cookieAccount = ServiceUtil.getAccountFromCookie(slingRequest);
@@ -73,6 +77,7 @@ permission to convey the resulting work.
 
     pageContext.setAttribute("services", services);
     pageContext.setAttribute("selectedAccount", selectedAccount);
+    pageContext.setAttribute("selectedAccountAlias", selectedAccountAlias);
 
     pageContext.setAttribute("favIcon", "/etc/designs/cs/brightcove/favicon.ico");
 
@@ -143,12 +148,19 @@ permission to convey the resulting work.
                         <tr>
                             <div id="accountDiv" style="float:right;padding:5px">
                                 <select id='selAccount' name="selAccount" style="position: relative;top: 5px;">
-                                    <c:forEach var="account" items="${services}" varStatus="status">
-                                        <option value="${account}"
-                                                class="${account eq selectedAccount ? 'selected':''}" ${account eq selectedAccount ? 'selected="selected"':''}>
-                                                ${account}
-                                        </option>
-                                    </c:forEach>
+                                    <%
+                                        for (String service: services){
+                                        ConfigurationService cs = cg.getConfigurationService(service);
+                                            if (cs != null) {
+                                                %>
+                                                <option value="<%=service%>"
+                                                        class="<%=service.equals(selectedAccount) ? "selected":""%>" <%=service.equals(selectedAccount) ? "selected=\"selected\"":""%>>
+                                                    <%=cs.getAccountAlias()+" ("+service+")"%>
+                                                </option>
+                                                <%
+                                            }
+                                        }
+                                    %>
                                 </select>
                             </div>
                         </tr>
