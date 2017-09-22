@@ -54,7 +54,7 @@
                     jcr:primaryType="cq:Widget"
                     allowBlank="{Boolean}true"
                     fieldLabel="Player Key:"
-                    fieldSubLabel="&lt;i>Legacy Player only&lt;/i>"
+                    fieldSubLabel="&lt;i>Legacy Player only - DEPRECATED&lt;/i>"
                     name="./playerKey"
                     xtype="textfield"/>
             </items>

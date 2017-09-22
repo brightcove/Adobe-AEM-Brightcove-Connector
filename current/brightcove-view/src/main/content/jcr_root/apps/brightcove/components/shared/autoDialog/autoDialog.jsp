@@ -61,7 +61,7 @@
 
     <div  class="aem-assets-metadata-form-column">
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/dc:title" value="<%=map.get("dc:title","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title (Editable in Basic Tab)</label><input  class="coral-Form-field" data-metaType="text" type="text" value="<%=map.get("dc:title","")%>" disabled="" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>

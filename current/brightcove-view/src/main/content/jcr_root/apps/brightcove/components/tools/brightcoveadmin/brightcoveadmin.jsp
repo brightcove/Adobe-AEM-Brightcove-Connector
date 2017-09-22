@@ -61,7 +61,7 @@ permission to convey the resulting work.
 
         selectedAccount = (cookieAccount.trim().isEmpty()) ? defaultAccount : cookieAccount;
 
-        ConfigurationService cs = cg.getConfigurationService(selectedAccount);
+        ConfigurationService cs = cg.getConfigurationService(selectedAccount) != null ? cg.getConfigurationService(selectedAccount) : cg.getConfigurationService(defaultAccount);
         if (cs != null) {
             previewPlayerLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?videoId=",cs.getAccountID(),cs.getDefVideoPlayerID());
             previewPlayerListLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?playlistId=",cs.getAccountID(),cs.getDefPlaylistPlayerID());

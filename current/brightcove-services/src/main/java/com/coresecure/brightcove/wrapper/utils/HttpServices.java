@@ -55,7 +55,7 @@ public class HttpServices {
         DataOutputStream wr = null;
         try {
             // Create connection
-            url = new URL(targetURL);
+            url = new URL(targetURL.replaceAll(" ", "%20"));
             connection = getSSLConnection(url, targetURL);
             connection.setRequestMethod("DELETE");
             connection.setRequestProperty("Content-Type", "application/json");
@@ -143,7 +143,7 @@ public class HttpServices {
         try {
 
             // Create connection
-            url = new URL(targetURL);
+            url = new URL(targetURL.replaceAll(" ", "%20"));
             LOGGER.debug("URL :"+targetURL);
             LOGGER.debug("payload :"+payload);
 
@@ -231,7 +231,7 @@ public class HttpServices {
         try {
 
             // Create connection
-            url = new URL(targetURL);
+            url = new URL(targetURL.replaceAll(" ", "%20"));
             LOGGER.debug("URL :"+targetURL);
             LOGGER.debug("payload :"+payload);
 
@@ -344,7 +344,7 @@ public class HttpServices {
         JSONObject exGetResponse = new JSONObject();
         try {
             // Create connection
-            url = new URL(targetURL + "?" + urlParameters);
+            url = new URL(targetURL.replaceAll(" ", "%20") + "?" + urlParameters);
             LOGGER.trace("url: "+targetURL + "?" + urlParameters+" Protocol:"+url.getProtocol());
             if ("http".equals(url.getProtocol())) {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
