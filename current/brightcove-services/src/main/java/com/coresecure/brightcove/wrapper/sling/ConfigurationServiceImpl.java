@@ -54,9 +54,9 @@ import java.util.*;
         @Property(name = "allowed_groups", label = "Allowed Groups", description = "Groups that are allowed to see this account data", value = {"", ""}),
         @Property(name = "playersstore", label = "Players Store Path", description = "Path of the players store locatione", value = "/content/brightcovetools/players"),
         @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = "default"),
-        @Property(name = "defVideoPlayerKey", label="Default Video Player Key", description="Default Video Player Key", value=""),
+        @Property(name = "defVideoPlayerKey", label="Default Video Player Key", description="Default Video Player Key - DEPRECATED", value=""),
         @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
-        @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key", value = ""),
+        @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
         @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
         @Property(name = "default_thumbnail_path", label = "Default Asset Thumbnail PNG", description = "Default Stock Image Path", value = "/etc/designs/cs/brightcove/images/default.png")
