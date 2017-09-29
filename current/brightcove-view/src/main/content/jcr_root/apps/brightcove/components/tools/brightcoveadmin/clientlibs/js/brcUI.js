@@ -954,6 +954,7 @@ function uploadtrack()
             },{
                 xtype: 'textfield',
                 fieldLabel: 'URL Source:',
+                fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
                 allowBlank: false,
                 width: "100%",
                 name:"track_source"
@@ -968,7 +969,7 @@ function uploadtrack()
             ]}),
 
         z = new CQ.Ext.Window({
-            title: 'Update Video',
+            title: 'Upload new text track',
             collapsible: true,
             maximizable: true,
             width: 750,
@@ -996,11 +997,8 @@ function uploadtrack()
                                 Load(getAllVideosURL());
                             },
                             failure: function (form, action) {
-                                CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
+                                CQ.Ext.Msg.alert('Track Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please verify your connection and the text track source type.');
                                 loadStart();
-
-
-                                console.log("FAIL");
                                 Load(getAllVideosURL());
                             }
                         });

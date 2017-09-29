@@ -327,7 +327,9 @@ public class BrcApi extends SlingAllMethodsServlet {
 
                             result = null;
 
-                        } else if ("upload_text_track".equals(requestedAPI)) {
+                        }
+                        else if ("upload_text_track".equals(requestedAPI))
+                        {
 
                             //LOGGER.trace("###$$$###upload_text_track###$$$###");
 
@@ -355,9 +357,19 @@ public class BrcApi extends SlingAllMethodsServlet {
                                     brAPI.setProxy(cs.getProxy());
                                 }
                                 JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter("id"), text_track_payload);
-                                LOGGER.trace(videoItem.toString(1));
 
-                            result = null;
+                                LOGGER.trace("**:" + videoItem.toString(1));
+
+
+                                if(videoItem.has("response"))
+                                {
+                                    JSONObject responseOBJ = new JSONObject(videoItem.getString("response"));
+                                    LOGGER.trace("**has id object: " + responseOBJ.has("id") );
+                                    //response.sendError(422, "Incompatible Payload for Audio Track");
+                                } else {
+                                    response.sendError(422, "Incompatible Payload for Audio Track");
+                                }
+                                result = null;
                         } else if ("upload_image".equals(requestedAPI)) {
                             LOGGER.trace("upload_thumbnail");
 

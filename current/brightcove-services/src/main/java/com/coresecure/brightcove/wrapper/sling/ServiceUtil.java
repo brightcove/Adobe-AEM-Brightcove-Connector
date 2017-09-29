@@ -415,11 +415,14 @@ public class ServiceUtil {
             try {
                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
                 videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
-                if (videoIngested != null && videoIngested.has("id")) {
+                if (videoIngested != null && videoIngested.has("id"))
+                {
                     LOGGER.info("New video id: '" + newVideoId + "'.");
                     result.put("videoid", newVideoId);
                     result.put("output", videoIngested);
-                } else {
+                }
+                else
+                {
                     result.put("error", "createIngest Error");
                     brAPI.cms.deleteVideo(newVideoId);
                 }
@@ -429,8 +432,10 @@ public class ServiceUtil {
                 result.put("error", "createIngest Exception");
                 brAPI.cms.deleteVideo(newVideoId);
             }
-        } catch (JSONException e) {
-            LOGGER.error("createVideo", e);
+        }
+        catch (JSONException e)
+        {
+            LOGGER.error("JSON Error - createVideo", e);
         }
         return result;
     }

@@ -1,5 +1,6 @@
 package com.coresecure.brightcove.wrapper.utils;
 
+import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.Geo;
 import com.coresecure.brightcove.wrapper.objects.RelatedLink;
 import com.coresecure.brightcove.wrapper.objects.Schedule;
@@ -47,6 +48,9 @@ public class ObjectSerializer {
                 } else if (f.getType().equals(Schedule.class)) {
                     Schedule value = (Schedule) f.get(obj);
                     if (value != null) json.put(field, value.toJSON());
+                } else if (f.getType().equals(EconomicsEnum.class)) {
+                    EconomicsEnum value = (EconomicsEnum) f.get(obj);
+                    if (value != null) json.put(field, value.name());
                 }
             } catch (Exception e) {
                 // TODO Auto-generated catch block
