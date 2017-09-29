@@ -18,7 +18,7 @@ public class Video {
     public String long_description;
     public String state;
     public Collection<String> tags;
-    public Map<String, String> custom_fields;
+    public Map<String, Object> custom_fields;
     public Geo geo;
     public RelatedLink link;
     public Schedule schedule;
@@ -51,6 +51,25 @@ public class Video {
         link = aLink;
         complete = aComplete;
     }
+
+
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics) {
+        id = aId;
+        name = aName;
+        reference_id = aReference_id;
+        description = aDescription;
+        long_description = aLong_description;
+        state = aState;
+        tags = aTags;
+        geo = aGeo;
+        schedule = aSchedule;
+        link = aLink;
+        complete = aComplete;
+        custom_fields = aCustom_fields;
+        economics = aEconomics;
+    }
+
+
     public Video(JSONObject video) throws JSONException {
         id = video.getString("id");
         account_id = video.getString("account_id");
@@ -75,7 +94,7 @@ public class Video {
     }
 
     public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"id", "account_id", "name", "reference_id", "description", "long_description", "state", "tags", "custom_fields", "geo", "schedule", "link"});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"id", "account_id", "name", "reference_id", "description", "long_description", "state", "tags", "custom_fields", "geo", "schedule", "link", "economics"});
         return json;
     }
 

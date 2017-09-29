@@ -185,9 +185,7 @@ public class HttpServices {
                 // return response.toString();
                 exPostResponse = response.toString();
             } else {
-                LOGGER.debug("getResponseCode: " + connection.getResponseCode());
-                LOGGER.debug("getResponseCode: " + connection.getResponseMessage());
-
+                LOGGER.debug("getResponseCode: " + connection.getResponseCode() + " getResponseMessage: " + connection.getResponseMessage());
             }
 
         } catch (Exception e) {

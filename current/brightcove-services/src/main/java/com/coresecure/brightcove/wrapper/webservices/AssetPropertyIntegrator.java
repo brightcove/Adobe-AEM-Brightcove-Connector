@@ -32,6 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.*;
+import javax.jcr.query.Query;
+import javax.jcr.query.QueryManager;
+import javax.jcr.query.QueryResult;
 import javax.servlet.ServletException;
 import java.io.*;
 import java.net.MalformedURLException;
@@ -114,16 +117,25 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
             String selectedaccount = AccountUtil.getSelectedAccount(req);
             LOGGER.trace(selectedaccount);
             Set<String> services = new TreeSet<String>();
-            if (selectedaccount != null && !selectedaccount.isEmpty()) {
+
+            //IF THERE EXISTS A VALID ACCOUNT VALUE - GET CONFIGURATION OF THAT ACCOUNT
+            if (selectedaccount != null && !selectedaccount.isEmpty())
+            {
                 ConfigurationService cs = cg.getConfigurationService(selectedaccount);
-                if (cs != null) {
+                if (cs != null)
+                {
                     services.add(selectedaccount);
-                } else {
+                }
+                else
+                {
                     services = cg.getAvailableServices(req);
                 }
-            } else {
+            }
+            else
+            {
                 services = cg.getAvailableServices(req);
             }
+
             for(String requestedAccount: services) {
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
 
@@ -162,30 +174,23 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
                     //LOGGER.info(fields.toString());
                     //LOGGER.trace("FIELDS INCLUDES DESCRIPTION?: " + fields.toString().contains("description"));
-                    if (is_authorized) {
-                        //FUNCTION CALL FOR THE JSON
-
+                    if (is_authorized)
+                    {
 
                         //get total  % a split = n, loop for n - TODO: PAGINATION? I THINK IS ALREADY HANDLED BY DEFAULT BRC
 
-
-
-
-
-
-
-
-
-
                         try {
                             int startOffset = 0;
-                            JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0));
+                            JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0)); //QUERY<------
 
                             JSONArray itemsArr = (JSONArray) jsonObject.getJSONArray("items");
 
                                 Boolean videoExists;
                                 //FOR EACH VIDEO IN THE ITEMS ARRAY
-                                for (int i = 0; i < itemsArr.length(); i++) {
+                                for (int i = 0; i < itemsArr.length(); i++)
+                                {
+                                    //FOR EACH VIDEO COMING BACK FROM THE QUERY
+
                                     JSONObject innerObj = itemsArr.getJSONObject(i);
                                     //EACH VIDEO
 
@@ -200,13 +205,18 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                     //Boolean condition_one = innerObj.has("name") && !innerObj.get("name").equals(null);
                                     Boolean condition_two = innerObj.has("id") && !innerObj.get("id").equals(null);
 
+
+                                    //IF VIDEO COMING INTO DAM (1) IS ACTIVE (2) HAS AN ID
                                     //TODO - Fix redundant condition three
                                     if (active && condition_two) {
-                                        String original_filename = innerObj.getString("name");
-
+                                        String name = innerObj.getString("name");
                                         String brightcove_filename = innerObj.getString("id")+ ".mp4";//original_filename + "__" + innerObj.getString("id")+ ".mp4";
-                                        LOGGER.trace("###NAME###>>" + brightcove_filename);
+                                        String original_filename = innerObj.getString("original_filename") !=  null ? innerObj.getString("original_filename").replaceAll("%20", " ") : null ;
+
+                                        LOGGER.trace("###BC_FILENAME###>>" + brightcove_filename);
+                                        LOGGER.trace("###NAME###>>" + name);
                                         LOGGER.trace("###ACTIVE###>>" + active);
+                                        LOGGER.trace("###ORIGINAL_NAME###>>" + original_filename);
 
 
                                         Asset newAsset = null;
@@ -216,16 +226,31 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                         //TODO:PRINT STATEMENT - DEBUGGER
                                         //LOGGER.trace(innerObj.toString(1));
 
-                                        if (src != null && !src.equals("")) {
+                                        if (src != null && !src.equals(""))
+                                        {
                                             String localpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(brightcove_filename);
                                             String oldpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount + "/").concat(original_filename);
+
+
+                                            //LOGGER.trace("####REQUEST GETS: " + get_response);
+
+                                            //TODO: Wrong place?
+                                            //HERE I COULD PUT A REQUEST TO SEARCH IN THIS LOCATION BY VIDEOID
+
 
                                             LOGGER.trace("CONFPATH : " + confPath);
                                             LOGGER.trace(">>PATH: " + localpath);
                                             LOGGER.trace(">>ORIGINAL: " + oldpath);
-                                            //LOGGER.trace("####REQUEST GETS: " + get_response);
+
+
+
                                             newAsset = resourceResolver.getResource(oldpath) != null ? resourceResolver.getResource(oldpath).adaptTo(Asset.class) : resourceResolver.getResource(localpath) != null ? resourceResolver.getResource(localpath).adaptTo(Asset.class) : null;
-                                            if (newAsset == null) {
+
+                                            LOGGER.trace(">>CHOSEN ASSET: " + newAsset.getPath());
+
+
+                                            if (newAsset == null)
+                                            {
                                                 //IF NEW ASSET IS NULL MEANS THAT - Resource At 'localpath'
 
 
@@ -278,6 +303,29 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
                                                 //TODO:Check if asset exists
 
+                                                //HERE WE CAN CHECK TO POINT THE RIGHT ASSET BEFORE IT UPDATES
+
+
+                                                //HERE I COULD PUT A REQUEST TO SEARCH IN THIS LOCATION BY VIDEOID
+
+
+//                                                LOGGER.trace("###MATCHING QUERY");
+//
+//                                                //Building and Executing the Query
+//                                                QueryManager queryManager = session.getWorkspace().getQueryManager();
+//                                                String target_id = innerObj.getString("id");
+//                                                String sqlStatement = "SELECT * FROM [nt:base]  AS s WHERE ISDESCENDANTNODE([/content/dam/brightcove_assets/"+requestedAccount+"]) AND [brc_id] IS NOT NULL AND [brc_id] = \'"+target_id+"\'";
+//                                                Query query = queryManager.createQuery(sqlStatement, "JCR-SQL2");
+//                                                QueryResult result = query.execute();
+
+//                                                //Doing Something with the nodes returned.. Printing the paths
+//                                                NodeIterator iterator = result.getNodes();
+//                                                while (iterator.hasNext())
+//                                                {
+//                                                    LOGGER.trace("FOUND : " +((Node) iterator.next()).getPath());
+//                                                }
+
+
                                                 newAsset = assetManager.createAsset(localpath, binary, mime_type, true);
                                                 resourceResolver.commit();
 
@@ -301,7 +349,9 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                                     SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
                                                     Date remote_date = sdf.parse(innerObj.getString("updated_at"));
 
-                                                    if (local_mod_date.compareTo(remote_date) < 0) {
+                                                    //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
+                                                    if (local_mod_date.compareTo(remote_date) < 0)
+                                                    {
                                                         LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
                                                         LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
                                                         LOGGER.trace(local_mod_date + " < " + remote_date);
@@ -358,13 +408,16 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
 
                                         LOGGER.trace(">>>>>>>>>>>>>>>>>>>>>");
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         LOGGER.trace("Video does not have correct initialization (missing core properties) - skipping: " + innerObj.toString(1));
                                     }
                                     //MAIN VIDEO LOOP
                                 }
 
-                                LOGGER.debug("### " + itemsArr.toString(1));
+                                //LOGGER.debug("### " + itemsArr.toString(1));
+                                LOGGER.trace("END OF TRAVERSAL");
 
 
                         } catch (JSONException j) {
@@ -419,8 +472,13 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 ModifiableValueMap map = metadataRes.adaptTo(ModifiableValueMap.class);
 
 
+                //DO CHECK FOR brc_lastsync being null <-
+
+
                 long current_time_millisec = new java.util.Date().getTime();
                 map.put("brc_lastsync", current_time_millisec);
+
+
 
 
 
@@ -664,4 +722,18 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
         }
 
     }
+
+
+//    private Asset checkExists(String requestedAccount, String videoID) throws JSONException, RepositoryException, PersistenceException
+//    {
+//
+//
+//
+//
+//        return newAsset;
+//    }
+
+
+
+
 }

@@ -6,6 +6,7 @@ package com.coresecure.brightcove.wrapper.webservices;
 
 
 
+import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.enums.GeoFilterCodeEnum;
 import com.coresecure.brightcove.wrapper.objects.Geo;
 import com.coresecure.brightcove.wrapper.objects.Schedule;
@@ -19,10 +20,13 @@ import com.day.cq.dam.api.Rendition;
 import com.day.cq.replication.*;
 import org.apache.felix.scr.annotations.*;
 import com.coresecure.brightcove.wrapper.objects.Video;
+import org.apache.felix.scr.annotations.Property;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.resource.*;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.commons.osgi.PropertiesUtil;
@@ -30,10 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.coresecure.brightcove.wrapper.objects.RelatedLink;
 
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
+import javax.jcr.*;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -47,7 +48,7 @@ public class BrcReplicationHandler implements TransportHandler {
     private static Map<String, Object> properties;
 
     private static final String DEFAULT_BRIGHTCOVE_PROTOCOL = "brightcove://";
-    @Property(label = "Azure Replication Protocol", value = DEFAULT_BRIGHTCOVE_PROTOCOL)
+    @Property(label = "Brightcove Replication Protocol", value = DEFAULT_BRIGHTCOVE_PROTOCOL)
     public static final String BRIGHTCOVE_PROTOCOL = "brightcove_protocol";
 
 
@@ -64,7 +65,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
 
 
-            @Reference
+    @Reference
     ResourceResolverFactory resourceResolverFactory;
 
     ReplicationLog replicationLog = null;
@@ -227,8 +228,11 @@ public class BrcReplicationHandler implements TransportHandler {
                                     } else {
                                         LOGGER.debug("Not authorized");
                                     }
-                                } else {
-                                    LOGGER.debug("Not Brightcove");
+                                }
+                                else
+                                {
+
+                                    LOGGER.debug("Not Brightcove - Asset Is Outside the Configuration Scope");
                                     return ReplicationResult.OK;
                                 }
                             } else {
@@ -335,7 +339,7 @@ public class BrcReplicationHandler implements TransportHandler {
         Long jcr_lastmod = _asset.getLastModified();
         //String brc_lastsync = _asset.getMetadataValue("brc_lastsync");
 
-        Video video = createVideo(path, _asset, "ACTIVE");
+        Video video = createVideo(path, _asset, "ACTIVE", serviceUtil);
 
 
 
@@ -438,7 +442,7 @@ public class BrcReplicationHandler implements TransportHandler {
         replicationLog.info("DEACTIVATING >> "+_asset.getName() +" ");
         String path = _asset.getPath();
 
-        Video video = createVideo(path, _asset, "INACTIVE");
+        Video video = createVideo(path, _asset,"INACTIVE", serviceUtil);
 
         LOGGER.trace("VIDEO GOING TO API CALL>>>>>>>"+video.toString());
 
@@ -488,7 +492,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
 
 
-    private Video createVideo(String request, Asset asset, String aState)
+    private Video createVideo(String request, Asset asset, String aState, ServiceUtil serviceUtil)
     {
         LOGGER.trace("VIDEO CREATION CALLED FOR"  + asset.getName() + " req? : " + request);
 
@@ -567,11 +571,40 @@ public class BrcReplicationHandler implements TransportHandler {
 
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
-        String name = map.get("dc:title", "");
+        String name = map.get("dc:title", asset.getName());
         String id = map.get("brc_id", null);
         String referenceId = map.get("brc_reference_id", "");
         String shortDescription = map.get("brc_description","");
         String longDescription = map.get("brc_long_description","");
+
+
+        Map<String, Object> custom_fields = new HashMap();
+
+        LOGGER.trace("###CUSTOM NODEMAP###");
+        LOGGER.trace(custom_node_map.toString());
+
+
+        try
+        {
+            JSONObject custom_fields_obj = serviceUtil.getCustomFields();
+            JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
+            for(int z = 0 ; z < custom_fields_arr.length() ; z ++ )
+            {
+                JSONObject current = custom_fields_arr.getJSONObject(z);
+                custom_fields.put( current.getString("id"), custom_node_map.get(current.getString("id"),""));
+            }
+
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("REPO EXCEPTION " + e);
+        }
+
+
+        //economics enum initialization
+        EconomicsEnum economics = EconomicsEnum.valueOf(map.get("brc_economics", "AD_SUPPORTED"));
+
+
 
         //ININTIALIZING WRAPPER OBJECTS
 
@@ -592,7 +625,6 @@ public class BrcReplicationHandler implements TransportHandler {
         LOGGER.trace("schedule "+schedule);
         LOGGER.trace("complete "+complete);
         LOGGER.trace("link "+alink);
-        LOGGER.trace(">>>>>>>>>>///>>>>>>>>>>");
 
         Video video;
         //TODO: CONSIDER PUTTING AN IF NO ID = NO ACTION UNLESS NEW VIDEO CREATION
@@ -608,8 +640,13 @@ public class BrcReplicationHandler implements TransportHandler {
                     geo,
                     schedule,
                     complete,
-                    alink
+                    alink,
+                    custom_fields,
+                    economics
             );
+        LOGGER.trace("Video "+video.toString());
+
+        LOGGER.trace(">>>>>>>>>>///>>>>>>>>>>");
 
         return video;
     }
