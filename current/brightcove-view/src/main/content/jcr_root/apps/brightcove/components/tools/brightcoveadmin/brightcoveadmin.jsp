@@ -85,6 +85,10 @@ permission to convey the resulting work.
 %><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">
 <html>
 
+
+<%--TODO:REMOVE--%>
+<%--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">--%>
+
 <head>
     <meta http-equiv="Content-Type" content="text/html; utf-8"/>
 
@@ -346,11 +350,16 @@ permission to convey the resulting work.
                     <br/>Reference ID:
                     <div id="divMeta.referenceId"></div>
                     <br/>
-                    <center>
-                        <%--<button id="bmetaEdit" onClick="extMetaEdit()" style="display:block">Edit</button>--%>
-                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload Audio Track</button>
+
+
+                    <%--Upload text track / Delete Track--%>
+                    <center id="trackarea">
+                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload Text Track</button>
+                        <br/>
+                        <%--<span>Click Below to Remove Text Track</span><br>--%>
+                        <div id="divMeta.text_tracks">
+                        </div>
                     </center>
-                    <br>
                 </td>
             </tr>
         </table>
