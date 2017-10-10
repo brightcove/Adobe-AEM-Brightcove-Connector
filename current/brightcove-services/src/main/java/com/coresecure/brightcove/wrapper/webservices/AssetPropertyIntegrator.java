@@ -39,6 +39,7 @@ import javax.servlet.ServletException;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -58,11 +59,12 @@ import java.util.*;
         @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/dataload"})
 })
 public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
+    private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AssetPropertyIntegrator.class);
 
-    private static final String[] fields = {"name", "created_at"  , "duration", "complete", "id", "account_id" ,"description" , "link", "tags","long_description", "reference_id", "economics", "updated_at" , "schedule", "state", "geo" , "custom_fields","text_tracks" , "images"};
+    private static final String[] fields = {"name", "created_at"  , "duration", "complete", "id", "account_id" ,"description" , "link", "tags","long_description", "reference_id", "economics", "updated_at" , "schedule", "state", "geo" , "custom_fields","text_tracks" , "images" ,"projection"};
 
     @Reference
     MimeTypeService mType;
@@ -246,9 +248,6 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
                                             newAsset = resourceResolver.getResource(oldpath) != null ? resourceResolver.getResource(oldpath).adaptTo(Asset.class) : resourceResolver.getResource(localpath) != null ? resourceResolver.getResource(localpath).adaptTo(Asset.class) : null;
 
-                                            LOGGER.trace(">>CHOSEN ASSET: " + newAsset.getPath());
-
-
                                             if (newAsset == null)
                                             {
                                                 //IF NEW ASSET IS NULL MEANS THAT - Resource At 'localpath'
@@ -345,7 +344,6 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
 
                                                     //LOGGER.trace("PRE-PARSE>>>>>>>" + innerObj.getString("updated_at") );
-                                                    final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
                                                     SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
                                                     Date remote_date = sdf.parse(innerObj.getString("updated_at"));
 
@@ -470,13 +468,13 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 Resource assetRes = newAsset.adaptTo(Resource.class);
                 Resource metadataRes = assetRes.getChild("jcr:content/metadata");
                 ModifiableValueMap map = metadataRes.adaptTo(ModifiableValueMap.class);
+                ModifiableValueMap assetmap = assetRes.getChild("jcr:content").adaptTo(ModifiableValueMap.class);
+
 
 
                 //DO CHECK FOR brc_lastsync being null <-
 
 
-                long current_time_millisec = new java.util.Date().getTime();
-                map.put("brc_lastsync", current_time_millisec);
 
 
 
@@ -488,9 +486,14 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 map.put("cq:tags", tags.toArray());
 
                 for (String x : fields) {
-                    LOGGER.trace("[X] {} " + innerObj.getString(x), x);
 
-                    if (innerObj.has(x) && !innerObj.get(x).equals(null)) {
+                    if(innerObj.has(x)) {
+                        LOGGER.trace("[X] {} " + innerObj.getString(x), x);
+                    }
+
+                    //IF INNER OBJECT HAS CURRENT KEY and OBJECT IS NOT NULL
+                    if (innerObj.has(x))// && !innerObj.get(x).equals(null))
+                    {
                         String key = x;
 
                         //                    if (x.equals("images"))
@@ -584,30 +587,33 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 //                                LOGGER.trace("***********/TEXT_TRACK***********");
 //                            }
                             if (x.equals("tags")) {
-                                for (int cnt = 0; cnt < objArray.length(); cnt++) {
+
+
+                                LOGGER.trace("TAG ARRAY "+objArray.toString(1));
+
+                                for (int cnt = 0; cnt < objArray.length(); cnt++)
+                                {
                                     String tagValue = objArray.getString(cnt);
+
+                                    String tagKey = tagValue.replaceAll(": ",":").trim();
+
+
                                     try {
-                                        if (tagManager.canCreateTag(tagValue)) {
+                                        if (tagManager.canCreateTag(tagKey)) {
 
-                                            Tag tag = tagManager.createTag(tagValue.replaceAll(": ",":").trim(), tagValue, "");
-
-
-                                            //TODO: We handled this trim as above, to
-
-
-
-
+                                            Tag tag = tagManager.createTag(tagKey, tagValue, "");
 
                                             //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
                                             resourceResolver.commit();
-                                            LOGGER.trace("t> " + tag.toString());
+                                            LOGGER.trace("tag created > " + tagValue);
                                             //tagManager.setTags(assetRes, new Tag[]{tag}, true);
                                         } else {
                                             //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
                                             //tagManager.setTags(assetRes, tags, true);
-                                            LOGGER.trace("TAG CANT BE CREATED or REPLACED");
+                                            LOGGER.error("tag create failed [exists] > added >  ", tagValue);
+
                                         }
-                                        tags.add(tagValue.trim());
+                                        tags.add(tagKey);
                                     } catch (InvalidTagFormatException e) {
                                         LOGGER.error("Invalid Tag Format", e);
                                     }
@@ -617,44 +623,100 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                             } else {
                                 map.put(key, objArray.join("#@#").split("#@#"));
                             }
-                        } else if (obj instanceof JSONObject) {
+                        }
+                        else if (obj instanceof JSONObject)
+                        {
                             JSONObject objObject = (JSONObject) obj;
 
 
-                            if (x.equals("images"))
+
+
+
+                            if (x.equals("images")) {
+                                if (objObject != null) {
+                                    LOGGER.trace(objObject.toString(1));
+                                    if (objObject.has("poster")) {
+                                        JSONObject images_poster_obj = objObject.getJSONObject("poster");
+                                        String src = images_poster_obj.getString("src");
+                                        //DO GET FOR RENDITION -> TO ASSET "brc_poster"
+                                        URL srcURL = new URL(src);
+                                        InputStream ris = srcURL.openStream();
+                                        //Map<String,Object> rendition_map = new HashMap<String,Object>();
+                                        newAsset.addRendition("brc_poster.png", ris, "image/jpeg");
+                                    }
+
+                                    if (objObject.has("thumbnail")) {
+                                        JSONObject images_poster_obj = objObject.getJSONObject("thumbnail");
+                                        String src = images_poster_obj.getString("src");
+                                        //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
+
+                                        InputStream ris = new URL(src).openStream();
+                                        //Map<String,Object> rendition_map = new HashMap<String,Object>();
+                                        newAsset.addRendition("brc_thumbnail.png", ris, "image/jpeg");
+
+                                        ris = new URL(src).openStream();//<= FIXES DISMISSED InputStream*
+                                        newAsset.addRendition("original", ris, "image/jpeg");
+
+
+                                    }
+                                } else {
+                                    newAsset.removeRendition("brc_poster.png");
+                                    newAsset.removeRendition("brc_thumbnail.png");
+                                }
+                            }
+                            else if (x.equals("schedule"))
+                            {
+                                if (objObject != null) {
+
+
+                                    LOGGER.trace("PRE-PARSE>>>>>>>");
+                                    SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+
+
+                                    String starts_at = objObject.getString("starts_at");
+                                    if (starts_at != null && !starts_at.equals("null")) {
+                                        assetmap.put("onTime", starts_at);
+                                    } else {
+                                        if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
+                                    }
+                                    String ends_at = objObject.getString("ends_at");
+                                    if (ends_at != null && !ends_at.equals("null")) {
+                                        assetmap.put("offTime", ends_at);
+                                    } else {
+                                        if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
+                                    }
+                                } else {
+                                    LOGGER.trace("PRE-REMOVE>>>>>>>");
+                                    if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
+                                    if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
+                                }
+                            }
+                            else if (x.equals("link"))
                             {
 
-                                LOGGER.trace("**********IMAGES*******");
-                                LOGGER.trace(objObject.toString(1));
-                                if (objObject.has("poster"))
+                                //"link":{"text":"Sample related link","url":"www.brightcove.com"},"
+                                if (objObject != null)
                                 {
-                                    JSONObject images_poster_obj = objObject.getJSONObject("poster");
-                                    String src = images_poster_obj.getString("src");
-                                    //DO GET FOR RENDITION -> TO ASSET "brc_poster"
-                                    URL srcURL = new URL(src);
-                                    InputStream ris = srcURL.openStream();
-                                    //Map<String,Object> rendition_map = new HashMap<String,Object>();
-                                    newAsset.addRendition("brc_poster.png",ris,"image/jpeg");
+                                    String link_url = objObject.getString("url");
+                                    if (link_url != null && !link_url.equals("null")) {
+                                        map.put("brc_link_url", link_url);
+                                    } else {
+                                        if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
+                                    }
+                                    String link_text = objObject.getString("text");
+                                    if (link_text != null && !link_text.equals("null")) {
+                                        map.put("brc_link_text", link_text);
+                                    } else {
+                                        if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
+                                    }
                                 }
-
-                                if (objObject.has("thumbnail"))
+                                else
                                 {
-                                    JSONObject images_poster_obj = objObject.getJSONObject("thumbnail");
-                                    String src = images_poster_obj.getString("src");
-                                    //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
-
-                                    InputStream ris = new URL(src).openStream();
-                                    //Map<String,Object> rendition_map = new HashMap<String,Object>();
-                                    newAsset.addRendition("brc_thumbnail.png",ris,"image/jpeg");
-
-                                    ris = new URL(src).openStream();//<= FIXES DISMISSED InputStream*
-                                    newAsset.addRendition("original",ris,"image/jpeg");
-
-
+                                    if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
+                                    if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
                                 }
-
-                                LOGGER.trace("**********///IMAGES*******");
-                            } else {
+                            }
+                            else {
 
 
                                 //GENERIC SUBMODULE CASES
@@ -680,7 +742,9 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                 //map.put(key, objObject.get(key));
 
                             }
-                        } else {
+                        }
+                        else //NOT ARRAY NOR OBJECT
+                        {
                                     //DURATION SETTING AND CHECK
                                     try {
                                         //Check format of brc_duration
@@ -693,16 +757,44 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                             obj = String.format("%02d:%02d:%02d", input/3600,(input % 3600) / 60,(input % 3600) % 60);
                                             //LOGGER.trace("*!*!*! is now :" + obj.toString());
                                         }
-                                        }catch (Exception e)
-                                        {
-                                            LOGGER.error("*!*!*! Duration Check Error:!", e);
-                                        }
+                                    }catch (Exception e)
+                                    {
+                                        LOGGER.error("*!*!*! Duration Check Error:!", e);
+                                    }
                                     //END DURATION CHECK AND SET
+                                if (obj != null && !obj.equals(null) && !obj.equals("null")) {
+                                    map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
+                                } else {
 
-                            map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
+                                     //TODO: Improvie this check, this is the handle for null object / string
+
+
+                                    if (x.equals("images")) {
+                                        newAsset.removeRendition("brc_poster.png");
+                                        newAsset.removeRendition("brc_thumbnail.png");
+                                    } else if (x.equals("schedule"))
+                                    {
+                                        if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
+                                        if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
+                                    } else if (x.equals("link"))
+                                    {
+                                        if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
+                                        if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
+                                    }
+                                    else {
+                                        if (map.containsKey(key)) map.remove(key);
+                                    }
+                                }
                         }
                     }
+                    else
+                    {
+                        LOGGER.trace("##HAS KEY BUT OBJECT IT LEADS TO IS NULL!");
+                        LOGGER.trace("## HAS OBJECT WITH KEY : " + x +" ? "+innerObj.has(x) + " isnull? : "+ innerObj.get(x).equals(null));
+                    }
                 }
+                long current_time_millisec = new java.util.Date().getTime();
+                map.put("brc_lastsync", current_time_millisec);
                 resourceResolver.commit();
             } else {
                 LOGGER.error("Asset creation failed");

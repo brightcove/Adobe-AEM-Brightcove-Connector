@@ -456,7 +456,8 @@ div.hLine {
   width: 100%;
 }
 
-#uploadtrackbutton {
+#uploadtrackbutton,#text_track {
+  list-style: none;
   display: inline-block;
   *display: inline;
   padding: 5px 20px;
@@ -553,6 +554,7 @@ div.hLine {
 #newplstButton,
 #syncdbutton,
 #uploadtrackbutton,
+#text_track,
 #searchBut,
 .btn,
 .btn:hover,

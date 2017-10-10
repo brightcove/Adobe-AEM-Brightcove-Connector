@@ -79,11 +79,20 @@
             </div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/url" value="<%=map.get("brc_link/url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_url" value="<%=map.get("brc_link_url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link/text" value="<%=map.get("brc_link/text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_text" value="<%=map.get("brc_link_text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
+
+        <div  class="coral-Form-fieldwrapper foundation-field-edit">
+            <label class="coral-Form-fieldlabel">Projection</label>
+            <coral-select class="coral-Form-field" data-metaType="dropdown" name="./jcr:content/metadata/brc_projection" data-foundation-validation="" data-validation="" >
+                <coral-select-item <%="".equals(map.get("brc_projection","")) ? "selected='selected'" : ""%> value=""></coral-select-item>
+                <coral-select-item <%="equirectangular".equals(map.get("brc_projection","EMPTY")) ? "selected='selected'" : ""%> value="equirectangular">360 Degree</coral-select-item>
+            </coral-select>
+        </div>
+
     </div>
 
 

@@ -8,8 +8,7 @@ package com.coresecure.brightcove.wrapper.webservices;
 
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.enums.GeoFilterCodeEnum;
-import com.coresecure.brightcove.wrapper.objects.Geo;
-import com.coresecure.brightcove.wrapper.objects.Schedule;
+import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
@@ -19,7 +18,6 @@ import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.Rendition;
 import com.day.cq.replication.*;
 import org.apache.felix.scr.annotations.*;
-import com.coresecure.brightcove.wrapper.objects.Video;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
@@ -32,17 +30,21 @@ import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.coresecure.brightcove.wrapper.objects.RelatedLink;
 
 import javax.jcr.*;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service(TransportHandler.class)
 @Component(label = "Brightcove: Replication Agents", immediate = true, metatype = true)
 public class BrcReplicationHandler implements TransportHandler {
+    private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+
+
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcReplicationHandler.class);
     /** Protocol for replication agent transport URI that triggers this transport handler. */
     private static Map<String, Object> properties;
@@ -374,11 +376,19 @@ public class BrcReplicationHandler implements TransportHandler {
                     //LOGGER.trace("API-RESP >>" + api_resp.toString(1));
                     boolean sent = api_resp.getBoolean("sent");
                     if (sent) {
+                        brc_lastsync_map.put("brc_id", api_resp.getString("videoid"));
+
+                        LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
+                        updateRenditions( _asset, account_id, video);
+
+                        //WOULD NEW ASSET HAVE RENDITIONS TO UPDATE?
+
+
+
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> " + _asset.getPath());
                         result = ReplicationResult.OK;
                         long current_time_millisec = new java.util.Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
-                        brc_lastsync_map.put("brc_id", api_resp.getString("videoid"));
                         //rr.commit()?
                     } else {
                         replicationLog.error("BC: ACTIVATION FAILED >> " + _asset.getName());
@@ -408,6 +418,13 @@ public class BrcReplicationHandler implements TransportHandler {
                     boolean sent = api_resp.getBoolean("sent");
                     if (sent)
                     {
+
+
+                        //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
+                        LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
+                        updateRenditions( _asset, account_id, video);
+
+
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> "+_asset.getPath());
                         long current_time_millisec = new java.util.Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
@@ -423,9 +440,127 @@ public class BrcReplicationHandler implements TransportHandler {
                 {
                     result =  new ReplicationResult(false, 0, "Replication failed: "+e.getMessage());
                 }
+
+
             }
         return result;
     }
+
+
+
+    private boolean updateRenditions(Asset _asset, String account_id , Video currentVideo) throws JSONException
+    {
+        boolean result = false;
+        //Asset asset = _asset; implied
+        Long asset_lastmod = _asset.getLastModified();
+        Resource metadataRes = _asset.adaptTo(Resource.class).getChild("jcr:content/metadata");
+        ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
+        Long brc_lastsync_time = Long.parseLong(brc_lastsync_map.get("brc_lastsync","0"));
+
+        ServiceUtil serviceUtil = new ServiceUtil(account_id);
+
+        Rendition poster_rendition = _asset.getRendition("brc_poster.png");
+        Rendition thumb_rendition = _asset.getRendition("brc_thumbnail.png");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+        Images images_obj = new Images();
+
+        com.coresecure.brightcove.wrapper.BrightcoveAPI brAPI = new com.coresecure.brightcove.wrapper.BrightcoveAPI(cs.getClientID(), cs.getClientSecret(), account_id);
+
+        if (poster_rendition != null) {
+
+            ValueMap poster_map = poster_rendition.getProperties();
+            String poster_lastmod = poster_map.get("jcr:lastModified", "");
+            String poster_lastmod_time = poster_map.get("jcr:lastModified","0");
+            LOGGER.trace("POSTER RENDITION LASTMOD: " + poster_lastmod);
+
+            Date poster_d = new Date();
+            try {
+                poster_d = sdf.parse(poster_lastmod_time);
+                LOGGER.trace("FORMATTED POSTER LASMOD: "  + poster_d.getTime());
+            }
+            catch (ParseException e)
+            {
+                LOGGER.error("ERROR PARSING DATE !");
+                replicationLog.error("ERROR PARSING DATE !");
+                LOGGER.trace("UNFORMATTED POSTER LASTMOD: "  + poster_lastmod_time);
+
+            }
+            if(poster_d.getTime() > brc_lastsync_time)
+            {
+                LOGGER.trace("UPLOADING POSTER");
+                //CHECK FOR Null BRC _ ID?
+                InputStream poster_rendition_is = _asset.getRendition("brc_poster.png") != null ? _asset.getRendition("brc_poster.png").getStream() : null;
+                JSONObject s3_url_resp_poster = serviceUtil.createAssetS3(currentVideo.id,"brc_poster.png",poster_rendition_is);
+
+                LOGGER.trace("S3RESP : " + s3_url_resp_poster);
+                LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
+                //POSTER
+                if (s3_url_resp_poster != null && s3_url_resp_poster.getBoolean("sent"))
+                {
+                    //IF SUCCESS - PUT
+                    Poster poster = new Poster(s3_url_resp_poster.getString("signed_url"));
+                    images_obj.poster = poster;
+                }
+            }
+
+        }
+        if (thumb_rendition != null) {
+            String thumbnail_lastmod = thumb_rendition.getValueMap().get("jcr:lastModified", "");
+
+            LOGGER.trace("ASSET LASTMOD: " + asset_lastmod);
+            LOGGER.trace("THUMBNAIL RENDITION LASTMOD: " + thumbnail_lastmod);
+            ValueMap thumbnail_map = thumb_rendition.getValueMap(); //RETURNED NULL EACH TIME
+
+
+            String thumbnail_lastmod_time = thumbnail_map.get("jcr:lastModified", "");
+            Date thumb_d = new Date();
+            try {
+
+
+                thumb_d = sdf.parse(thumbnail_lastmod_time);
+                LOGGER.trace("UNFORMATTED THUMBNAIL LASMOD: " + thumbnail_lastmod_time);
+                LOGGER.trace("DATE COMPARISON BLOCK");
+                LOGGER.trace("ASSET  LASTMOD: " + asset_lastmod);
+                LOGGER.trace("BRC LAST SYNC : " + brc_lastsync_time);
+                LOGGER.trace("FORMATTED THUMBNAIL LASTMOD: " + thumb_d.getTime());
+            } catch (ParseException e) {
+                LOGGER.error("ERROR PARSING DATE !");
+                replicationLog.error("ERROR PARSING DATE !");
+
+            }
+            if (thumb_d.getTime() > brc_lastsync_time) {
+                LOGGER.trace("UPLOADING THUMBNAIL");
+                InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png") != null ? _asset.getRendition("brc_thumbnail.png").getStream() : null;
+                JSONObject s3_url_resp_thumbnail = serviceUtil.createAssetS3(currentVideo.id, "brc_thumbnail.png", thumbnail_rendition);
+
+                if (s3_url_resp_thumbnail != null && s3_url_resp_thumbnail.getBoolean("sent")) {
+                    //IF SUCCESS - PUT
+                    Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString("signed_url"));
+                    images_obj.thumbnail = thumbnail;
+                }
+            }
+        }
+
+        if (images_obj.poster != null || images_obj.thumbnail != null) {
+
+            LOGGER.trace("IMAGES OBJECT : " + images_obj.toString());
+
+            JSONObject response = brAPI.cms.uploadInjest(currentVideo.id, images_obj.toJSON());
+
+            LOGGER.trace("response: " + response.toString());
+
+            JSONObject api_resp = new JSONObject(response.getString("response"));
+            if (api_resp.has("id")) {
+                result = true;
+            }
+        } else {
+            result = true;
+        }
+
+        return result;
+    }
+
+
 
     private ReplicationResult deactivateVideo(Asset _asset, String account_id)
     {
@@ -455,7 +590,7 @@ public class BrcReplicationHandler implements TransportHandler {
             LOGGER.trace("DEACTIVATION");
             LOGGER.trace(video.toString());
             JSONObject update_resp = serviceUtil.updateVideo(video);
-            boolean sent = true ;//update_resp.getBoolean("sent");
+            boolean sent = update_resp.getBoolean("sent");
             if (sent)
             {
                 replicationLog.info("BC: ACTIVATION SUCCESSFUL >> "+_asset.getPath());
@@ -497,6 +632,8 @@ public class BrcReplicationHandler implements TransportHandler {
         LOGGER.trace("VIDEO CREATION CALLED FOR"  + asset.getName() + " req? : " + request);
 
         Resource assetRes = asset.adaptTo(Resource.class);
+        LOGGER.trace("assetRes: " + assetRes.getPath());
+
         Resource metadataRes = assetRes.getChild("jcr:content/metadata");
         //SUB ASSETS
         Resource links_node =  metadataRes.getChild("brc_link") != null ? metadataRes.getChild("brc_link") : null;
@@ -505,34 +642,30 @@ public class BrcReplicationHandler implements TransportHandler {
         Resource custom_node = metadataRes.getChild("brc_custom_fields")!= null ? metadataRes.getChild("brc_custom_fields") : null;
 
         //MAIN MAP
+        ValueMap assetMap = assetRes.getChild("jcr:content").adaptTo(ValueMap.class);
         ValueMap map = metadataRes.adaptTo(ValueMap.class);
 
         //SUBMAPS
-        ValueMap links_node_map = links_node != null ? links_node.adaptTo(ValueMap.class) : null;
+        //ValueMap links_node_map = links_node != null ? links_node.adaptTo(ValueMap.class) : null;
         ValueMap schedule_node_map = schedule_node != null ? schedule_node.adaptTo(ValueMap.class) : null ;
         ValueMap geo_node_map = geo_node !=  null ? geo_node.adaptTo(ValueMap.class) : null;
         ValueMap custom_node_map = custom_node != null ? custom_node.adaptTo(ValueMap.class) : null;
 
         //RELATED LINK
-        String aUrl;
-        String aText;
-        RelatedLink alink = null;
-        if(links_node_map!=null)
-        {
-            aUrl = links_node_map.get("url", "");
-            aText = links_node_map.get("text", "");
-            alink = new RelatedLink(aText, aUrl);
-        }
+        String aUrl = map.get("brc_link_url", null);
+        String aText  = map.get("brc_link_text", null);
+        RelatedLink alink  = new RelatedLink( (aUrl != null ? (aText != null ? aText : "" ) : null),  (aText != null ? (aUrl != null ? aUrl : "" ): null));
 
         //SCHEDULE
-        String sched_start;
-        String sched_ends;
+        SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+
+        Date sched_start = assetMap.get("onTime", Date.class);
+        Date sched_ends  = assetMap.get("offTime", Date.class);
         Schedule schedule = null;
-        if(schedule_node_map!=null)
+        if(sched_start!=null || sched_ends != null)
         {
-            sched_start = schedule_node_map.get("starts_at","");
-            sched_ends = schedule_node_map.get("ends_at","");
-            schedule = new Schedule(sched_start, sched_ends);
+
+            schedule = new Schedule(sdf.format(sched_start), sdf.format(sched_ends) );
         }
 
 
@@ -576,12 +709,12 @@ public class BrcReplicationHandler implements TransportHandler {
         String referenceId = map.get("brc_reference_id", "");
         String shortDescription = map.get("brc_description","");
         String longDescription = map.get("brc_long_description","");
+        String projection = "equirectangular".equals(map.get("brc_projection",""))? "equirectangular" : "";
 
 
         Map<String, Object> custom_fields = new HashMap();
 
         LOGGER.trace("###CUSTOM NODEMAP###");
-        LOGGER.trace(custom_node_map.toString());
 
 
         try
@@ -614,18 +747,6 @@ public class BrcReplicationHandler implements TransportHandler {
 
         // WCMUtils.getKeywords(currentPage, false);
 
-        LOGGER.trace(">>>>>>>>>>///>>>>>>>>>>");
-        LOGGER.trace("VIDEO OBJ INITIALIZATION");
-        LOGGER.trace("name "+name);
-        LOGGER.trace("referenceId "+referenceId);
-        LOGGER.trace("shortDescription "+shortDescription);
-        LOGGER.trace("longDescription "+longDescription);
-        LOGGER.trace("tags "+tags);
-        LOGGER.trace("geo "+geo);
-        LOGGER.trace("schedule "+schedule);
-        LOGGER.trace("complete "+complete);
-        LOGGER.trace("link "+alink);
-
         Video video;
         //TODO: CONSIDER PUTTING AN IF NO ID = NO ACTION UNLESS NEW VIDEO CREATION
 
@@ -642,7 +763,8 @@ public class BrcReplicationHandler implements TransportHandler {
                     complete,
                     alink,
                     custom_fields,
-                    economics
+                    economics,
+                    projection
             );
         LOGGER.trace("Video "+video.toString());
 

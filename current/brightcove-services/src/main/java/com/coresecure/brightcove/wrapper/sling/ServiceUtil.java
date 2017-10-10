@@ -483,6 +483,40 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONObject createAssetS3(String newVideoId, String filename, InputStream is){
+        JSONObject result = new JSONObject();
+        try {
+            JSONObject assetIngested = new JSONObject();
+            try {
+                assetIngested = brAPI.cms.getIngestURL(newVideoId, filename);
+                if (assetIngested != null && assetIngested.has("bucket")) {
+                    LOGGER.info("New video id: '" + newVideoId + "'.");
+                    result.put("bucket", assetIngested.get("bucket"));
+                    result.put("videoid",newVideoId);
+                    result.put("object_key", assetIngested.get("object_key"));
+                    result.put("api_request_url", assetIngested.get("api_request_url"));
+                    result.put("signed_url", assetIngested.get("signed_url"));
+                    boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.getString("signed_url")),is);
+                    result.put("sent",sent);
+                } else {
+                    LOGGER.trace("createIngest: "+assetIngested.toString(1));
+                    result.put("error", "createIngest Error");
+                }
+
+            } catch (Exception exIngest) {
+                LOGGER.error("createIngest",exIngest);
+                result.put("error", "createIngest Exception");
+                brAPI.cms.deleteVideo(newVideoId);
+            }
+            LOGGER.trace("result: "+result.toString(1));
+
+        } catch (JSONException e) {
+            LOGGER.error("createAssetS3", e);
+        }
+
+        return result;
+    }
+
 
     //FindAllPlaylists(String readToken, Integer pageSize, Integer pageNumber, SortByTypeEnum sortBy, SortOrderTypeEnum sortOrderType, EnumSet<VideoFieldEnum> videoFields, Set<String> customFields, EnumSet<PlaylistFieldEnum> playlistFields)
     public String getListPlaylistsSideMenu(String limits) {

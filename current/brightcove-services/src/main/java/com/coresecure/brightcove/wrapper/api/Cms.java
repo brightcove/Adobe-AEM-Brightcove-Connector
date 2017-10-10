@@ -165,13 +165,8 @@ public class Cms {
             String targetURL = "/accounts/" + account.getAccount_ID() + "/videos";
             try {
 
-
-
-
-
-
-
-
+                JSONObject videoObj = aVideo.toJSON();
+                videoObj.remove("account_id");
                 String response = account.platform.postAPI(targetURL, aVideo.toJSON().toString(1), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
@@ -223,6 +218,8 @@ public class Cms {
 
                 LOGGER.trace("UPDATE VIDEO DATA OBJECT: " + video.toString(1));
                 video.remove("id");
+                video.remove("account_id");
+
                 String response = account.platform.patchAPI(targetURL, video.toString(1), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
@@ -237,7 +234,7 @@ public class Cms {
     }
 
 
-    public JSONObject uploadInjest(String videoId, JSONObject text_track_payload)
+    public JSONObject uploadInjest(String videoId, JSONObject payload)
     {
         JSONObject json = new JSONObject();
         account.login();
@@ -248,8 +245,8 @@ public class Cms {
             String targetURL = "/accounts/" + account.getAccount_ID() + "/videos/" + videoId + "/ingest-requests";
 
             try {
-            LOGGER.trace("PAYLOAD PROTO>>: " + text_track_payload.toString(1));
-            String response = account.platform.postDIRequest_API(targetURL, text_track_payload.toString(1), headers);
+            LOGGER.trace("PAYLOAD PROTO>>: " + payload.toString(1));
+            String response = account.platform.postDIRequest_API(targetURL, payload.toString(1), headers);
 
             if (response != null && !response.isEmpty()) json.put("response",response);
 
@@ -430,7 +427,7 @@ public class Cms {
 
             try {
                 q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-                String urlParameters = "q=" + q + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+                String urlParameters = "q=" + q + "%20%2Bstate:ACTIVE&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
                 String targetURL = "/accounts/" + account.getAccount_ID() + "/videos";
                 LOGGER.debug("urlParameters: " + urlParameters);
                 String response = account.platform.getAPI(targetURL, urlParameters, headers);

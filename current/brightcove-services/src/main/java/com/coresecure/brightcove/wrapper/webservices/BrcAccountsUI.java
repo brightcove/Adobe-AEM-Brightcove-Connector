@@ -30,10 +30,14 @@ permission to convey the resulting work.
 
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.adobe.granite.ui.components.ds.DataSource;
+import com.adobe.granite.ui.components.ds.SimpleDataSource;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
+import org.apache.commons.collections.KeyValue;
+import org.apache.commons.collections.Transformer;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
@@ -43,7 +47,10 @@ import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.resource.ResourceMetadata;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -58,11 +65,14 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.HashMap;
+import org.apache.commons.collections.iterators.TransformIterator;
+import com.adobe.granite.ui.components.ds.ValueMapResource;
 
 @Service
 @Component
 @Properties(value = {
-        @Property(name = "sling.servlet.resourceTypes", value= {"coresecure/brightcove/accountsUI"})
+        @Property(name = "sling.servlet.resourceTypes", value= {"coresecure/brightcove/accountsUI","coresecure/brightcove/playersUI"})
 })
 public class BrcAccountsUI extends SlingAllMethodsServlet {
 
@@ -73,7 +83,9 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                           final SlingHttpServletResponse response) throws ServletException,
             IOException {
 
-        api(request, response);
+        LOGGER.trace("*POST-requestspath*" + request.getRequestPathInfo().toString());
+
+        routeUIrequest(request, response);
 
 
     }
@@ -82,8 +94,19 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
     @Override
     protected void doGet(final SlingHttpServletRequest request,
                          final SlingHttpServletResponse response) throws ServletException,
-            IOException {
-        api(request, response);
+            IOException
+    {
+
+        LOGGER.trace("*GET-requestspath*" + request.getRequestPathInfo().toString());
+
+
+
+        //IF HEADER = something
+
+        routeUIrequest(request, response);
+
+
+
 
     }
 
@@ -91,11 +114,11 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
     public void api(final SlingHttpServletRequest request,
                     final SlingHttpServletResponse response) throws ServletException,
             IOException {
-        PrintWriter outWriter = response.getWriter();
-        response.setContentType("application/json");
-        JSONObject root = new JSONObject();
+
+
         boolean is_authorized = false;
-        JSONArray accounts = new JSONArray();
+
+        List<JSONObject> accountsList = new ArrayList<JSONObject>();
 
         LOGGER.debug("get account");
         try {
@@ -131,25 +154,64 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                         accountJson.put("value", account);
                         accountJson.put("id", i);
                         i++;
-                        accounts.put(accountJson);
+                        accountsList.add(accountJson);
                     }
                 }
 
-                LOGGER.debug("accounts: " + accounts.toString());
-
-
             } else {
                 LOGGER.debug("not authorized");
-                root.put("error",403);
             }
-            root.put("accounts", accounts);
-            outWriter.write(root.toString(1));
         } catch (JSONException e) {
             LOGGER.error("JSONException", e);
-            outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");
         } catch (RepositoryException e) {
             LOGGER.error("RepositoryException", e);
-            outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");
+        }
+
+
+        DataSource ds = new SimpleDataSource(new TransformIterator(accountsList.iterator(), new Transformer() {
+            public Object transform(Object input) {
+                try {
+                    JSONObject item = (JSONObject) input;
+
+                    ValueMap vm = new ValueMapDecorator(new HashMap<String, Object>());
+                    vm.put("value", item.getString("value"));
+                    vm.put("text", item.getString("text"));
+                    vm.put("id", item.getString("id"));
+
+                    return new ValueMapResource(request.getResourceResolver(), new ResourceMetadata(), "nt:unstructured", vm);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }));
+
+        request.setAttribute(DataSource.class.getName(), ds);
+
+    }
+
+
+
+
+
+    public void  routeUIrequest( final SlingHttpServletRequest request, final SlingHttpServletResponse response)throws ServletException,
+            IOException
+    {
+
+
+        if(request.getResource()!=null && "coresecure/brightcove/accountsUI".equals(request.getResource().getResourceType()))
+        {
+            LOGGER.trace("*accountsUI*" + request.getResource().getResourceType());
+            api(request, response);
+        }
+        else if(request.getResource()!=null && "coresecure/brightcove/playersUI".equals(request.getResource().getResourceType()))
+        {
+            LOGGER.trace("*playersUI*" + request.getResource().getResourceType());
+            api(request, response);
+        }
+        else
+        {
+            LOGGER.trace("*otherRestype*" + request.getResource().getResourceType());
+
         }
 
     }

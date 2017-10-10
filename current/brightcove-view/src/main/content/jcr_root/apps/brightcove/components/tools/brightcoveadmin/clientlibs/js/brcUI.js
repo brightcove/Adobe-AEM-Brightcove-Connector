@@ -38,6 +38,7 @@ permission to convey the resulting work.
 
 //CONFIG
 
+var $ACTIVE_TRACKS;
 var brc_admin = brc_admin || {};
 
 
@@ -378,7 +379,71 @@ function showMetaData(idx) {
     modDate = new Date(v.published_at);
     document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
     document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
+
+
+
+
+    //document.getElementById('divMeta.text_tracks').innerHTML = "<button>" +  v.toString() + "</button>";
+
+
+    $ACTIVE_TRACKS = v.text_tracks!=null ? v.text_tracks : "";
+    var arr = v.text_tracks!=null ? v.text_tracks : "";
+    console.log("SIZE " + arr.length);
+    document.getElementById('divMeta.text_tracks').innerHTML = "";
+
+    if(arr.length>0)
+    {
+        document.getElementById('divMeta.text_tracks').innerHTML = document.getElementById('divMeta.text_tracks').innerHTML + "\<span>Click below to delete a text track\</span>";
+
+        for (var x = 0; x < arr.length; x++) {
+
+            var cur = arr[x];
+
+            // console.log(cur.label);
+            // $("#divMeta.text_tracks").append("<p>"+cur.label+"</p>");
+
+            document.getElementById('divMeta.text_tracks').innerHTML = document.getElementById('divMeta.text_tracks').innerHTML + "\<button id='text_track' class='text_track' data-track-id='" + cur.id + "' onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\" style=\"display:block\">" + cur.label + "\<\/button>";
+
+        }
+    }
+
+
 }
+
+
+function deleteTrack(trackid , videoID)
+{
+    console.log("APILOCATION IS : " + apiLocation);
+    console.log("DELETE TRAC: " +   trackid);
+    console.log("TRACKS ARRAY BEFORE REMOVAL: " +   $ACTIVE_TRACKS);
+    console.log("TRACKS ARRAY LENGTH BEFORE: " +   $ACTIVE_TRACKS.length);
+    //index of track to remove
+
+    $.ajax({
+        url: apiLocation + '.js',
+        type: 'GET',
+        data: { a: "remove_text_track", track : trackid , id : videoID } ,
+        contentType: 'application/json; charset=utf-8',
+        success: function (response)
+        {
+            //alert(response.status);
+            //console.log("success");
+            loadStart();
+            Load(getAllVideosURL());
+        },
+        error: function () {
+            console.log("err");
+            //alert("error");
+        }
+    });
+
+    //console.log("SUBMIT TO API LOCATION: " + apiLocation);
+    //console.log("ATTR: " + trackid + " " + videoID);
+
+
+}
+
+
 
 //open an overlay and show the screen
 function openBox(id) {
@@ -735,202 +800,190 @@ function uploadtrack()
                 type: "select",
                 allowBlank: false,
                 options: [
-                    {"value":"aa","text":"Afar"},
-                    {"value":"ab","text":"Abkhazian"},
-                    {"value":"ae","text":"Avestan"},
-                    {"value":"af","text":"Afrikaans"},
-                    {"value":"ak","text":"Akan"},
-                    {"value":"am","text":"Amharic"},
-                    {"value":"an","text":"Aragonese"},
-                    {"value":"ar","text":"Arabic"},
-                    {"value":"as","text":"Assamese"},
-                    {"value":"av","text":"Avaric"},
-                    {"value":"ay","text":"Aymara"},
-                    {"value":"az","text":"Azerbaijani"},
-                    {"value":"ba","text":"Bashkir"},
-                    {"value":"be","text":"Belarusian"},
-                    {"value":"bg","text":"Bulgarian"},
-                    {"value":"bh","text":"Bihari languages"},
-                    {"value":"bi","text":"Bislama"},
-                    {"value":"bm","text":"Bambara"},
-                    {"value":"bn","text":"Bengali"},
-                    {"value":"bo","text":"Tibetan"},
-                    {"value":"br","text":"Breton"},
-                    {"value":"bs","text":"Bosnian"},
-                    {"value":"ca","text":"Catalan; Valencian"},
-                    {"value":"ce","text":"Chechen"},
-                    {"value":"ch","text":"Chamorro"},
-                    {"value":"co","text":"Corsican"},
-                    {"value":"cr","text":"Cree"},
-                    {"value":"cs","text":"Czech"},
-                    {"value":"cu","text":"Church Slavic; Old Slavonic; Church Slavonic; Old Bulgarian; Old Church Slavonic"},
-                    {"value":"cv","text":"Chuvash"},
-                    {"value":"cy","text":"Welsh"},
-                    {"value":"da","text":"Danish"},
-                    {"value":"de","text":"German"},
-                    {"value":"dv","text":"Divehi; Dhivehi; Maldivian"},
-                    {"value":"dz","text":"Dzongkha"},
-                    {"value":"ee","text":"Ewe"},
-                    {"value":"el","text":"Greek, Modern (1453-)"},
-                    {"value":"en","text":"English"},
-                    {"value":"eo","text":"Esperanto"},
-                    {"value":"es","text":"Spanish; Castilian"},
-                    {"value":"et","text":"Estonian"},
-                    {"value":"eu","text":"Basque"},
-                    {"value":"fa","text":"Persian"},
-                    {"value":"ff","text":"Fulah"},
-                    {"value":"fi","text":"Finnish"},
-                    {"value":"fj","text":"Fijian"},
-                    {"value":"fo","text":"Faroese"},
-                    {"value":"fr","text":"French"},
-                    {"value":"fy","text":"Western Frisian"},
-                    {"value":"ga","text":"Irish"},
-                    {"value":"gd","text":"Gaelic; Scottish Gaelic"},
-                    {"value":"gl","text":"Galician"},
-                    {"value":"gn","text":"Guarani"},
-                    {"value":"gu","text":"Gujarati"},
-                    {"value":"gv","text":"Manx"},
-                    {"value":"ha","text":"Hausa"},
-                    {"value":"he","text":"Hebrew"},
-                    {"value":"hi","text":"Hindi"},
-                    {"value":"ho","text":"Hiri Motu"},
-                    {"value":"hr","text":"Croatian"},
-                    {"value":"ht","text":"Haitian; Haitian Creole"},
-                    {"value":"hu","text":"Hungarian"},
-                    {"value":"hy","text":"Armenian"},
-                    {"value":"hz","text":"Herero"},
-                    {"value":"ia","text":"Interlingua (International Auxiliary Language Association)"},
-                    {"value":"id","text":"Indonesian"},
-                    {"value":"ie","text":"Interlingue; Occidental"},
-                    {"value":"ig","text":"Igbo"},
-                    {"value":"ii","text":"Sichuan Yi; Nuosu"},
-                    {"value":"ik","text":"Inupiaq"},
-                    {"value":"io","text":"Ido"},
-                    {"value":"is","text":"Icelandic"},
-                    {"value":"it","text":"Italian"},
-                    {"value":"iu","text":"Inuktitut"},
-                    {"value":"ja","text":"Japanese"},
-                    {"value":"jv","text":"Javanese"},
-                    {"value":"ka","text":"Georgian"},
-                    {"value":"kg","text":"Kongo"},
-                    {"value":"ki","text":"Kikuyu; Gikuyu"},
-                    {"value":"kj","text":"Kuanyama; Kwanyama"},
-                    {"value":"kk","text":"Kazakh"},
-                    {"value":"kl","text":"Kalaallisut; Greenlandic"},
-                    {"value":"km","text":"Central Khmer"},
-                    {"value":"kn","text":"Kannada"},
-                    {"value":"ko","text":"Korean"},
-                    {"value":"kr","text":"Kanuri"},
-                    {"value":"ks","text":"Kashmiri"},
-                    {"value":"ku","text":"Kurdish"},
-                    {"value":"kv","text":"Komi"},
-                    {"value":"kw","text":"Cornish"},
-                    {"value":"ky","text":"Kirghiz; Kyrgyz"},
-                    {"value":"la","text":"Latin"},
-                    {"value":"lb","text":"Luxembourgish; Letzeburgesch"},
-                    {"value":"lg","text":"Ganda"},
-                    {"value":"li","text":"Limburgan; Limburger; Limburgish"},
-                    {"value":"ln","text":"Lingala"},
-                    {"value":"lo","text":"Lao"},
-                    {"value":"lt","text":"Lithuanian"},
-                    {"value":"lu","text":"Luba-Katanga"},
-                    {"value":"lv","text":"Latvian"},
-                    {"value":"mg","text":"Malagasy"},
-                    {"value":"mh","text":"Marshallese"},
-                    {"value":"mi","text":"Maori"},
-                    {"value":"mk","text":"Macedonian"},
-                    {"value":"ml","text":"Malayalam"},
-                    {"value":"mn","text":"Mongolian"},
-                    {"value":"mr","text":"Marathi"},
-                    {"value":"ms","text":"Malay"},
-                    {"value":"mt","text":"Maltese"},
-                    {"value":"my","text":"Burmese"},
-                    {"value":"na","text":"Nauru"},
-                    {"value":"nb","text":"Bokmål, Norwegian; Norwegian Bokmål"},
-                    {"value":"nd","text":"Ndebele, North; North Ndebele"},
-                    {"value":"ne","text":"Nepali"},
-                    {"value":"ng","text":"Ndonga"},
-                    {"value":"nl","text":"Dutch; Flemish"},
-                    {"value":"nn","text":"Norwegian Nynorsk; Nynorsk, Norwegian"},
-                    {"value":"no","text":"Norwegian"},
-                    {"value":"nr","text":"Ndebele, South; South Ndebele"},
-                    {"value":"nv","text":"Navajo; Navaho"},
-                    {"value":"ny","text":"Chichewa; Chewa; Nyanja"},
-                    {"value":"oc","text":"Occitan (post 1500); Provençal"},
-                    {"value":"oj","text":"Ojibwa"},
-                    {"value":"om","text":"Oromo"},
-                    {"value":"or","text":"Oriya"},
-                    {"value":"os","text":"Ossetian; Ossetic"},
-                    {"value":"pa","text":"Panjabi; Punjabi"},
-                    {"value":"pi","text":"Pali"},
-                    {"value":"pl","text":"Polish"},
-                    {"value":"ps","text":"Pushto; Pashto"},
-                    {"value":"pt","text":"Portuguese"},
-                    {"value":"qu","text":"Quechua"},
-                    {"value":"rm","text":"Romansh"},
-                    {"value":"rn","text":"Rundi"},
-                    {"value":"ro","text":"Romanian; Moldavian; Moldovan"},
-                    {"value":"ru","text":"Russian"},
-                    {"value":"rw","text":"Kinyarwanda"},
-                    {"value":"sa","text":"Sanskrit"},
-                    {"value":"sc","text":"Sardinian"},
-                    {"value":"sd","text":"Sindhi"},
-                    {"value":"se","text":"Northern Sami"},
-                    {"value":"sg","text":"Sango"},
-                    {"value":"si","text":"Sinhala; Sinhalese"},
-                    {"value":"sk","text":"Slovak"},
-                    {"value":"sl","text":"Slovenian"},
-                    {"value":"sm","text":"Samoan"},
-                    {"value":"sn","text":"Shona"},
-                    {"value":"so","text":"Somali"},
-                    {"value":"sq","text":"Albanian"},
-                    {"value":"sr","text":"Serbian"},
-                    {"value":"ss","text":"Swati"},
-                    {"value":"st","text":"Sotho, Southern"},
-                    {"value":"su","text":"Sundanese"},
-                    {"value":"sv","text":"Swedish"},
-                    {"value":"sw","text":"Swahili"},
-                    {"value":"ta","text":"Tamil"},
-                    {"value":"te","text":"Telugu"},
-                    {"value":"tg","text":"Tajik"},
-                    {"value":"th","text":"Thai"},
-                    {"value":"ti","text":"Tigrinya"},
-                    {"value":"tk","text":"Turkmen"},
-                    {"value":"tl","text":"Tagalog"},
-                    {"value":"tn","text":"Tswana"},
-                    {"value":"to","text":"Tonga (Tonga Islands)"},
-                    {"value":"tr","text":"Turkish"},
-                    {"value":"ts","text":"Tsonga"},
-                    {"value":"tt","text":"Tatar"},
-                    {"value":"tw","text":"Twi"},
-                    {"value":"ty","text":"Tahitian"},
-                    {"value":"ug","text":"Uighur; Uyghur"},
-                    {"value":"uk","text":"Ukrainian"},
-                    {"value":"ur","text":"Urdu"},
-                    {"value":"uz","text":"Uzbek"},
-                    {"value":"ve","text":"Venda"},
-                    {"value":"vi","text":"Vietnamese"},
-                    {"value":"vo","text":"Volapük"},
-                    {"value":"wa","text":"Walloon"},
-                    {"value":"wo","text":"Wolof"},
-                    {"value":"xh","text":"Xhosa"},
-                    {"value":"yi","text":"Yiddish"},
-                    {"value":"yo","text":"Yoruba"},
-                    {"value":"za","text":"Zhuang; Chuang"},
-                    {"value":"zh","text":"Chinese"},
-                    {"value":"zu","text":"Zulu"}]
+                    {"value":"ar","text":"ar"},
+                    {"value":"ar-AE","text":"ar-AE"},
+                    {"value":"ar-BH","text":"ar-BH"},
+                    {"value":"ar-DZ","text":"ar-DZ"},
+                    {"value":"ar-EG","text":"ar-EG"},
+                    {"value":"ar-IQ","text":"ar-IQ"},
+                    {"value":"ar-JO","text":"ar-JO"},
+                    {"value":"ar-KW","text":"ar-KW"},
+                    {"value":"ar-LB","text":"ar-LB"},
+                    {"value":"ar-LY","text":"ar-LY"},
+                    {"value":"ar-MA","text":"ar-MA"},
+                    {"value":"ar-OM","text":"ar-OM"},
+                    {"value":"ar-QA","text":"ar-QA"},
+                    {"value":"ar-SA","text":"ar-SA"},
+                    {"value":"ar-SD","text":"ar-SD"},
+                    {"value":"ar-SY","text":"ar-SY"},
+                    {"value":"ar-TN","text":"ar-TN"},
+                    {"value":"ar-YE","text":"ar-YE"},
+                    {"value":"be","text":"be"},
+                    {"value":"be-BY","text":"be-BY"},
+                    {"value":"bg","text":"bg"},
+                    {"value":"bg-BG","text":"bg-BG"},
+                    {"value":"ca","text":"ca"},
+                    {"value":"ca-ES","text":"ca-ES"},
+                    {"value":"cs","text":"cs"},
+                    {"value":"cs-CZ","text":"cs-CZ"},
+                    {"value":"da","text":"da"},
+                    {"value":"da-DK","text":"da-DK"},
+                    {"value":"de","text":"de"},
+                    {"value":"de-AT","text":"de-AT"},
+                    {"value":"de-CH","text":"de-CH"},
+                    {"value":"de-DE","text":"de-DE"},
+                    {"value":"de-LU","text":"de-LU"},
+                    {"value":"el","text":"el"},
+                    {"value":"el-CY","text":"el-CY"},
+                    {"value":"el-GR","text":"el-GR"},
+                    {"value":"en","text":"en"},
+                    {"value":"en-AU","text":"en-AU"},
+                    {"value":"en-CA","text":"en-CA"},
+                    {"value":"en-GB","text":"en-GB"},
+                    {"value":"en-IE","text":"en-IE"},
+                    {"value":"en-IN","text":"en-IN"},
+                    {"value":"en-MT","text":"en-MT"},
+                    {"value":"en-NZ","text":"en-NZ"},
+                    {"value":"en-PH","text":"en-PH"},
+                    {"value":"en-SG","text":"en-SG"},
+                    {"value":"en-US","text":"en-US"},
+                    {"value":"en-ZA","text":"en-ZA"},
+                    {"value":"es","text":"es"},
+                    {"value":"es-AR","text":"es-AR"},
+                    {"value":"es-BO","text":"es-BO"},
+                    {"value":"es-CL","text":"es-CL"},
+                    {"value":"es-CO","text":"es-CO"},
+                    {"value":"es-CR","text":"es-CR"},
+                    {"value":"es-DO","text":"es-DO"},
+                    {"value":"es-EC","text":"es-EC"},
+                    {"value":"es-ES","text":"es-ES"},
+                    {"value":"es-GT","text":"es-GT"},
+                    {"value":"es-HN","text":"es-HN"},
+                    {"value":"es-MX","text":"es-MX"},
+                    {"value":"es-NI","text":"es-NI"},
+                    {"value":"es-PA","text":"es-PA"},
+                    {"value":"es-PE","text":"es-PE"},
+                    {"value":"es-PR","text":"es-PR"},
+                    {"value":"es-PY","text":"es-PY"},
+                    {"value":"es-SV","text":"es-SV"},
+                    {"value":"es-US","text":"es-US"},
+                    {"value":"es-UY","text":"es-UY"},
+                    {"value":"es-VE","text":"es-VE"},
+                    {"value":"et","text":"et"},
+                    {"value":"et-EE","text":"et-EE"},
+                    {"value":"fi","text":"fi"},
+                    {"value":"fi-FI","text":"fi-FI"},
+                    {"value":"fr","text":"fr"},
+                    {"value":"fr-BE","text":"fr-BE"},
+                    {"value":"fr-CA","text":"fr-CA"},
+                    {"value":"fr-CH","text":"fr-CH"},
+                    {"value":"fr-FR","text":"fr-FR"},
+                    {"value":"fr-LU","text":"fr-LU"},
+                    {"value":"ga","text":"ga"},
+                    {"value":"ga-IE","text":"ga-IE"},
+                    {"value":"he","text":"he"},
+                    {"value":"he-IL","text":"he-IL"},
+                    {"value":"hi-IN","text":"hi-IN"},
+                    {"value":"hr","text":"hr"},
+                    {"value":"hr-HR","text":"hr-HR"},
+                    {"value":"hu","text":"hu"},
+                    {"value":"hu-HU","text":"hu-HU"},
+                    {"value":"id","text":"id"},
+                    {"value":"id-ID","text":"id-ID"},
+                    {"value":"is","text":"is"},
+                    {"value":"is-IS","text":"is-IS"},
+                    {"value":"it","text":"it"},
+                    {"value":"it-CH","text":"it-CH"},
+                    {"value":"it-IT","text":"it-IT"},
+                    {"value":"ja","text":"ja"},
+                    {"value":"ja-JP","text":"ja-JP"},
+                    {"value":"ja-JP-u-ca-japanese-x-lvariant-JP","text":"ja-JP-u-ca-japanese-x-lvariant-JP"},
+                    {"value":"ko","text":"ko"},
+                    {"value":"ko-KR","text":"ko-KR"},
+                    {"value":"lt","text":"lt"},
+                    {"value":"lt-LT","text":"lt-LT"},
+                    {"value":"lv","text":"lv"},
+                    {"value":"lv-LV","text":"lv-LV"},
+                    {"value":"mk","text":"mk"},
+                    {"value":"mk-MK","text":"mk-MK"},
+                    {"value":"ms","text":"ms"},
+                    {"value":"ms-MY","text":"ms-MY"},
+                    {"value":"mt","text":"mt"},
+                    {"value":"mt-MT","text":"mt-MT"},
+                    {"value":"nl","text":"nl"},
+                    {"value":"nl-BE","text":"nl-BE"},
+                    {"value":"nl-NL","text":"nl-NL"},
+                    {"value":"nn-NO","text":"nn-NO"},
+                    {"value":"no","text":"no"},
+                    {"value":"no-NO","text":"no-NO"},
+                    {"value":"pl","text":"pl"},
+                    {"value":"pl-PL","text":"pl-PL"},
+                    {"value":"pt","text":"pt"},
+                    {"value":"pt-BR","text":"pt-BR"},
+                    {"value":"pt-PT","text":"pt-PT"},
+                    {"value":"ro","text":"ro"},
+                    {"value":"ro-RO","text":"ro-RO"},
+                    {"value":"ru","text":"ru"},
+                    {"value":"ru-RU","text":"ru-RU"},
+                    {"value":"sk","text":"sk"},
+                    {"value":"sk-SK","text":"sk-SK"},
+                    {"value":"sl","text":"sl"},
+                    {"value":"sl-SI","text":"sl-SI"},
+                    {"value":"sq","text":"sq"},
+                    {"value":"sq-AL","text":"sq-AL"},
+                    {"value":"sr","text":"sr"},
+                    {"value":"sr-BA","text":"sr-BA"},
+                    {"value":"sr-CS","text":"sr-CS"},
+                    {"value":"sr-La","text":"sr-La"},
+                    {"value":"tn","text":"tn"},
+                    {"value":"sr-La","text":"sr-La"},
+                    {"value":"tn-BA","text":"tn-BA"},
+                    {"value":"sr-La","text":"sr-La"},
+                    {"value":"tn-ME","text":"tn-ME"},
+                    {"value":"sr-La","text":"sr-La"},
+                    {"value":"tn-RS","text":"tn-RS"},
+                    {"value":"sr-ME","text":"sr-ME"},
+                    {"value":"sr-RS","text":"sr-RS"},
+                    {"value":"sv","text":"sv"},
+                    {"value":"sv-SE","text":"sv-SE"},
+                    {"value":"th","text":"th"},
+                    {"value":"th-TH","text":"th-TH"},
+                    {"value":"th-TH-u-nu-thai-x-lvariant-TH","text":"th-TH-u-nu-thai-x-lvariant-TH"},
+                    {"value":"ar","text":"ar"},
+                    {"value":"ia","text":"ia"},
+                    {"value":"nt-TH","text":"nt-TH"},
+                    {"value":"tr","text":"tr"},
+                    {"value":"tr-TR","text":"tr-TR"},
+                    {"value":"uk","text":"uk"},
+                    {"value":"uk-UA","text":"uk-UA"},
+                    {"value":"vi","text":"vi"},
+                    {"value":"vi-VN","text":"vi-VN"},
+                    {"value":"zh","text":"zh"},
+                    {"value":"zh-CN","text":"zh-CN"},
+                    {"value":"zh-HK","text":"zh-HK"},
+                    {"value":"zh-SG","text":"zh-SG"},
+                    {"value":"zh-TW","text":"zh-TW"}
+                ]
             },{
                 xtype: 'textfield',
                 fieldLabel: 'Label:',
-                allowBlank: false,
+                allowBlank: true,
                 name:"track_label",
+                width: "100%"
+            },{
+                xtype: 'textfield',
+                fieldLabel: 'MIME type:',
+                allowBlank: true,
+                name:"track_mime_type",
+                value:"text/vtt",
+                disabled: true,
                 width: "100%"
             },{
                     xtype: "selection",
                     fieldLabel: "Kind:",
                     name: "track_kind",
                     type: "select",
-                    allowBlank: false,
+                    value:"captions",
                     options: [
                         {
                             "value": "subtitles",
@@ -951,20 +1004,67 @@ function uploadtrack()
                             "value": "captions",
                             "text": "Captions"
                         }]
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'URL Source:',
-                fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
-                allowBlank: false,
-                width: "100%",
-                name:"track_source"
-            },{
+            }
+            //     {
+            //     xtype: 'textfield',
+            //     fieldLabel: 'URL Source:',
+            //     fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
+            //     allowBlank: false,
+            //     width: "100%",
+            //     name:"track_source"
+            // },
+                ,{
                 xtype: 'selection',
                 fieldLabel: 'Default Track:',
                 fieldDescription: 'Set new uploaded track as the default text track?',
                 inputValue: true,
                 name: 'track_default',
                 type:'checkbox'
+            },{
+                xtype: "dialogfieldset",
+                collapsible: false,
+                collapsed: false,
+                fieldLabel: 'Source',
+                fieldDescription: 'Note: Please choose only ONE text track source path',
+                items: [
+                    {
+                        xtype: "dialogfieldset",
+                        collapsible: false,
+                        collapsed: false,
+                        items: [
+                            {
+                                xtype: 'fileuploadfield',
+                                id: 'filePath',
+                                fieldDescription: 'Upload a text track from the file system (.vtt)',
+                                fieldLabel: 'Upload File',
+                                name: 'track_filepath',
+                                buttonText: 'Browse',
+                                width: "100%",
+                                allowBlank: true
+                            }
+                        ]
+                    },
+                    {
+                        xtype: 'label',
+                        text: 'OR',
+                        margins: '0 0 0 10'
+                    },
+                    {
+                        xtype: "dialogfieldset",
+                        collapsible: false,
+                        collapsed: false,
+                        items: [
+                            {
+                                xtype: 'textfield',
+                                fieldLabel: 'From Source URL',
+                                fieldDescription: 'Upload from website (warning: Non text/vtt sources will result in a submission error.)',
+                                allowBlank: true,
+                                width: "100%",
+                                name:"track_source"
+                            }
+                        ]
+                    }
+                ]
             }
             ]}),
 
@@ -984,6 +1084,9 @@ function uploadtrack()
                 handler: function (btn, evt)
                 {
                     var formobj = form.getForm();
+
+                    console.log("FILE SUBMIT TEST");
+
                     console.log(formobj);
 
                     if (formobj.isValid())
