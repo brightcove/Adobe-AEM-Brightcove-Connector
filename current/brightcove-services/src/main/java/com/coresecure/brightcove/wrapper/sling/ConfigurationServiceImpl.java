@@ -58,8 +58,8 @@ import java.util.*;
         @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
-        @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
-        @Property(name = "default_thumbnail_path", label = "Default Asset Thumbnail PNG", description = "Default Stock Image Path", value = "/etc/designs/cs/brightcove/images/default.png")
+        @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets")
+//        @Property(name = "default_thumbnail_path", label = "Default Asset Thumbnail PNG", description = "Default Stock Image Path", value = "/etc/designs/cs/brightcove/images/default.png")
 
 })
 
@@ -98,7 +98,7 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         return (String) getProperties().get("key");
     }
 
-    public String getDefaultThumbnailPath(){ return (String) getProperties().get("default_thumbnail_path"); }
+    //public String getDefaultThumbnailPath(){ return (String) getProperties().get("default_thumbnail_path"); }
 
     public String getPlayersLoc() {
         return (String) getProperties().get("playersstore");

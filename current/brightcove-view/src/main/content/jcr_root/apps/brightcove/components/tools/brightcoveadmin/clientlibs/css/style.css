@@ -205,7 +205,6 @@ button {
   border-width: 1px;
   border-color: black;
   padding: 2px;
-  margin-left: 5px;
   width: auto;
   overflow: visible;
 }
@@ -549,6 +548,11 @@ div.hLine {
 
 
 
+
+
+
+
+
 #delButton,
 #uplButton,
 #newplstButton,
@@ -661,6 +665,7 @@ td.tdMetadata, th#trHeader {
 input#search {
   position: relative;
   top: 5px;
+  height: 28px;
 }
 
 tr.select {
@@ -949,5 +954,25 @@ h6 {
 }
 
 
+
+.tg  {width: 100%; border-collapse:collapse;border-spacing:0;border-color:#ccc;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#fff;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;}
+.tg .tg-uqo3{background-color:#efefef;text-align:center;vertical-align:top}
+.tg .tg-baqh{text-align:center;vertical-align:middle}
+
+
+
+
+
+.tg .tg-baqh.delete_button
+{
+  background-color: #f44336; /* Red */
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
 
 

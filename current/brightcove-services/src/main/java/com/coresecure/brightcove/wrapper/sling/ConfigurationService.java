@@ -50,7 +50,7 @@ public interface ConfigurationService {
 
     String getAssetIntegrationPath();
 
-    String getDefaultThumbnailPath();
+    //String getDefaultThumbnailPath();
 
     String getClientID();
 

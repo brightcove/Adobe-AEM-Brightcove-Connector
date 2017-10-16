@@ -354,11 +354,13 @@ permission to convey the resulting work.
 
                     <%--Upload text track / Delete Track--%>
                     <center id="trackarea">
-                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload Text Track</button>
-                        <br/>
                         <%--<span>Click Below to Remove Text Track</span><br>--%>
                         <div id="divMeta.text_tracks">
                         </div>
+                        <br/>
+                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload New Text Track</button>
+                        <br/>
+
                     </center>
                 </td>
             </tr>

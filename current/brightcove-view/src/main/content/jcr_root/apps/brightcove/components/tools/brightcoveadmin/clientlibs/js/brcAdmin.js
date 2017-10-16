@@ -125,16 +125,16 @@ function getFindPlaylistsURL() {
     if (searchVal != "" && searchVal != "Search Playlists") {
         if (searchField == "find_playlist_by_id") {
             return apiLocation +
-                '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllVideosCallBack&query=' + searchVal + '&sort=' + sort_by
+                '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         } else if (searchField == "find_playlist_by_reference_id") {
             return apiLocation +
-                '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllVideosCallBack&query=ref:' + searchVal + '&sort=' + sort_by
+                '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=ref:' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         }
     } else {
         return apiLocation +
-            '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllVideosCallBack&sort=' + sort_by
+            '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack'
             + '&limit=' + paging.size + '&start=' + paging.allPlaylists
     }
 }

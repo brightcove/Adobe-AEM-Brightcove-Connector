@@ -35,15 +35,15 @@ public class Text_track {
 
         try
         {
-            id = aText_track.getString("id");
-            account_id = aText_track.getString("account_id");
-            src = aText_track.getString("src");
-            srclang = aText_track.getString("srclang");
-            label = aText_track.getString("label");
-            kind = aText_track.getString("kind");
-            mime_type = aText_track.getString("mime_type");
-            asset_id = aText_track.getString("asset_id");
-            sources = aText_track.getJSONArray("sources");
+            if(!aText_track.isNull("id")) id = aText_track.getString("id");
+            if(!aText_track.isNull("account_id"))account_id = aText_track.getString("account_id");
+            if(!aText_track.isNull("src"))src = aText_track.getString("src");
+            if(!aText_track.isNull("srclang"))srclang = aText_track.getString("srclang");
+            if(!aText_track.isNull("label"))label = aText_track.getString("label");
+            if(!aText_track.isNull("kind"))kind = aText_track.getString("kind");
+            if(!aText_track.isNull("mime_type"))mime_type = aText_track.getString("mime_type");
+            if(!aText_track.isNull("asset_id"))asset_id = aText_track.getString("asset_id");
+            if(!aText_track.isNull("sources"))sources = aText_track.getJSONArray("sources");
 
         }
         catch (JSONException e)
