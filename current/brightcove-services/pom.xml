@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>parent</artifactId>
-        <version>5.0.8-SNAPSHOT</version>
+        <version>5.0.9-SNAPSHOT</version>
     </parent>
 
     <!-- ====================================================================== -->

@@ -332,15 +332,20 @@ function showPlaylist() {
 }
 
 function showMetaData(idx) {
+
+
+
     $("tr.select").removeClass("select");
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
     var v = oCurrentVideoList[idx];
 
+
+
     // Populate the metadata panel
     document.getElementById('divMeta.name').innerHTML = v.name;
     document.getElementById('divMeta.thumbnailURL').src = v.thumbnailURL;
-    document.getElementById('divMeta.videoStillURL').src =(v.images != null && v.images.poster != null && v.images.poster.src !=null) ? v.images.poster.src : "";
+    document.getElementById('divMeta.videoStillURL').src = (v.images != null && v.images.poster != null && v.images.poster.src != null) ? v.images.poster.src : "";
     document.getElementById('divMeta.previewDiv').value = v.id;
     var modDate = new Date(v.updated_at);
     document.getElementById('divMeta.lastModifiedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
@@ -351,7 +356,7 @@ function showMetaData(idx) {
     document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
     document.getElementById('divMeta.id').innerHTML = v.id;
-    document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null? v.description:"") + "</pre>";
+    document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null ? v.description : "") + "</pre>";
 
     //Construct the tag section:
     var tagsObject = "";
@@ -368,8 +373,8 @@ function showMetaData(idx) {
     document.getElementById('divMeta.tags').innerHTML = tagsObject;
 
     //if there's no link text use the linkURL as the text
-    var  linkText =  (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text: (v.link != null && v.link.url != null) ?  v.link.url : "";
-    var  linkURL =  (v.link != null && v.link.url != null) ? v.link.url : "";
+    var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";
+    var linkURL = (v.link != null && v.link.url != null) ? v.link.url : "";
     document.getElementById('divMeta.linkURL').innerHTML = linkText;
 
     document.getElementById('divMeta.linkURL').href = linkURL;
@@ -381,29 +386,19 @@ function showMetaData(idx) {
     document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
 
 
-
-
     //document.getElementById('divMeta.text_tracks').innerHTML = "<button>" +  v.toString() + "</button>";
 
 
-    $ACTIVE_TRACKS = v.text_tracks!=null ? v.text_tracks : "";
-    var arr = v.text_tracks!=null ? v.text_tracks : "";
-    console.log("SIZE " + arr.length);
+    $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
+    var arr = v.text_tracks != null ? v.text_tracks : "";
     document.getElementById('divMeta.text_tracks').innerHTML = "";
 
-    if(arr.length>0)
-    {
-        document.getElementById('divMeta.text_tracks').innerHTML = document.getElementById('divMeta.text_tracks').innerHTML + "\<span>Click below to delete a text track\</span>";
-
+    if (arr.length > 0) {
+        var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
+        document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
         for (var x = 0; x < arr.length; x++) {
-
             var cur = arr[x];
-
-            // console.log(cur.label);
-            // $("#divMeta.text_tracks").append("<p>"+cur.label+"</p>");
-
-            document.getElementById('divMeta.text_tracks').innerHTML = document.getElementById('divMeta.text_tracks').innerHTML + "\<button id='text_track' class='text_track' data-track-id='" + cur.id + "' onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\" style=\"display:block\">" + cur.label + "\<\/button>";
-
+            document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
         }
     }
 
@@ -411,14 +406,23 @@ function showMetaData(idx) {
 }
 
 
+//
+// $(".delete_button").mouseenter(function(data){
+//
+//     $(this).css("color","red");
+// });
+//
+// $(".delete_button").mouseleave(function(data){
+//
+//     $(this).css("color","black");
+// });
+
+
+
+
+
 function deleteTrack(trackid , videoID)
 {
-    console.log("APILOCATION IS : " + apiLocation);
-    console.log("DELETE TRAC: " +   trackid);
-    console.log("TRACKS ARRAY BEFORE REMOVAL: " +   $ACTIVE_TRACKS);
-    console.log("TRACKS ARRAY LENGTH BEFORE: " +   $ACTIVE_TRACKS.length);
-    //index of track to remove
-
     $.ajax({
         url: apiLocation + '.js',
         type: 'GET',
@@ -426,19 +430,13 @@ function deleteTrack(trackid , videoID)
         contentType: 'application/json; charset=utf-8',
         success: function (response)
         {
-            //alert(response.status);
-            //console.log("success");
             loadStart();
             Load(getAllVideosURL());
         },
         error: function () {
-            console.log("err");
-            //alert("error");
+            alert("error");
         }
     });
-
-    //console.log("SUBMIT TO API LOCATION: " + apiLocation);
-    //console.log("ATTR: " + trackid + " " + videoID);
 
 
 }
@@ -492,7 +490,6 @@ function syncDB()
 {
     syncStart();
     var url = window.location.origin + "/bin/brightcove/dataload";
-    //console.log(url);
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
@@ -501,12 +498,10 @@ function syncDB()
         async: true,
         success: function (data)
         {
-            console.log("Database Synch Complete!");
             syncEnd();
             data = $.parseJSON(data);
         }
     });
-    console.log("FINISHED");
 }
 
 
@@ -583,8 +578,6 @@ function uploadPoster()
                 handler: function (btn, evt)
                 {
                     var formobj = form.getForm();
-                    console.log(formobj);
-
                     if (formobj.isValid())
                     {
                         formobj.submit({
@@ -695,8 +688,6 @@ function uploadThumbnail()
                 handler: function (btn, evt)
                 {
                     var formobj = form.getForm();
-                    console.log(formobj);
-
                     if (formobj.isValid())
                     {
                         formobj.submit({
@@ -733,11 +724,6 @@ function uploadThumbnail()
 
 function uploadtrack()
 {
-    //var url = window.location.origin + "/bin/brightcove/dataload";
-    console.log("APILOCATION IS : " + apiLocation);
-
-
-
     var v = oCurrentVideoList[$("tr.select").attr("id")],
         modDate = new Date(v.updated_at),
         tags = ((v.tags != null) ? v.tags : new Array()),
@@ -1084,10 +1070,6 @@ function uploadtrack()
                 handler: function (btn, evt)
                 {
                     var formobj = form.getForm();
-
-                    console.log("FILE SUBMIT TEST");
-
-                    console.log(formobj);
 
                     if (formobj.isValid())
                     {
@@ -1715,7 +1697,6 @@ function extFormUpload() {
                     //Ext.getCmp('form').getForm().submit();
                     formobj.submit({
                         success: function (form, action) {
-                            console.log(action);
                             w.destroy();
                             loadStart();
                             Load(getAllVideosURL());
