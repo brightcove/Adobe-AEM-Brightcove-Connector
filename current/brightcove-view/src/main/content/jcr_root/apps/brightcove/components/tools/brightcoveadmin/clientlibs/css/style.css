@@ -42,9 +42,10 @@ body {
   background: url("/libs/cq/ui/resources/titlebar.png") repeat scroll 0 0 transparent;
   height: 36px;
   left: 0;
-  position: absolute;
+  position: fixed;
   top: 0;
   width: 100%;
+  z-index:999999;
 }
 
 .navbar {
@@ -332,6 +333,7 @@ div.delConfPop {
   right: 5px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   top: 0;
+    z-index:9999999;
 }
 
 #progress {
@@ -975,4 +977,269 @@ h6 {
   cursor: pointer;
 }
 
+
+
+
+
+
+/*Improved Brightcove Themed Loader Modal*/
+
+
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.loading {
+  display: none;
+}
+.loading .loader {
+  top: 0;
+  left: 0;
+  z-index: 9999999999;
+  position: fixed;
+  background-color: rgba(0,0,0,0.5);
+  height: 100%;
+  width: 100vw;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+}
+.loading .loader #brightcode {
+  max-width: 120px;
+  max-height: 120px;
+  height: 120px;
+  width: 120px;
+}
+.loading .loader #brightcode .cls-1,
+.loading .loader #brightcode .cls-2,
+.loading .loader #brightcode .cls-3 {
+  opacity: 0;
+  -webkit-transform: scale(0);
+  -ms-transform: scale(0);
+  transform: scale(0);
+  -webkit-transform-origin: center;
+  -ms-transform-origin: center;
+  transform-origin: center;
+}
+.loading .loader #brightcode .cls-1 {
+  fill: #099ab1;
+}
+.loading .loader #brightcode .cls-2 {
+  fill: #94bf3b;
+}
+.loading .loader #brightcode .cls-3 {
+  fill: #d3277c;
+}
+.loading .loader #brightcode .shape-1 {
+  animation-name: shape1;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+.loading .loader #brightcode .shape-2 {
+  animation-name: shape2;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+.loading .loader #brightcode .shape-3 {
+  animation-name: shape3;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+.loading .loader #brightcode .shape-4 {
+  animation-name: shape4;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+.loading .loader #brightcode .shape-5 {
+  animation-name: shape5;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+.loading .loader #brightcode .shape-6 {
+  animation-name: shape6;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+}
+@-webkit-keyframes shape1 {
+  0% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  4%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape1 {
+  0% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  4%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@-webkit-keyframes shape2 {
+  0%,
+  4% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  8%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape2 {
+  0%,
+  4% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  8%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@-webkit-keyframes shape3 {
+  0%,
+  8% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  12%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape3 {
+  0%,
+  8% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  12%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@-webkit-keyframes shape4 {
+  0%,
+  12% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  16%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape4 {
+  0%,
+  12% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  16%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@-webkit-keyframes shape5 {
+  0%,
+  16% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  20%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape5 {
+  0%,
+  16% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  20%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@-webkit-keyframes shape6 {
+  0%,
+  20% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  24%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+@keyframes shape6 {
+  0%,
+  20% {
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  24%,
+  100% {
+    opacity: 0.9;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+/* ---------- END NEW CSS --------------- */
 

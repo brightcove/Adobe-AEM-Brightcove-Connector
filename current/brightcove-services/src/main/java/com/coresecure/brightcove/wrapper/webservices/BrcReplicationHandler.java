@@ -42,6 +42,8 @@ import java.util.*;
 @Service(TransportHandler.class)
 @Component(label = "Brightcove: Replication Agents", immediate = true, metatype = true)
 public class BrcReplicationHandler implements TransportHandler {
+    private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
+
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
 
@@ -163,7 +165,17 @@ public class BrcReplicationHandler implements TransportHandler {
                 else {
                     LOGGER.debug("READY TO REPLICATE! RESOURCE IS A BRIGHTCOVE RESOURCE");
                     try {
-                        ResourceResolver rr = resourceResolverFactory.getAdministrativeResourceResolver(null);
+
+                        final Map<String, Object> authInfo = Collections.singletonMap(
+                                ResourceResolverFactory.SUBSERVICE,
+                                (Object) SERVICE_ACCOUNT_IDENTIFIER);
+
+                        // Get the Service resource resolver
+                        ResourceResolver rr = resourceResolverFactory.getServiceResourceResolver(authInfo);
+
+                        LOGGER.info(rr.getUserID());
+
+                        //ResourceResolver rr = resourceResolverFactory.getAdministrativeResourceResolver(null);
                         Resource asset_res;
 
 
@@ -388,6 +400,7 @@ public class BrcReplicationHandler implements TransportHandler {
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> " + _asset.getPath());
                         result = ReplicationResult.OK;
                         long current_time_millisec = new java.util.Date().getTime();
+                        brc_lastsync_map.put("dc:title",video.name);
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
                         //rr.commit()?
                     } else {
@@ -481,7 +494,7 @@ public class BrcReplicationHandler implements TransportHandler {
             catch (ParseException e)
             {
                 LOGGER.error("ERROR PARSING DATE !");
-                replicationLog.error("ERROR PARSING DATE !");
+                replicationLog.error("ERROR PARSING DATE POSTER!");
                 LOGGER.trace("UNFORMATTED POSTER LASTMOD: "  + poster_lastmod_time);
 
             }
@@ -498,7 +511,7 @@ public class BrcReplicationHandler implements TransportHandler {
                 if (s3_url_resp_poster != null && s3_url_resp_poster.getBoolean("sent"))
                 {
                     //IF SUCCESS - PUT
-                    Poster poster = new Poster(s3_url_resp_poster.getString("signed_url"));
+                    Poster poster = new Poster(s3_url_resp_poster.getString("api_request_url"));
                     images_obj.poster = poster;
                 }
             }
@@ -535,7 +548,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
                 if (s3_url_resp_thumbnail != null && s3_url_resp_thumbnail.getBoolean("sent")) {
                     //IF SUCCESS - PUT
-                    Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString("signed_url"));
+                    Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString("api_request_url"));
                     images_obj.thumbnail = thumbnail;
                 }
             }

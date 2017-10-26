@@ -30,7 +30,8 @@
     <filter root="/conf/global/settings/dam/adminui-extension/metadataschema/default/video/items/tabs/items"/>
 
     <filter root="/etc/replication/agents.author/brightcove"/>
+    <filter root="/home/users/system/G0QXXR_brightcove"/>
 
-
+    <filter root="/rep:policy/allowBrc"/>
 
 </workspaceFilter>

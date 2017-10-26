@@ -464,7 +464,11 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 //IF SUCCESS
                                 if (s3_url_resp != null && s3_url_resp.has("sent") && s3_url_resp.getBoolean("sent"))
                                 {
-                                    text_track.put("url", s3_url_resp.getString("signed_url"));
+                                    //text_track.put("url", s3_url_resp.getString("signed_url"));
+
+
+                                    text_track.put("url", s3_url_resp.getString("api_request_url"));
+                                    LOGGER.trace("S3URLRESP: " + s3_url_resp.toString(1));
                                 }
                                 else
                                 {
@@ -496,6 +500,10 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 JSONObject responseOBJ = new JSONObject(videoItem.getString("response"));
                                 LOGGER.trace("**has id object: " + responseOBJ.has("id") );
                                 //response.sendError(422, "Incompatible Payload for Audio Track");
+
+
+                                LOGGER.trace("Text Track Upload Complete");
+
                             } else {
                                 response.sendError(500, "Check logs");
                             }
@@ -558,6 +566,10 @@ public class BrcApi extends SlingAllMethodsServlet {
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(resultstr);
             }
+        } else {
+            //NOTE : This had to be added to fix a limitation of etx.js where a json response was non acceptable on file submission
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().write("true");
         }
     }
 
