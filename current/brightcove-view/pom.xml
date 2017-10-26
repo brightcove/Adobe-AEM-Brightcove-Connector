@@ -12,7 +12,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>parent</artifactId>
-        <version>5.0.9-SNAPSHOT</version>
+        <version>5.1.0-SNAPSHOT</version>
     </parent>
 
 
@@ -77,21 +77,24 @@
                 <artifactId>maven-vault-plugin</artifactId>
                 <extensions>true</extensions>
                 <executions>
-                <execution>
-                <goals>
-                    <goal>package</goal>
-                </goals>
-                <configuration>
-                <embeddedTarget>/apps/brightcove/install</embeddedTarget>
-                <embeddeds>
-                <embedded>
-                    <groupId>${project.groupId}</groupId>
-                    <artifactId>brightcove-services</artifactId>
-                    <filter>true</filter>
-                </embedded>
-                </embeddeds>
-                </configuration>
-                </execution>
+                    <execution>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                        <configuration>
+                            <properties>
+                                <acHandling>merge</acHandling>
+                            </properties>
+                            <embeddedTarget>/apps/brightcove/install</embeddedTarget>
+                            <embeddeds>
+                                <embedded>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>brightcove-services</artifactId>
+                                    <filter>true</filter>
+                                </embedded>
+                            </embeddeds>
+                        </configuration>
+                    </execution>
                 </executions>
 
             </plugin>

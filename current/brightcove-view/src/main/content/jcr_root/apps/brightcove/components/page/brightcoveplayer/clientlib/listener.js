@@ -3,7 +3,14 @@
 
     var ACCOUNT = "./account", PLAYERID = "./playerID";
 
+
+    $(document).on("dialog-ready", function() {
+        init();
+    });
     $(window).load(function () {
+        init();
+    });
+    function init() {
         var account = $("[name='" + ACCOUNT +"']").closest(".coral-Select")
         var playerID = new CUI.Select({
             element: $("[name='" + PLAYERID +"']").closest(".coral-Select")
@@ -44,6 +51,6 @@
                 return;
             }
             fillPlayers($("[name='" + ACCOUNT +"']").val(),data.playerID);
-        })
-    });
+        });
+    }
 })(document, Granite.$);

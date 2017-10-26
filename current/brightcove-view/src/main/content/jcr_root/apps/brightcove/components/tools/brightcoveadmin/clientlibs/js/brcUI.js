@@ -143,7 +143,7 @@ function buildMainVideoList(title) {
     document.getElementById('nameCol').innerHTML = "Video Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = title;
     document.getElementById('search').value = searchVal ? searchVal : "Search Videos";
-    document.getElementById('tdMeta').style.display = "block";
+    document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "inline";
     document.getElementById('searchDiv_pl').style.display = "none";
 
@@ -169,9 +169,11 @@ function buildMainVideoList(title) {
             "</td><td>"
             + n.id +
             "</td></tr>"
-        ).children("tr").bind('click', function () {
-                showMetaData(this.id);
-            })
+        );
+        $("tr#"+i,"#tbData").bind('click', function () {
+            showMetaData(this.id);
+            $("#tdMeta").show();
+        });
     });
 
     //Zebra stripe the table
@@ -186,7 +188,7 @@ function buildMainVideoList(title) {
 
     //if there are videos, show the metadata window, else hide it
     if (oCurrentVideoList.length > 0) {
-        showMetaData(0);
+        if (window.selectedVideoId) showMetaDataByVideoID(window.selectedVideoId);
     }
     else {
         closeBox("tdMeta");
@@ -226,12 +228,7 @@ function buildPlaylistList() {
             "</td><td>"
             + n.id +
             "</td></tr>"
-        ).children("tr");
-
-            //TODO: We had to remove the click event to load the playlist elements as the CMS API has changed and now we must adapt to tbe able to generate the playlist videos...
-            //.bind('click', function () {
-            // getPlaylist(this.id);
-            //     })
+        );
     });
 
     //Zebra stripe the table
@@ -284,7 +281,7 @@ function showPlaylist() {
     document.getElementById('searchDiv_pl').style.display = "none";
 
     document.getElementById('checkToggle').style.display = "inline"
-    document.getElementById('tdMeta').style.display = "block";
+    document.getElementById('tdMeta').style.display = "none";
     $("span[name=buttonRow]").show();
     $(".uplButton").hide();
     $(".delButton").hide();
@@ -336,8 +333,11 @@ function showMetaData(idx) {
 
 
     $("tr.select").removeClass("select");
+    idx = oCurrentVideoList.length > idx ? idx : 0;
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
+
+    //TODO: CURRENTLY
     var v = oCurrentVideoList[idx];
 
 
@@ -401,28 +401,98 @@ function showMetaData(idx) {
             document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
         }
     }
-
-
 }
+function showMetaDataByVideoID(idx) {
+
+    window.selectedVideoId = false;
+
+    $("tr.select").removeClass("select");
+    $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
 
-//
-// $(".delete_button").mouseenter(function(data){
-//
-//     $(this).css("color","red");
-// });
-//
-// $(".delete_button").mouseleave(function(data){
-//
-//     $(this).css("color","black");
-// });
+    $.ajax({
+        url: getVideoAPIURL(idx),
+        type: 'GET',
+        contentType: 'application/json; charset=utf-8',
+        success: function (response)
+        {
+            console.log(response);
+            var v = response.items[0];
 
 
 
+
+            // Populate the metadata panel
+            document.getElementById('divMeta.name').innerHTML = v.name;
+            document.getElementById('divMeta.thumbnailURL').src = (v.images != null && v.images.thumbnail != null && v.images.thumbnail.src != null) ? v.images.thumbnail.src : "";
+            document.getElementById('divMeta.videoStillURL').src = (v.images != null && v.images.poster != null && v.images.poster.src != null) ? v.images.poster.src : "";
+            document.getElementById('divMeta.previewDiv').value = v.id;
+            var modDate = new Date(v.updated_at);
+            document.getElementById('divMeta.lastModifiedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
+
+            //v.length is the running time of the video in ms
+            var sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
+            sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
+            document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
+
+            document.getElementById('divMeta.id').innerHTML = v.id;
+            document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null ? v.description : "") + "</pre>";
+
+            //Construct the tag section:
+            var tagsObject = "";
+            if ("" != v.tags) {
+                var tags = v.tags.toString().split(',');
+                for (var k = 0; k < tags.length; k++) {
+                    if (k > 0) {
+                        tagsObject += ', ';
+                    }
+                    tagsObject += '<a style="cursor:pointer;color:blue;text-decoration:underline"' +
+                        'onclick="searchVal=\'' + tags[k].replace(/\'/gi, "\\\'") + '\';Load(findByTag(\'' + tags[k] + '\'))" >' + tags[k] + '</a>';
+                }
+            }
+            document.getElementById('divMeta.tags').innerHTML = tagsObject;
+
+            //if there's no link text use the linkURL as the text
+            var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";
+            var linkURL = (v.link != null && v.link.url != null) ? v.link.url : "";
+            document.getElementById('divMeta.linkURL').innerHTML = linkText;
+
+            document.getElementById('divMeta.linkURL').href = linkURL;
+            document.getElementById('divMeta.linkText').innerHTML = linkText;
+            document.getElementById('divMeta.economics').innerHTML = v.economics;
+
+            modDate = new Date(v.published_at);
+            document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
+            document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
+
+
+            //document.getElementById('divMeta.text_tracks').innerHTML = "<button>" +  v.toString() + "</button>";
+
+
+            $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
+            var arr = v.text_tracks != null ? v.text_tracks : "";
+            document.getElementById('divMeta.text_tracks').innerHTML = "";
+
+            if (arr.length > 0) {
+                var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
+                document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
+                for (var x = 0; x < arr.length; x++) {
+                    var cur = arr[x];
+                    document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
+                }
+            }
+            $("#tdMeta").show();
+        },
+        error: function () {
+            alert("Error");
+        }
+    });
+}
 
 
 function deleteTrack(trackid , videoID)
 {
+    loadStart();
     $.ajax({
         url: apiLocation + '.js',
         type: 'GET',
@@ -430,11 +500,13 @@ function deleteTrack(trackid , videoID)
         contentType: 'application/json; charset=utf-8',
         success: function (response)
         {
-            loadStart();
+            window.selectedVideoId = videoID;
             Load(getAllVideosURL());
         },
         error: function () {
-            alert("error");
+            window.selectedVideoId = videoID;
+            loadEnd();
+            alert("Error in track deletion");
         }
     });
 
@@ -580,15 +652,16 @@ function uploadPoster()
                     var formobj = form.getForm();
                     if (formobj.isValid())
                     {
+                        loadStart();
                         formobj.submit({
                             success: function (form, action) {
                                 u.destroy();
-                                loadStart();
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 Load(getAllVideosURL());
                             },
                             failure: function (form, action) {
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                loadStart();
                                 Load(getAllVideosURL());
                             }
                         });
@@ -690,15 +763,16 @@ function uploadThumbnail()
                     var formobj = form.getForm();
                     if (formobj.isValid())
                     {
+                        loadStart();
                         formobj.submit({
                             success: function (form, action) {
                                 o.destroy();
-                                loadStart();
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 Load(getAllVideosURL());
                             },
                             failure: function (form, action) {
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                loadStart();
                                 Load(getAllVideosURL());
                             }
                         });
@@ -1073,27 +1147,32 @@ function uploadtrack()
 
                     if (formobj.isValid())
                     {
+                        //TODO: Find animation midground to make modal only loading thing
+                        loadStart();
                         formobj.submit({
                             success: function (form, action)
                             {
                                 //FIELDS WERE VALID
                                 z.destroy();
-                                loadStart();
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 Load(getAllVideosURL());
                             },
                             failure: function (form, action) {
                                 CQ.Ext.Msg.alert('Track Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please verify your connection and the text track source type.');
-                                loadStart();
+                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
                                 Load(getAllVideosURL());
                             }
                         });
                     }
-                    else alert('Invalid form');
+                    else
+                    {
+                        alert('Invalid form');
+                    }
                 }
             }, {
                 text: 'Cancel',
                 handler: function (btn, evt) {
-                    z.destroy()
+                    z.destroy();
                 }
             }]
         });
@@ -1253,15 +1332,17 @@ function extMetaEdit() {
                 {
                     var formobj = form.getForm();
                     if (formobj.isValid()) {
+                        loadStart();
+
                         formobj.submit({
                             success: function (form, action) {
                                 w.destroy();
-                                loadStart();
+                                window.selectedVideoId = v.id;
                                 Load(getAllVideosURL());
                             },
                             failure: function (form, action) {
+                                window.selectedVideoId = v.id;
                                 CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                loadStart();
                                 Load(getAllVideosURL());
                             }
                         });
@@ -1318,10 +1399,12 @@ function loadStart()
     } else {
         $("#loading").show();
     }
+    $(".loading").show();
 }
 
 function loadEnd()
 {
+    $('html,body').scrollTop(0);
     $("#syncdbutton").css("color", "#333333");
     $("#syncdbutton").html('SYNC DATABASE');
     $("#syncdbutton").prop('disabled', false);
@@ -1330,6 +1413,7 @@ function loadEnd()
     } else {
         $("#loading").hide();
     }
+    $(".loading").hide();
 }
 
 function syncStart()
@@ -1340,6 +1424,7 @@ function syncStart()
     if (!$.browser.msie)
     {
         $("#loading").slideDown("fast");
+        $(".loading").show();
     }
     else
     {
@@ -1355,6 +1440,7 @@ function syncEnd() {
     $(".syncingMsg").fadeOut();
     loadEnd();
     $(".loadingMsg").hide();
+    $(".loading").hide();
 }
 
 

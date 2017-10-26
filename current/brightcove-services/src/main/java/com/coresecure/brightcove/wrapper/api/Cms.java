@@ -3,6 +3,7 @@ package com.coresecure.brightcove.wrapper.api;
 import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
 import jdk.nashorn.internal.parser.JSONParser;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -427,7 +428,7 @@ public class Cms {
 
             try {
                 q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-                String urlParameters = "q=" + q + "%20%2Bstate:ACTIVE&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+                String urlParameters = "q=%2Bstate:ACTIVE" + (!q.isEmpty()  ? "%20%2B"+q:"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
                 String targetURL = "/accounts/" + account.getAccount_ID() + "/videos";
                 LOGGER.debug("urlParameters: " + urlParameters);
                 String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -436,7 +437,7 @@ public class Cms {
                     LOGGER.debug("response", response);
                     LOGGER.debug("json", json.toString());
                 }
-                if (json.length() == 0 && !q.isEmpty()) {
+                if (json.length() == 0 && !q.isEmpty() && NumberUtils.isNumber(q)) {
                     json.put(getVideo(q));
                 }
             } catch (IOException e) {

@@ -105,7 +105,10 @@ function getAllVideosURLOrdered(sort_by, sort_type) {
             + '&fields=' + fields;
     }
 }
-
+function getVideoAPIURL(idx){
+    return apiLocation +
+    '.json?isID=true&account_id='+$("#selAccount").val()+'&a=search_videos&query='+ idx;
+}
 function isNumber(n) {
     return !isNaN(parseFloat(n)) && isFinite(n);
 }
@@ -146,7 +149,7 @@ function searchVideoURL() {
     var data_sorttype = $("#trHeader th.sortable").not("NONE").attr("data-sorttype");
     if (searchVal != "" && searchVal != "Search Videos") {
         if (!isNumber(searchVal)) {
-            if (searchField == "every_field" || searchField == "" || typeof searchField == "undefined") {
+            if ( typeof searchField == "undefined" || searchField == "every_field" || searchField == "") {
                 return apiLocation +
                     '.js?account_id='+$("#selAccount").val()+'&a=search_videos&callback=showAllVideosCallBack&query=' + searchVal + '&sort=' + data_sorttype +sort_by
                     + '&limit=' + paging.size + '&start=' + paging.textSearch
@@ -162,6 +165,8 @@ function searchVideoURL() {
                 '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_videos&callback=showAllVideosCallBack&query=' + searchVal
                 + '&fields=' + fields;
         }
+    } else {
+        loadEnd();
     }
 }
 

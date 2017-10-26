@@ -9,8 +9,8 @@ import java.net.Proxy;
 import java.util.Map;
 
 public class Platform {
-    private final static String DEFAULT_OAUTH_URL = "https://oauth.brightcove.com/v3";
-    private final static String DEFAULT_PLAYERS_API_URL = "https://players.api.brightcove.com/v1";
+    private final static String DEFAULT_OAUTH_URL = "https://oauth.brightcove.com/v4";
+    private final static String DEFAULT_PLAYERS_API_URL = "https://players.api.brightcove.com/v2";
     private final static String DEFAULT_API_URL = "https://cms.api.brightcove.com/v1";
     private final static String DEFAULT_DI_API_URL = "https://ingest.api.brightcove.com/v1";
     private static String OAUTH_Url;

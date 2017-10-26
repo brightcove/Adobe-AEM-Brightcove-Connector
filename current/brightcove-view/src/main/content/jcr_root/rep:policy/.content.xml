@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:granite="http://www.adobe.com/jcr/granite/1.0" xmlns:crx="http://www.day.com/crx/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:rep="internal"
+          jcr:primaryType="rep:ACL">
+    <allowBrc
+            jcr:primaryType="rep:GrantACE"
+            rep:principalName="brightcove_admin"
+            rep:privileges="{Name}[jcr:versionManagement,jcr:modifyAccessControl,jcr:read,jcr:readAccessControl,crx:replicate,rep:write,jcr:lockManagement]"/>
+</jcr:root>
