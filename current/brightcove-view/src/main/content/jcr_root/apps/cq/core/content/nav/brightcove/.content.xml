@@ -4,4 +4,5 @@
           jcr:primaryType="nt:unstructured"
           jcr:title="Brightcove Console"
           href="/brightcove/admin"
+          icon="fastForward"
           id="brightcove-admin-touch-nav"/>

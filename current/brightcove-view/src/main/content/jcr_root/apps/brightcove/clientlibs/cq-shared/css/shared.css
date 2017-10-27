@@ -41,3 +41,7 @@ permission to convey the resulting work.
 div .brightcoveadmin {
   background-image: url('../img/brightcove-welcome.png');
 }
+
+tr.default_track {
+  font-weight: bold;
+}

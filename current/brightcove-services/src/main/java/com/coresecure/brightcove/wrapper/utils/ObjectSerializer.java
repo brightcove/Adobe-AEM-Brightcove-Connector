@@ -18,6 +18,7 @@ public class ObjectSerializer {
                 Class<?> c = obj.getClass();
 
                 Field f = c.getDeclaredField(field);
+                if (field.startsWith("_")) field = field.substring(1);
                 f.setAccessible(true);
                 if (f.getType().equals(Collection.class)) {
                     Collection value = (Collection) f.get(obj);

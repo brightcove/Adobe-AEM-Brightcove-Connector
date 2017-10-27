@@ -398,7 +398,7 @@ function showMetaData(idx) {
         document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
         for (var x = 0; x < arr.length; x++) {
             var cur = arr[x];
-            document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
+            document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow "+(cur.default?"default_track":"")+"'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
         }
     }
 }
@@ -478,7 +478,7 @@ function showMetaDataByVideoID(idx) {
                 document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
                 for (var x = 0; x < arr.length; x++) {
                     var cur = arr[x];
-                    document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
+                    document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "\<tr class='texttrackrow "+(cur.default?"default_track":"")+"'>\<td class=\"tg-baqh \">" + cur.label + "\<\/td>\<td  class=\"tg-baqh\">" + cur.srclang + "\<\/td>\<td  class=\"tg-baqh\">" + cur.kind + "\<\/td>\<td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X\<\/td> \<\/tr>";
                 }
             }
             $("#tdMeta").show();
@@ -798,17 +798,7 @@ function uploadThumbnail()
 
 function uploadtrack()
 {
-    var v = oCurrentVideoList[$("tr.select").attr("id")],
-        modDate = new Date(v.updated_at),
-        tags = ((v.tags != null) ? v.tags : new Array()),
-        sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
-    sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
-
-
-
-
-
-       var form = new CQ.Ext.form.FormPanel({
+    var form = new CQ.Ext.form.FormPanel({
             baseCls: 'x-plain',
             labelWidth: 130,
             url: apiLocation+
@@ -1035,7 +1025,7 @@ function uploadtrack()
                 fieldLabel: 'MIME type:',
                 allowBlank: true,
                 name:"track_mime_type",
-                value:"text/vtt",
+                value:"text/webvtt",
                 disabled: true,
                 width: "100%"
             },{

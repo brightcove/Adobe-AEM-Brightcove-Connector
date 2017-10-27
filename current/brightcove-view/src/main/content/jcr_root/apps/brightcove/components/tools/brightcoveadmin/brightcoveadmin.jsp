@@ -320,6 +320,16 @@ permission to convey the resulting work.
                             </li>
 
                         </ul>
+                        <%--Upload text track / Delete Track--%>
+                        <center id="trackarea">
+                            <%--<span>Click Below to Remove Text Track</span><br>--%>
+                            <div id="divMeta.text_tracks">
+                            </div>
+                            <br/>
+                            <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload New Text Track</button>
+                            <br/>
+
+                        </center>
                         <p><a href="#" onClick="doPreview(document.getElementById('divMeta.id').innerHTML)"
                               class="btn btn-primary">Video Preview</a>
                         </p>
@@ -348,18 +358,6 @@ permission to convey the resulting work.
                     <br/>Reference ID:
                     <div id="divMeta.referenceId"></div>
                     <br/>
-
-
-                    <%--Upload text track / Delete Track--%>
-                    <center id="trackarea">
-                        <%--<span>Click Below to Remove Text Track</span><br>--%>
-                        <div id="divMeta.text_tracks">
-                        </div>
-                        <br/>
-                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload New Text Track</button>
-                        <br/>
-
-                    </center>
                 </td>
             </tr>
         </table>

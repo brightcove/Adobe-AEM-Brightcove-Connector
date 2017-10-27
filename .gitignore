@@ -1,0 +1,86 @@
+### AEM References ###
+**/geometrixx*
+
+
+### Mac OS X ###
+.DS_Store
+
+
+### Package Files ###
+*.ear
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.war
+*.zip
+
+#### Eclipse ###
+.classpath
+.project
+.settings/
+
+
+### VLT ###
+*.vlt
+*.vlt-sync.log
+*.vlt-sync-config.properties
+
+### SVN ###
+.svn/
+
+### Maven ###
+log/
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+content/target/**
+bundle/target/**
+
+### Intellij ###
+# Created by https://www.gitignore.io
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm
+*.iml
+
+## Directory-based project format:
+.idea/*
+cs_commons-dev/
+# if you remove the above rule, at least ignore the following:
+
+# User-specific stuff:
+**/workspace.xml
+**/.idea/tasks.xml
+**/.idea/dictionaries
+**/.idea/libraries
+**/.idea/.name
+**/.idea/scopes
+
+# Sensitive or high-churn files:
+ .idea/dataSources.ids
+ .idea/dataSources.xml
+ .idea/sqlDataSources.xml
+ .idea/dynamic.xml
+ .idea/uiDesigner.xml
+
+# Gradle:
+ .idea/gradle.xml
+ .idea/libraries
+
+# Mongo Explorer plugin:
+ .idea/mongoSettings.xml
+
+## File-based project format:
+*.ipr
+*.iws
+
+## Plugin-specific files:
+*.dir
+# IntelliJ
+/out/
