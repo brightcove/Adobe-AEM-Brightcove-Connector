@@ -428,7 +428,7 @@ public class Cms {
 
             try {
                 q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-                String urlParameters = "q=%2Bstate:ACTIVE" + (!q.isEmpty()  ? "%20%2B"+q:"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+                String urlParameters = "q=%2Bstate:ACTIVE%20%2Dtags:AEM_NO_DAM" + (!q.isEmpty()  ? "%20%2B"+q:"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
                 String targetURL = "/accounts/" + account.getAccount_ID() + "/videos";
                 LOGGER.debug("urlParameters: " + urlParameters);
                 String response = account.platform.getAPI(targetURL, urlParameters, headers);

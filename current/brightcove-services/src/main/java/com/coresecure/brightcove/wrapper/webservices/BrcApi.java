@@ -262,7 +262,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 }
                                 com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
                                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
-                                com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
+                                Video video = new Video(
                                         request.getParameter("name"),
                                         request.getParameter("referenceId"),
                                         request.getParameter("shortDescription"),
@@ -278,7 +278,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 String newVideoId = videoItem.getString("id");
                                 JSONObject videoIngested = new JSONObject();
                                 try {
-                                    videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
+                                    videoIngested = brAPI.cms.createIngest(new Video(videoItem), ingest);
                                     if (videoIngested != null && videoIngested.has("id")) {
                                         LOGGER.info("New video id: '" + newVideoId + "'.");
                                         result.put("videoid", newVideoId);
@@ -306,7 +306,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
                                 }
                                 com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-                                com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
+                                Video video = new Video(
                                         request.getParameter("id"),
                                         request.getParameter("name"),
                                         request.getParameter("referenceId"),
@@ -338,7 +338,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 //                                LOGGER.trace(video.toString());
 
                                 String videoID = request.getParameter("id");
-                                LOGGER.trace("TRAXXX DELETION ACTIVATED FOR TRACK " + trackID);
+                                LOGGER.trace("TRACK DELETION ACTIVATED FOR TRACK " + trackID);
                                 //PUT TOGETHER THE TEXT TRACKS JSON OBJECT IN ORDER TO SEND
                                 LOGGER.trace("VideoID: " + videoID);
 
@@ -387,7 +387,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 LOGGER.trace("UPDATED TRACKS LIST " + updated_tracks.length());
 
 
-                                com.coresecure.brightcove.wrapper.objects.Video video = new Video(
+                                Video video = new Video(
                                         request.getParameter("id"),
                                     null,
                                         null,
@@ -460,7 +460,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 InputStream is = new ByteArrayInputStream(request.getParameter("track_filepath").getBytes("UTF-8" ));
 
                                 //REQUEST INGEST URL
-                                JSONObject s3_url_resp = serviceUtil.createAssetS3(request.getParameter("id"),label+".vtt", is);
+                                JSONObject s3_url_resp = serviceUtil.createAssetS3(request.getParameter("id"),label.replaceAll(" ","_")+".vtt", is);
                                 //IF SUCCESS
                                 if (s3_url_resp != null && s3_url_resp.has("sent") && s3_url_resp.getBoolean("sent"))
                                 {

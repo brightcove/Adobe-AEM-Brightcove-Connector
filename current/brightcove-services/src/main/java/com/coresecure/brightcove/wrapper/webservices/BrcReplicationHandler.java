@@ -399,7 +399,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> " + _asset.getPath());
                         result = ReplicationResult.OK;
-                        long current_time_millisec = new java.util.Date().getTime();
+                        long current_time_millisec = new Date().getTime();
                         brc_lastsync_map.put("dc:title",video.name);
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
                         //rr.commit()?
@@ -439,7 +439,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
 
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> "+_asset.getPath());
-                        long current_time_millisec = new java.util.Date().getTime();
+                        long current_time_millisec = new Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
                         result = ReplicationResult.OK;
                     }
@@ -474,13 +474,62 @@ public class BrcReplicationHandler implements TransportHandler {
 
         Rendition poster_rendition = _asset.getRendition("brc_poster.png");
         Rendition thumb_rendition = _asset.getRendition("brc_thumbnail.png");
+        Rendition original_rendition = _asset.getRendition("original");
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
         Images images_obj = new Images();
 
         com.coresecure.brightcove.wrapper.BrightcoveAPI brAPI = new com.coresecure.brightcove.wrapper.BrightcoveAPI(cs.getClientID(), cs.getClientSecret(), account_id);
+        JSONObject master = new JSONObject();
 
-        if (poster_rendition != null) {
 
+        //ORGINAL RENDITION - REPLACE CHECK -  RENDITION PROCESS
+        if (currentVideo.id != null && original_rendition != null)
+        {
+
+            ValueMap original_map = original_rendition.getProperties();
+            String orig_lastmod_time = original_map.get("jcr:lastModified","0");
+            LOGGER.trace("ORGINAL RENDITION LASTMOD: " + orig_lastmod_time + " VS LASTSYNC " + brc_lastsync_time);
+            LOGGER.trace(""+original_map);
+
+
+            Date original_d = new Date();
+            try
+            {
+                original_d = sdf.parse(orig_lastmod_time);
+                LOGGER.trace("FORMATTED POSTER LASMOD: "  + original_d.getTime());
+            }
+            catch (ParseException e)
+            {
+                LOGGER.error("ERROR PARSING DATE !");
+                replicationLog.error("ERROR PARSING DATE POSTER!");
+                LOGGER.trace("UNFORMATTED POSTER LASTMOD: "  + orig_lastmod_time);
+            }
+
+            if(original_d.getTime() > brc_lastsync_time)
+            {
+                LOGGER.trace("UPLOADING ORIGINAL");
+                //CHECK FOR Null BRC _ ID?
+                InputStream original_rendition_is = _asset.getRendition("original") != null ? _asset.getRendition("original").getStream() : null;
+                JSONObject s3_url_resp_original = serviceUtil.createAssetS3(currentVideo.id, _asset.getName() ,original_rendition_is);
+
+                LOGGER.trace("S3RESP : " + s3_url_resp_original);
+                LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
+                if (s3_url_resp_original != null && s3_url_resp_original.getBoolean("sent")) {
+                    master = new JSONObject("{'master': {'url': '" + s3_url_resp_original.getString("api_request_url") + "'},'profile': 'high-resolution','capture-images': false}");
+                }
+
+            }
+
+        }
+
+
+
+
+
+        //POSTER RENDITION PROCESS
+        if (poster_rendition != null)
+        {
             ValueMap poster_map = poster_rendition.getProperties();
             String poster_lastmod = poster_map.get("jcr:lastModified", "");
             String poster_lastmod_time = poster_map.get("jcr:lastModified","0");
@@ -512,11 +561,15 @@ public class BrcReplicationHandler implements TransportHandler {
                 {
                     //IF SUCCESS - PUT
                     Poster poster = new Poster(s3_url_resp_poster.getString("api_request_url"));
-                    images_obj.poster = poster;
+                    master.put("poster", poster.toJSON());
+
                 }
             }
 
         }
+
+
+        //THUMBNAIL RENDITION PROCESS
         if (thumb_rendition != null) {
             String thumbnail_lastmod = thumb_rendition.getValueMap().get("jcr:lastModified", "");
 
@@ -549,16 +602,21 @@ public class BrcReplicationHandler implements TransportHandler {
                 if (s3_url_resp_thumbnail != null && s3_url_resp_thumbnail.getBoolean("sent")) {
                     //IF SUCCESS - PUT
                     Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString("api_request_url"));
-                    images_obj.thumbnail = thumbnail;
+                    master.put("thumbnail", thumbnail.toJSON());
                 }
             }
         }
 
-        if (images_obj.poster != null || images_obj.thumbnail != null) {
 
-            LOGGER.trace("IMAGES OBJECT : " + images_obj.toString());
 
-            JSONObject response = brAPI.cms.uploadInjest(currentVideo.id, images_obj.toJSON());
+
+
+        //UPLOAD INJEST SENDS THE IMAGE OBJECT TO THE  API - UPDATES THE METADATA TO POINT TO THE NEW URLS
+        if (master.has("poster") || master.has("thumbnail") || master.has("master") ) {
+
+            LOGGER.trace("master OBJ    ECT : " + master.toString());
+
+            JSONObject response = brAPI.cms.uploadInjest(currentVideo.id, master);
 
             LOGGER.trace("response: " + response.toString());
 
@@ -569,6 +627,8 @@ public class BrcReplicationHandler implements TransportHandler {
         } else {
             result = true;
         }
+
+
 
         return result;
     }
