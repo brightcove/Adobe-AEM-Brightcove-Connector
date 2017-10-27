@@ -23,6 +23,7 @@ public class Text_track {
     public String kind;
     public String mime_type;
     public String asset_id;
+    public Boolean _default;
     public JSONArray sources;
 
 
@@ -44,6 +45,7 @@ public class Text_track {
             if(!aText_track.isNull("mime_type"))mime_type = aText_track.getString("mime_type");
             if(!aText_track.isNull("asset_id"))asset_id = aText_track.getString("asset_id");
             if(!aText_track.isNull("sources"))sources = aText_track.getJSONArray("sources");
+            if(!aText_track.isNull("default"))_default = aText_track.getBoolean("default");
 
         }
         catch (JSONException e)
@@ -61,7 +63,7 @@ public class Text_track {
     public JSONObject toJSON() throws JSONException
     {
 
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"id", "account_id" , "src", "srclang", "label","kind","mime_type","asset_id","sources"});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"id", "account_id" , "src", "srclang", "label","kind","mime_type","asset_id","sources", "_default"});
 
 
 

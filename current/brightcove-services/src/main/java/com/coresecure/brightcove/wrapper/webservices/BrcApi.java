@@ -440,7 +440,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                             String label = request.getParameter("track_label");
                             if (label!= null && !label.isEmpty()) text_track.put("label", label);
                             text_track.put("default", "true".equals(request.getParameter("track_default")));
-                            //text_track.put("mime_type", request.getParameter("track_mime_type"));
+                            text_track.put("mime_type", request.getParameter("track_mime_type"));
                             //LOGGER.trace(text_track.toString(1));
 
 
