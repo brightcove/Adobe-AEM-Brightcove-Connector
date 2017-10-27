@@ -763,7 +763,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
 
                 //AFTER SETTING ALL THE METADATA - SET THE LAST UPDATE TIME
-                long current_time_millisec = new java.util.Date().getTime();
+                long current_time_millisec = new Date().getTime();
                 map.put("brc_lastsync", current_time_millisec);
                 resourceResolver.commit();
 

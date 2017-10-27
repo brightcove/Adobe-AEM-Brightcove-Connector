@@ -414,7 +414,7 @@ public class ServiceUtil {
             JSONObject videoIngested = new JSONObject();
             try {
                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
-                videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
+                videoIngested = brAPI.cms.createIngest(new Video(videoItem), ingest);
                 if (videoIngested != null && videoIngested.has("id"))
                 {
                     LOGGER.info("New video id: '" + newVideoId + "'.");

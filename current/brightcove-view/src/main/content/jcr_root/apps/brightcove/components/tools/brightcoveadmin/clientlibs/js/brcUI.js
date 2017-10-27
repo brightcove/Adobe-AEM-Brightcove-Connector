@@ -797,7 +797,9 @@ function uploadThumbnail()
 }
 
 function uploadtrack()
-{
+{var default_tracks = $("#divMeta\\.text_tracks_table tr.default_track");
+
+
     var form = new CQ.Ext.form.FormPanel({
             baseCls: 'x-plain',
             labelWidth: 130,
@@ -1066,7 +1068,7 @@ function uploadtrack()
                 ,{
                 xtype: 'selection',
                 fieldLabel: 'Default Track:',
-                fieldDescription: 'Set new uploaded track as the default text track?',
+                fieldDescription: (default_tracks.length > 0) ? '<b style="color:red;">NOTE: Only a single text track should be set as the default</b>' :'Set new uploaded track as the default text track?',
                 inputValue: true,
                 name: 'track_default',
                 type:'checkbox'
@@ -1137,6 +1139,8 @@ function uploadtrack()
 
                     if (formobj.isValid())
                     {
+
+
                         //TODO: Find animation midground to make modal only loading thing
                         loadStart();
                         formobj.submit({
