@@ -1,34 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
     jcr:primaryType="cq:Panel"
-    title="Basic">
+    title="Brightcove Basic">
     <items jcr:primaryType="cq:WidgetCollection">
-        <basic
-            jcr:primaryType="cq:Widget"
-            collapsed="{Boolean}false"
-            collapsible="{Boolean}false"
-            xtype="dialogfieldset">
-            <items jcr:primaryType="cq:WidgetCollection">
-                <title
-                    jcr:primaryType="cq:Widget"
-                    fieldLabel="Title"
-                    name="./jcr:title"
-                    xtype="textfield"/>
-                <description
-                    jcr:primaryType="cq:Widget"
-                    fieldLabel="Description"
-                    fieldSubLabel="(For authors)"
-                    name="./jcr:description"
-                    xtype="textarea"/>
-                <hideInNav
-                    jcr:primaryType="cq:Widget"
-                    fieldLabel="Hide in Navigation"
-                    inputValue="{Boolean}true"
-                    name="./hideInNav"
-                    type="checkbox"
-                    xtype="selection"/>
-            </items>
-        </basic>
         <player_information
             jcr:primaryType="cq:Widget"
             collapsed="{Boolean}false"

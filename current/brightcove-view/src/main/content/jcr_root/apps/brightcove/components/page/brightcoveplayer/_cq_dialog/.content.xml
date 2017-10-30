@@ -90,7 +90,8 @@
                                             name="./account"
                                             renderReadOnly="{Boolean}false"
                                             translateOptions="{Boolean}true"
-                                            required="{Boolean}true">
+                                            required="{Boolean}true"
+                                            cq:showOnCreate="{Boolean}true">
                                         <datasource
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="coresecure/brightcove/accountsUI"
@@ -101,14 +102,16 @@
                                             sling:resourceType="granite/ui/components/foundation/form/select"
                                             fieldLabel="Player ID:"
                                             multiple="{Boolean}false"
-                                            name="./playerID"/>
+                                            name="./playerID"
+                                            cq:showOnCreate="{Boolean}true"/>
                                     <playerKey
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
                                             fieldLabel="Player Key "
                                             fieldDescription="(Legacy Player Only - Deprecated)"
                                             name="./playerKey"
-                                            required="{Boolean}false"/>
+                                            required="{Boolean}false"
+                                            cq:showOnCreate="{Boolean}true"/>
                                 </items>
                             </title>
 
@@ -123,7 +126,8 @@
                                             fieldLabel="Player Class"
                                             name="./playerClass"
                                             renderReadOnly="{Boolean}true"
-                                            required="{Boolean}false"/>
+                                            required="{Boolean}false"
+                                            cq:showOnCreate="{Boolean}true"/>
                                     <ignoreComponentProperties
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="granite/ui/components/foundation/form/checkbox"
@@ -132,7 +136,8 @@
                                             fieldDescription="If true, all custom Component Properties will be ignored."
                                             renderReadOnly="{Boolean}true"
                                             text="Ignore Component Settings"
-                                            value="true"/>
+                                            value="true"
+                                            cq:showOnCreate="{Boolean}true"/>
                                 </items>
                             </player_customization>
                             <fieldset_player_styles
@@ -149,7 +154,8 @@
                                             name="./align"
                                             renderReadOnly="{Boolean}false"
                                             translateOptions="{Boolean}true"
-                                            required="{Boolean}true">
+                                            required="{Boolean}true"
+                                            cq:showOnCreate="{Boolean}true">
                                         <items
                                                 jcr:primaryType="nt:unstructured">
                                             <left
@@ -174,13 +180,15 @@
                                                 jcr:primaryType="nt:unstructured"
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Width"
-                                                name="./width">
+                                                name="./width"
+                                                cq:showOnCreate="{Boolean}true">
                                         </width>
                                         <height
                                                 jcr:primaryType="nt:unstructured"
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Height"
-                                                name="./height">
+                                                name="./height"
+                                                cq:showOnCreate="{Boolean}true">
                                         </height>
                                     </size>
                                 </items>
@@ -197,7 +205,8 @@
                                             fieldDescription="(If blank 'default' will be used)"
                                             name="./data_embedded"
                                             renderReadOnly="{Boolean}true"
-                                            required="{Boolean}false"/>
+                                            required="{Boolean}false"
+                                            cq:showOnCreate="{Boolean}true"/>
 
                                 </items>
                             </fieldset_misc>

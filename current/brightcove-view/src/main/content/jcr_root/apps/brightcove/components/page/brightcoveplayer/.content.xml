@@ -3,4 +3,5 @@
     cq:defaultView="html"
     jcr:description="Brightcove Player Definition"
     jcr:primaryType="cq:Component"
-    jcr:title="Brightcove Player Definition"/>
+    jcr:title="Brightcove Player Definition"
+          sling:resourceSuperType="foundation/components/page"/>
