@@ -587,7 +587,8 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                             newAsset.addRendition("brc_poster.png", ris, "image/jpeg");
                                         }
 
-                                        if (objObject.has("thumbnail")) {
+                                        if (objObject.has("thumbnail"))
+                                        {
                                             JSONObject images_poster_obj = objObject.getJSONObject("thumbnail");
                                             String src = images_poster_obj.getString("src");
                                             //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
@@ -595,9 +596,6 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                             InputStream ris = new URL(src).openStream();
                                             //Map<String,Object> rendition_map = new HashMap<String,Object>();
                                             newAsset.addRendition("brc_thumbnail.png", ris, "image/jpeg");
-
-                                            ris = new URL(src).openStream();//<= FIXES DISMISSED InputStream*
-                                            newAsset.addRendition("original", ris, "image/jpeg");
                                         }
                                     }
                                     catch (Exception e)
