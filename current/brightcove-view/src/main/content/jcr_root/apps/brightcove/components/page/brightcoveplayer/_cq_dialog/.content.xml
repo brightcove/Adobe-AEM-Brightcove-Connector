@@ -71,7 +71,8 @@
                     <brightcove
                             jcr:primaryType="nt:unstructured"
                             jcr:title="Brightcove"
-                            sling:resourceType="granite/ui/components/foundation/section">
+                            sling:resourceType="granite/ui/components/foundation/section"
+                            cq:showOnCreate="{Boolean}false">
                         <layout
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/foundation/layouts/fixedcolumns"
@@ -91,7 +92,7 @@
                                             renderReadOnly="{Boolean}false"
                                             translateOptions="{Boolean}true"
                                             required="{Boolean}true"
-                                            cq:showOnCreate="{Boolean}true">
+                                            >
                                         <datasource
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="coresecure/brightcove/accountsUI"
@@ -103,7 +104,7 @@
                                             fieldLabel="Player ID:"
                                             multiple="{Boolean}false"
                                             name="./playerID"
-                                            cq:showOnCreate="{Boolean}true"/>
+                                            />
                                     <playerKey
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
@@ -111,7 +112,7 @@
                                             fieldDescription="(Legacy Player Only - Deprecated)"
                                             name="./playerKey"
                                             required="{Boolean}false"
-                                            cq:showOnCreate="{Boolean}true"/>
+                                            />
                                 </items>
                             </title>
 
@@ -127,7 +128,7 @@
                                             name="./playerClass"
                                             renderReadOnly="{Boolean}true"
                                             required="{Boolean}false"
-                                            cq:showOnCreate="{Boolean}true"/>
+                                            />
                                     <ignoreComponentProperties
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="granite/ui/components/foundation/form/checkbox"
@@ -137,7 +138,7 @@
                                             renderReadOnly="{Boolean}true"
                                             text="Ignore Component Settings"
                                             value="true"
-                                            cq:showOnCreate="{Boolean}true"/>
+                                            />
                                 </items>
                             </player_customization>
                             <fieldset_player_styles
@@ -155,7 +156,7 @@
                                             renderReadOnly="{Boolean}false"
                                             translateOptions="{Boolean}true"
                                             required="{Boolean}true"
-                                            cq:showOnCreate="{Boolean}true">
+                                            >
                                         <items
                                                 jcr:primaryType="nt:unstructured">
                                             <left
@@ -181,14 +182,14 @@
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Width"
                                                 name="./width"
-                                                cq:showOnCreate="{Boolean}true">
+                                                >
                                         </width>
                                         <height
                                                 jcr:primaryType="nt:unstructured"
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Height"
                                                 name="./height"
-                                                cq:showOnCreate="{Boolean}true">
+                                                >
                                         </height>
                                     </size>
                                 </items>
@@ -206,7 +207,7 @@
                                             name="./data_embedded"
                                             renderReadOnly="{Boolean}true"
                                             required="{Boolean}false"
-                                            cq:showOnCreate="{Boolean}true"/>
+                                            />
 
                                 </items>
                             </fieldset_misc>
