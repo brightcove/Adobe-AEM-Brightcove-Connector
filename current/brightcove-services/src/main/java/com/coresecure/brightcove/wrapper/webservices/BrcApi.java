@@ -1,10 +1,12 @@
 /*
-    Adobe CQ5 Brightcove Connector
 
-    Copyright (C) 2015 Coresecure Inc.
+    Adobe AEM Brightcove Connector
 
-        Authors:    Alessandro Bonfatti
-                    Yan Kisen
+    Copyright (C) 2017 Coresecure Inc.
+
+    Authors:    Alessandro Bonfatti
+                Yan Kisen
+                Pablo Kropilnicki
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,13 +21,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-- Additional permission under GNU GPL version 3 section 7
-If you modify this Program, or any covered work, by linking or combining
-it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
-squeakysand-commons and squeakysand-osgi (or a modified version of those
-libraries), containing parts covered by the terms of APACHE LICENSE 2.0 
-or MIT License, the licensors of this Program grant you additional 
-permission to convey the resulting work.
+    - Additional permission under GNU GPL version 3 section 7
+    If you modify this Program, or any covered work, by linking or combining
+    it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
+    squeakysand-commons and squeakysand-osgi (or a modified version of those
+    libraries), containing parts covered by the terms of APACHE LICENSE 2.0
+    or MIT License, the licensors of this Program grant you additional
+    permission to convey the resulting work.
+
  */
 
 package com.coresecure.brightcove.wrapper.webservices;
@@ -38,7 +41,6 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
-import com.coresecure.brightcove.wrapper.utils.S3UploadUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
@@ -62,8 +64,6 @@ import javax.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.net.URL;
 import java.util.*;
 
 @Service
@@ -330,42 +330,17 @@ public class BrcApi extends SlingAllMethodsServlet {
 
 
                             try {
-
-                                JSONObject text_tracks = new JSONObject();
                                 String trackID = request.getParameter("track");
-
-
-//                                LOGGER.trace(video.toString());
-
                                 String videoID = request.getParameter("id");
                                 LOGGER.trace("TRACK DELETION ACTIVATED FOR TRACK " + trackID);
                                 //PUT TOGETHER THE TEXT TRACKS JSON OBJECT IN ORDER TO SEND
                                 LOGGER.trace("VideoID: " + videoID);
 
-
-
                                 //GET VIDEO FOR THIS VIDEO ID  - REMOVE FORM THE JSON OBJECT AND RESEND UP
-
                                 //GET VIDEO AND UPDATE TEXT TRACKS JSON
-
-
-//                                Collection<String> tagsToAdd = new ArrayList<String>();
-//                                if (request.getParameter("tags") != null) {
-//
-//                                    List<String> tags = Arrays.asList(request.getParameterValues("tags"));
-//                                    for (String tag : tags) {
-//                                        if (tag.startsWith("+")) tagsToAdd.add(tag.substring(1));
-//                                    }
-//
-//                                }
-//                                com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-                                //com.coresecure.brightcove.wrapper.objects.Video video = new Video(brAPI.cms.getVideo(request.getParameter("id")));
-
-
                                 JSONObject down_video = brAPI.cms.getVideo(request.getParameter("id"));
 
                                 //DELETE THE TRACK
-
                                 JSONArray trackslist = down_video.has("text_tracks") ? down_video.getJSONArray("text_tracks") : null;
                                 String curID = "";
 
@@ -383,9 +358,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                         updated_tracks.put(currentTrack.toJSON());
                                     }
                                 }
-
                                 LOGGER.trace("UPDATED TRACKS LIST " + updated_tracks.length());
-
 
                                 Video video = new Video(
                                         request.getParameter("id"),
@@ -405,35 +378,24 @@ public class BrcApi extends SlingAllMethodsServlet {
                                         updated_tracks
                                 );
 
-
                                 //LOGGER.debug("GOT VIDEO: "+ down_video.toString(1));
                                 LOGGER.debug("REBUILT VIDEO: "+ video.toJSON().toString(1));
-
                                 JSONObject videoItem = brAPI.cms.updateVideo(video);
-
                                 LOGGER.trace("RESP TXT TRACK :" + videoItem.toString(1) );
-
-
                             }
                             catch (JSONException e)
                             {
                                 LOGGER.error("ERROR! JSON WTF", e);
                             }
 
-
                             result = null;
                         }
                         else if ("upload_text_track".equals(requestedAPI))
                         {
 
-                            //LOGGER.trace("###$$$###upload_text_track###$$$###");
-
-                            //IF B IS AVAILABLE, THEN ADD THE TRACK TO THE UPDATE VIDEO PAYLOAD
-
                             JSONObject text_track_payload = new JSONObject();
                             JSONArray text_track_arr = new JSONArray();
                             JSONObject text_track = new JSONObject();
-
 
                             text_track.put("srclang", request.getParameter("track_lang"));
                             text_track.put("kind", request.getParameter("track_kind"));
@@ -444,18 +406,13 @@ public class BrcApi extends SlingAllMethodsServlet {
                             //LOGGER.trace(text_track.toString(1));
 
 
-
                             //FILE UPLOAD CASE***
                             //HERE IT GETS THE TRACK SOURCE - HANDLE CASE OF FILE UPLOAD
                             if("".equals(request.getParameter("track_source")) && !"".equals(request.getParameter("track_filepath"))  )
                             {
                                 LOGGER.trace("FILEPATH: "  + request.getParameter("track_filepath"));
-
-
                                 //DO PUSH OF THE FILE GIVEN THE FILEPATH AND THEN PUSH THE NEW OBJECT TRACK TO VIDEO AS BEFORE
-
                                 //CHECK THAT IT IS A VTT FILE??? END OF NAME???
-
 
                                 InputStream is = new ByteArrayInputStream(request.getParameter("track_filepath").getBytes("UTF-8" ));
 
@@ -465,8 +422,6 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 if (s3_url_resp != null && s3_url_resp.has("sent") && s3_url_resp.getBoolean("sent"))
                                 {
                                     //text_track.put("url", s3_url_resp.getString("signed_url"));
-
-
                                     text_track.put("url", s3_url_resp.getString("api_request_url"));
                                     LOGGER.trace("S3URLRESP: " + s3_url_resp.toString(1));
                                 }
@@ -474,8 +429,6 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 {
                                     LOGGER.error("FAILED TO INITIALIZE BUCKET");
                                 }
-
-
 
                             }
                             else if (!"".equals(request.getParameter("track_source")))
@@ -491,9 +444,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
 
                             JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter("id"), text_track_payload);
-
-                            LOGGER.trace("**:" + videoItem.toString(1));
-
+                            //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toString(1));
 
                             if(videoItem.has("response"))
                             {
@@ -528,9 +479,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 images_payload.put("poster", poster);
                             }
 
-
-                            LOGGER.trace("PAY>>" + images_payload.toString(1));
-
+                            LOGGER.trace("UploadImagesPayload>>" + images_payload.toString(1));
 
                             JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter("id"), images_payload);
                             LOGGER.trace(videoItem.toString(1));

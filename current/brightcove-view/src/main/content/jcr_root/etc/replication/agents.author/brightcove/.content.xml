@@ -13,7 +13,7 @@
         jcr:lastModifiedBy="admin"
         jcr:mixinTypes="[cq:ReplicationStatus,mix:versionable]"
         jcr:primaryType="nt:unstructured"
-        jcr:title="brightcove"
+        jcr:title="Brightcove Replication Agent"
         jcr:uuid="0ed32b72-a4d7-4458-af99-bc4d3e180685"
         sling:resourceType="cq/replication/components/agent"
         enabled="true"

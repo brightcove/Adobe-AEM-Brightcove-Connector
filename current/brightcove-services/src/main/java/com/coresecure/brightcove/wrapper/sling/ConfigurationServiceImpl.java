@@ -1,10 +1,12 @@
 /*
-    Adobe CQ5 Brightcove Connector
 
-    Copyright (C) 2015 Coresecure Inc.
+    Adobe AEM Brightcove Connector
 
-        Authors:    Alessandro Bonfatti
-                    Yan Kisen
+    Copyright (C) 2017 Coresecure Inc.
+
+    Authors:    Alessandro Bonfatti
+                Yan Kisen
+                Pablo Kropilnicki
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,14 +21,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-- Additional permission under GNU GPL version 3 section 7
-If you modify this Program, or any covered work, by linking or combining
-it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
-squeakysand-commons and squeakysand-osgi (or a modified version of those
-libraries), containing parts covered by the terms of APACHE LICENSE 2.0 
-or MIT License, the licensors of this Program grant you additional 
-permission to convey the resulting work.
- */
+    - Additional permission under GNU GPL version 3 section 7
+    If you modify this Program, or any covered work, by linking or combining
+    it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
+    squeakysand-commons and squeakysand-osgi (or a modified version of those
+    libraries), containing parts covered by the terms of APACHE LICENSE 2.0
+    or MIT License, the licensors of this Program grant you additional
+    permission to convey the resulting work.
+
+*/
+
 package com.coresecure.brightcove.wrapper.sling;
 
 import org.apache.felix.scr.annotations.*;
@@ -59,8 +63,6 @@ import java.util.*;
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
         @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets")
-//        @Property(name = "default_thumbnail_path", label = "Default Asset Thumbnail PNG", description = "Default Stock Image Path", value = "/etc/designs/cs/brightcove/images/default.png")
-
 })
 
 
@@ -97,8 +99,6 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     public String getAccountID() {
         return (String) getProperties().get("key");
     }
-
-    //public String getDefaultThumbnailPath(){ return (String) getProperties().get("default_thumbnail_path"); }
 
     public String getPlayersLoc() {
         return (String) getProperties().get("playersstore");
