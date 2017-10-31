@@ -32,44 +32,28 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.InputStream;
 
-public class Ingest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Ingest.class);
 
-    public String profile;
-    public Map<String, String> master;
+public class Binary {
 
-    public Ingest(String aProfile, Map<String, String> aMaster) {
-        profile = aProfile;
-        master = aMaster;
+    public InputStream binary;
 
+    public String mime_type;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Binary.class);
+
+    public Binary()
+    {
+        binary = null;
+        mime_type = null;
     }
-
-    public Ingest(String aProfile, String aUrl) {
-        master = new HashMap<String, String>();
-        master.put("url", aUrl);
-        profile = aProfile;
-    }
-
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"profile", "master"});
-        return json;
-    }
-
-    public String toString() {
-        try {
-            return toJSON().toString();
-        } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
-        }
+    public Binary(InputStream aBinary, String aType)
+    {
+        binary = aBinary;
+        mime_type = aType;
     }
 }

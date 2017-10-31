@@ -1,3 +1,35 @@
+/*
+
+    Adobe AEM Brightcove Connector
+
+    Copyright (C) 2017 Coresecure Inc.
+
+    Authors:    Alessandro Bonfatti
+                Yan Kisen
+                Pablo Kropilnicki
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+    - Additional permission under GNU GPL version 3 section 7
+    If you modify this Program, or any covered work, by linking or combining
+    it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
+    squeakysand-commons and squeakysand-osgi (or a modified version of those
+    libraries), containing parts covered by the terms of APACHE LICENSE 2.0
+    or MIT License, the licensors of this Program grant you additional
+    permission to convey the resulting work.
+
+ */
 package com.coresecure.brightcove.wrapper.utils;
 
 import java.io.*;
@@ -13,14 +45,24 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.util.HashMap;
 import java.util.Map;
 
+import javax.jcr.Node;
+import javax.jcr.RepositoryException;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.coresecure.brightcove.wrapper.objects.Binary;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.commons.JcrUtils;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
+import org.apache.sling.commons.mime.MimeTypeService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -72,9 +114,6 @@ public class HttpServices {
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
             wr.writeBytes(payload);
-            // Fortify Fix for below two lines.
-            // wr.flush();
-            // wr.close();
 
             // Get Response
             LOGGER.debug("getResponseCode: " + connection.getResponseCode());
@@ -88,9 +127,6 @@ public class HttpServices {
                     response.append(line);
                     response.append('\r');
                 }
-                // Fortify Fix for below two lines.
-                // rd.close();
-                // return response.toString();
                 delResponse = response.toString();
             } else {
                 delResponse= "{'error_code':"+connection.getResponseCode()+",'message':'"+connection.getResponseMessage()+"'}";
@@ -104,8 +140,6 @@ public class HttpServices {
             if (connection != null) {
                 connection.disconnect();
             }
-            // Fixed the Fortify Scan -- - HttpServices.java, line 50
-            // (Unreleased Resource: Streams) [Hidden]
             if (null != rd) {
                 try {
                     rd.close();
@@ -166,9 +200,6 @@ public class HttpServices {
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
             wr.writeBytes(payload);
-            // Fortify Fix for below commented two lines.
-            // wr.flush();
-            // wr.close();
 
             // Get Response
             if (connection.getResponseCode() < 400) {
@@ -180,9 +211,7 @@ public class HttpServices {
                     response.append(line);
                     response.append("\r\n");
                 }
-                // Fortify Fix for below two lines.
-                // rd.close();
-                // return response.toString();
+
                 exPostResponse = response.toString();
             } else {
                 LOGGER.debug("getResponseCode: " + connection.getResponseCode() + " getResponseMessage: " + connection.getResponseMessage());
@@ -196,8 +225,7 @@ public class HttpServices {
             if (connection != null) {
                 connection.disconnect();
             }
-            // Fixed the Fortify Scan -- HttpServices.java, line 99 (Unreleased
-            // Resource: Streams) [Hidden]
+
             if (null != rd) {
                 try {
                     rd.close();
@@ -249,9 +277,7 @@ public class HttpServices {
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
             wr.writeBytes(payload);
-            // Fortify Fix for below commented two lines.
-            // wr.flush();
-            // wr.close();
+
             if (200 == connection.getResponseCode()) {
                 InputStream is = connection.getInputStream();
                 rd = new BufferedReader(new InputStreamReader(is));
@@ -261,9 +287,7 @@ public class HttpServices {
                     response.append(line);
                     response.append("\r\n");
                 }
-                // Fortify Fix for below two lines.
-                // rd.close();
-                // return response.toString();
+
                 exPostResponse = response.toString();
             } else {
                 LOGGER.debug("getResponseCode: " + connection.getResponseCode());
@@ -280,8 +304,7 @@ public class HttpServices {
             if (connection != null) {
                 connection.disconnect();
             }
-            // Fixed the Fortify Scan -- HttpServices.java, line 99 (Unreleased
-            // Resource: Streams) [Hidden]
+
             if (null != rd) {
                 try {
                     rd.close();
@@ -350,7 +373,6 @@ public class HttpServices {
                 connection = getSSLConnection(url, targetURL, HttpsURLConnection.class);
 
             }
-            //connection.setRequestMethod("GET");
             connection.setRequestProperty("Content-Type",
                     "application/x-www-form-urlencoded");
             connection.setRequestProperty("Content-Length",
@@ -369,8 +391,6 @@ public class HttpServices {
 
             ByteArrayOutputStream response = new ByteArrayOutputStream();
 
-            //StringBuffer response = new StringBuffer();
-
             byte[] buffer = new byte[4096];
             int n;
 
@@ -379,9 +399,6 @@ public class HttpServices {
             }
             LOGGER.trace("response committed!");
 
-            // Fortify Fix for below two lines.
-            // rd.close();
-            // return response.toString();
             exGetResponse.put("response",new String(response.toByteArray(), "UTF-8"));
             exGetResponse.put("binary",response.toByteArray());
             exGetResponse.put("mime_type", connection.getContentType());
@@ -394,9 +411,6 @@ public class HttpServices {
             if (connection != null) {
                 connection = null;
             }
-            // Fixed the Fortify Scan -- - HttpServices.java, line 191
-            // (Unreleased Resource: Streams) [Hidden]
-
         }
         return exGetResponse;
     }
@@ -543,5 +557,26 @@ public class HttpServices {
         }
 
         return context;
+    }
+
+    public static boolean isLocalPath(String path){
+        return path.startsWith("/") && !path.startsWith("//");
+    }
+
+    public static Binary getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException{
+        Binary binary = new Binary();
+        JSONObject get_response = HttpServices.executeFullGet(path, urlParameters, headers!= null ? headers :new HashMap<String, String>());
+        if (get_response != null && get_response.has("binary")) {
+            InputStream binarystream = new ByteArrayInputStream((byte[]) get_response.get("binary"));
+            String mime_type = get_response.getString("mime_type"); //< SET MIME TYPE
+
+            if (binarystream == null) //IF REMOTE IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
+            {
+                LOGGER.error("External thumbnail could not be read");
+            } else {
+                binary = new Binary(binarystream,mime_type);
+            }
+        }
+        return binary;
     }
 }

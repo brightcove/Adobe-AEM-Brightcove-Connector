@@ -1,13 +1,12 @@
 /*
+ Adobe AEM Brightcove Connector
 
-
- Adobe CQ5 Brightcove Connector
-
- Copyright (C) 2015 Coresecure Inc.
+ Copyright (C) 2017 Coresecure Inc.
 
  Authors:
  Alessandro Bonfatti
  Yan Kisen
+ Pablo Kropilnicki
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -22,19 +21,14 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-- Additional permission under GNU GPL version 3 section 7
-If you modify this Program, or any covered work, by linking or combining
-it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
-squeakysand-commons and squeakysand-osgi (or a modified version of those
-libraries), containing parts covered by the terms of APACHE LICENSE 2.0 
-or MIT License, the licensors of this Program grant you additional 
-permission to convey the resulting work.
-
-
-
- *//*vm_ui.js
- *ui code
- */
+ - Additional permission under GNU GPL version 3 section 7
+ If you modify this Program, or any covered work, by linking or combining
+ it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
+ squeakysand-commons and squeakysand-osgi (or a modified version of those
+ libraries), containing parts covered by the terms of APACHE LICENSE 2.0
+ or MIT License, the licensors of this Program grant you additional
+ permission to convey the resulting work.
+*/
 
 //CONFIG
 
@@ -416,11 +410,7 @@ function showMetaDataByVideoID(idx) {
         contentType: 'application/json; charset=utf-8',
         success: function (response)
         {
-            console.log(response);
             var v = response.items[0];
-
-
-
 
             // Populate the metadata panel
             document.getElementById('divMeta.name').innerHTML = v.name;

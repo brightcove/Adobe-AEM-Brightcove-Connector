@@ -1,12 +1,12 @@
 /*
+ Adobe AEM Brightcove Connector
 
+ Copyright (C) 2017 Coresecure Inc.
 
- Adobe CQ5 Brightcove Connector
-
- Copyright (C) 2015 Coresecure Inc.
-
- Authors:    Alessandro Bonfatti
+ Authors:
+ Alessandro Bonfatti
  Yan Kisen
+ Pablo Kropilnicki
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -28,9 +28,6 @@
  libraries), containing parts covered by the terms of APACHE LICENSE 2.0
  or MIT License, the licensors of this Program grant you additional
  permission to convey the resulting work.
-
-
-
  */
 
 //setVideoTrackingEvents();

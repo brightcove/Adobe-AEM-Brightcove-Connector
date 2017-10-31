@@ -1,10 +1,12 @@
 /*
-    Adobe CQ5 Brightcove Connector
 
-    Copyright (C) 2015 Coresecure Inc.
+    Adobe AEM Brightcove Connector
 
-        Authors:    Alessandro Bonfatti
-                    Yan Kisen
+    Copyright (C) 2017 Coresecure Inc.
+
+    Authors:    Alessandro Bonfatti
+                Yan Kisen
+                Pablo Kropilnicki
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,13 +21,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-- Additional permission under GNU GPL version 3 section 7
-If you modify this Program, or any covered work, by linking or combining
-it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
-squeakysand-commons and squeakysand-osgi (or a modified version of those
-libraries), containing parts covered by the terms of APACHE LICENSE 2.0 
-or MIT License, the licensors of this Program grant you additional 
-permission to convey the resulting work.
+    - Additional permission under GNU GPL version 3 section 7
+    If you modify this Program, or any covered work, by linking or combining
+    it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
+    squeakysand-commons and squeakysand-osgi (or a modified version of those
+    libraries), containing parts covered by the terms of APACHE LICENSE 2.0
+    or MIT License, the licensors of this Program grant you additional
+    permission to convey the resulting work.
+
  */
 
 package com.coresecure.brightcove.wrapper.webservices;
@@ -36,7 +39,6 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
-import org.apache.commons.collections.KeyValue;
 import org.apache.commons.collections.Transformer;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
@@ -51,7 +53,6 @@ import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
@@ -61,7 +62,6 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.servlet.ServletException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -82,12 +82,8 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
     protected void doPost(final SlingHttpServletRequest request,
                           final SlingHttpServletResponse response) throws ServletException,
             IOException {
-
         LOGGER.trace("*POST-requestspath*" + request.getRequestPathInfo().toString());
-
         routeUIrequest(request, response);
-
-
     }
 
 
@@ -96,18 +92,9 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                          final SlingHttpServletResponse response) throws ServletException,
             IOException
     {
-
         LOGGER.trace("*GET-requestspath*" + request.getRequestPathInfo().toString());
-
-
-
         //IF HEADER = something
-
         routeUIrequest(request, response);
-
-
-
-
     }
 
 
@@ -196,8 +183,6 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
     public void  routeUIrequest( final SlingHttpServletRequest request, final SlingHttpServletResponse response)throws ServletException,
             IOException
     {
-
-
         if(request.getResource()!=null && "coresecure/brightcove/accountsUI".equals(request.getResource().getResourceType()))
         {
             LOGGER.trace("*accountsUI*" + request.getResource().getResourceType());

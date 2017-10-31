@@ -1,14 +1,18 @@
 Adobe AEM Brightcove Connector
 ==============================
 
-This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.com/en/video-cloud/ )** platform into Adobe Experience Manager (AEM)
+This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.com/en/video-cloud/ )** platform into Adobe Experience Manager (CQ5)
 
 <http://www.coresecure.com/brightcove-aem-integration>
 #### Supports
- - AEM 6.2
+ - AEM 6.2, 6.3
 
 ## Features
-New connector: you can now integrate the DAM with Brightcove Platform and manage the video metadata from within AEM
+- Components for Authoring Videos and Playlists
+   - **HTML5** and **Smart Player** API Support
+- Integrated *Library Managment Console* built on top of the **Video Cloud CMS API**
+- DAM Integration
+- Support for **Multiple Accounts**
 
 ## Screenshots
 <img src="https://cloud.githubusercontent.com/assets/1116995/11013626/17a9f018-84e3-11e5-8038-b7541751af06.png" width="23%"></img> 
@@ -18,7 +22,7 @@ New connector: you can now integrate the DAM with Brightcove Platform and manage
 
 ## Content Packages
 
-Pre-compiled Content Packages can be found on the [Releases Page](https://github.com/coresecure/Adobe-AEM-Brightcove-Connector/releases)
+Pre-compiled Content Packages can be found on the [Releases Page](https://github.com/coresecure/Adobe-CQ5-Brightcove-Connector/releases)
 
 ## Maven Setup
 
@@ -35,16 +39,16 @@ To compile this project you will need access to the **Adobe** and **CQ Blueprint
 The following Maven commands should be run from the *Project Root* directory:
 
 - ``mvn -Pauto-deploy-all clean install``
-   - Build the *services*, *view*, and *config* packages and install to a AEM instance.
+   - Build the *services*, *view*, and *config* packages and install to a CQ instance.
 
 - ``mvn -Pauto-deploy-view clean install``
-   - Build the *view* and *services* packages and install to a AEM instance.
+   - Build the *view* and *services* packages and install to a CQ instance.
 
 - ``mvn -Pauto-deploy-services clean install``
-   - Build the *services* bundle and install to a AEM instance.
+   - Build the *services* bundle and install to a CQ instance.
 
 - ``mvn -Pauto-deploy-config clean install``
-   - Build the *config* bundle and install to a AEM instance.
+   - Build the *config* bundle and install to a CQ instance.
 
 
 ### Specifying CRX Host/Port
@@ -54,7 +58,7 @@ mvn -Dcq.host=otherhost -Dcq.port=5502 <goals>
 
 ## Using with VLT
 
-To use vlt with this project, first build and install the package to your local AEM instance as described above. Then cd to `brightcove-view/src/main/content/jcr_root` and run
+To use vlt with this project, first build and install the package to your local CQ instance as described above. Then cd to `brightcove-view/src/main/content/jcr_root` and run
 
     vlt --credentials admin:admin checkout --force http://localhost:4502/crx
 
