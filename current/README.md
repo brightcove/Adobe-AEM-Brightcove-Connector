@@ -22,7 +22,7 @@ This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.co
 
 ## Content Packages
 
-Pre-compiled Content Packages can be found on the [Releases Page](https://github.com/coresecure/Adobe-CQ5-Brightcove-Connector/releases)
+Pre-compiled Content Packages can be found on the [Releases Page](https://github.com/coresecure/Adobe-AEM-Brightcove-Connector/releases)
 
 ## Maven Setup
 
