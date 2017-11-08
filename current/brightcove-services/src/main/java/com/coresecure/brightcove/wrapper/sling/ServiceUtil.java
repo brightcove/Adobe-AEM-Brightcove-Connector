@@ -185,7 +185,9 @@ public class ServiceUtil {
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query) {
         return getList(exportCSV, offset, limit, full_scroll, query, "name");
     }
-
+    public JSONArray getVideoSources(String videoID) {
+        return brAPI.cms.getVideoSources(videoID);
+    }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
         LOGGER.debug("getList: " + query);
         JSONObject items = new JSONObject();
@@ -451,8 +453,8 @@ public class ServiceUtil {
             String newVideoId = videoItem.getString("id");
             JSONObject videoIngested = new JSONObject();
             try {
-                Ingest ingest = new Ingest(ingestProfile, ingestURL);
-                videoIngested = brAPI.cms.createIngest(new Video(videoItem), ingest);
+                com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
+                videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
                 if (videoIngested != null && videoIngested.has("id")) {
                     LOGGER.info("New video id: '" + newVideoId + "'.");
                     result.put("videoid", newVideoId);
@@ -651,7 +653,7 @@ public class ServiceUtil {
                                         } else {
                                             //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
                                             //tagManager.setTags(assetRes, tags, true);
-                                            LOGGER.error("tag create failed [exists] > added >  ", tagValue);
+                                            LOGGER.warn("tag create failed [exists] > added >  ", tagValue);
 
                                         }
                                         tags.add(tagKey);
@@ -805,9 +807,17 @@ public class ServiceUtil {
                                     //LOGGER.trace("*!*!*! is now :" + obj.toString());
                                 }
                             }
+                            catch (IllegalStateException e)
+                            {
+                                LOGGER.warn("Duration Check Error! Invalid / empty video duration");
+                            }
+                            catch (NumberFormatException e)
+                            {
+                                LOGGER.warn("Duration Check Error! Invalid / empty video duration");
+                            }
                             catch (Exception e)
                             {
-                                LOGGER.error("*!*!*! Duration Check Error:!", e);
+                                LOGGER.warn("Duration Check Error!", e);
                             }
                             //END DURATION CHECK AND SET
 

@@ -62,7 +62,7 @@ function createPlayers() {
                 bc(document.getElementById(playerID));
                 videojs(playerID).ready(function () {
                     myPlayer = this;
-                    if (typeof myPlayer !== "undefined") {
+                    if (typeof myPlayer !== "undefined" && typeof ga != "undefined") {
                         myPlayer.on("firstplay", function () {
                             var videoName = myPlayer.mediainfo.name;
                             var videoID = myPlayer.mediainfo.id;

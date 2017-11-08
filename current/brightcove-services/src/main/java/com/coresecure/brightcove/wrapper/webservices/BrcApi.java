@@ -262,7 +262,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 }
                                 com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
                                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
-                                Video video = new Video(
+                                com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
                                         request.getParameter("name"),
                                         request.getParameter("referenceId"),
                                         request.getParameter("shortDescription"),
@@ -278,7 +278,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 String newVideoId = videoItem.getString("id");
                                 JSONObject videoIngested = new JSONObject();
                                 try {
-                                    videoIngested = brAPI.cms.createIngest(new Video(videoItem), ingest);
+                                    videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
                                     if (videoIngested != null && videoIngested.has("id")) {
                                         LOGGER.info("New video id: '" + newVideoId + "'.");
                                         result.put("videoid", newVideoId);
@@ -306,7 +306,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
                                 }
                                 com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-                                Video video = new Video(
+                                com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
                                         request.getParameter("id"),
                                         request.getParameter("name"),
                                         request.getParameter("referenceId"),
@@ -360,7 +360,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                                 }
                                 LOGGER.trace("UPDATED TRACKS LIST " + updated_tracks.length());
 
-                                Video video = new Video(
+                                com.coresecure.brightcove.wrapper.objects.Video video = new Video(
                                         request.getParameter("id"),
                                     null,
                                         null,

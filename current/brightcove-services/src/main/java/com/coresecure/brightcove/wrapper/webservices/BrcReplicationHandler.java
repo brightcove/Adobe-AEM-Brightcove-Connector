@@ -410,7 +410,7 @@ public class BrcReplicationHandler implements TransportHandler {
                         serviceUtil.updateRenditions( _asset, video);
 
                         replicationLog.info("BC: ACTIVATION SUCCESSFUL >> "+_asset.getPath());
-                        long current_time_millisec = new Date().getTime();
+                        long current_time_millisec = new java.util.Date().getTime();
                         brc_lastsync_map.put("brc_lastsync", current_time_millisec);
                         result = ReplicationResult.OK;
                     }

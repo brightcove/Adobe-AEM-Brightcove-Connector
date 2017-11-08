@@ -42,7 +42,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>parent</artifactId>
-        <version>5.1.5-SNAPSHOT</version>
+        <version>5.1.6</version>
     </parent>
 
 
