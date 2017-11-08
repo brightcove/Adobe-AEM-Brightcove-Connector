@@ -28,7 +28,7 @@
  libraries), containing parts covered by the terms of APACHE LICENSE 2.0
  or MIT License, the licensors of this Program grant you additional
  permission to convey the resulting work.
- */
+*/
 
 //CONFIG
 
@@ -249,7 +249,7 @@ function createSubPlaylist() {
         var i = paging.curPlaylist * paging.size;
         var lim = (paging.curPlaylist + 1) * paging.size > oCurrentPlaylistList.videos.length ?
             oCurrentPlaylistList.videos.length :
-            (paging.curPlaylist + 1) * paging.size;
+        (paging.curPlaylist + 1) * paging.size;
         for (; i < lim; i++) {
             oCurrentVideoList.push(oCurrentPlaylistList.videos[i]);
         }
@@ -299,8 +299,8 @@ function showPlaylist() {
             + n.id +
             "</td></tr>"
         ).children("tr").bind('click', function () {
-            showMetaData(this.id);
-        });
+                showMetaData(this.id);
+            });
     });
 
     //Zebra stripe the table
@@ -580,57 +580,57 @@ function uploadPoster()
     //var url = window.location.origin + "/bin/brightcove/dataload";
 
     var form = new CQ.Ext.form.FormPanel({
-            baseCls: 'x-plain',
-            labelWidth: 130,
-            url: apiLocation+
-            '.js',
-            method: "POST",
-            standardSubmit: false,
-            defaults: {
-                xtype: 'textfield'
-            },
+        baseCls: 'x-plain',
+        labelWidth: 130,
+        url: apiLocation+
+        '.js',
+        method: "POST",
+        standardSubmit: false,
+        defaults: {
+            xtype: 'textfield'
+        },
 
-            items: [{
-                xtype: 'hidden',
-                id: 'limit',
-                name: 'limit',
-                value: paging.size
-            },{
-                xtype: 'hidden',
-                id: 'start',
-                name: 'start',
-                value:paging.generic
-            },{
-                xtype: 'hidden',
-                id: 'id',
-                name: 'id',
-                value: document.getElementById('divMeta.id').innerHTML,
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                id: 'a',
-                name: 'a',
-                value: 'upload_image',
-                width: "100%"
-            }, {
-                xtype: 'hidden',
-                fieldLabel: 'Account ID:',
-                value: $("#selAccount").val(),
-                name:"account_id",
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                fieldLabel: 'Video ID:',
-                value: document.getElementById('divMeta.id').innerHTML,
-                disabled: true,
-                width: "100%"
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'URL Source:',
-                allowBlank: false,
-                width: "100%",
-                name:"poster_source"
-            }]}),
+        items: [{
+            xtype: 'hidden',
+            id: 'limit',
+            name: 'limit',
+            value: paging.size
+        },{
+            xtype: 'hidden',
+            id: 'start',
+            name: 'start',
+            value:paging.generic
+        },{
+            xtype: 'hidden',
+            id: 'id',
+            name: 'id',
+            value: document.getElementById('divMeta.id').innerHTML,
+            width: "100%"
+        },{
+            xtype: 'hidden',
+            id: 'a',
+            name: 'a',
+            value: 'upload_image',
+            width: "100%"
+        }, {
+            xtype: 'hidden',
+            fieldLabel: 'Account ID:',
+            value: $("#selAccount").val(),
+            name:"account_id",
+            width: "100%"
+        },{
+            xtype: 'hidden',
+            fieldLabel: 'Video ID:',
+            value: document.getElementById('divMeta.id').innerHTML,
+            disabled: true,
+            width: "100%"
+        },{
+            xtype: 'textfield',
+            fieldLabel: 'URL Source:',
+            allowBlank: false,
+            width: "100%",
+            name:"poster_source"
+        }]}),
 
         u = new CQ.Ext.Window({
             title: 'Upload Poster',
@@ -691,58 +691,58 @@ function uploadThumbnail()
     //var url = window.location.origin + "/bin/brightcove/dataload";
 
     var form = new CQ.Ext.form.FormPanel({
-            baseCls: 'x-plain',
-            labelWidth: 130,
-            url: apiLocation+
-            '.js',
-            method: "POST",
-            standardSubmit: false,
-            defaults: {
-                xtype: 'textfield'
-            },
+        baseCls: 'x-plain',
+        labelWidth: 130,
+        url: apiLocation+
+        '.js',
+        method: "POST",
+        standardSubmit: false,
+        defaults: {
+            xtype: 'textfield'
+        },
 
-            items: [{
-                xtype: 'hidden',
-                id: 'limit',
-                name: 'limit',
-                value: paging.size
-            },{
-                xtype: 'hidden',
-                id: 'start',
-                name: 'start',
-                value:paging.generic
-            },{
-                xtype: 'hidden',
-                id: 'id',
-                name: 'id',
-                value: document.getElementById('divMeta.id').innerHTML,
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                id: 'a',
-                name: 'a',
-                value: 'upload_image',
-                width: "100%"
-            }, {
-                xtype: 'hidden',
-                fieldLabel: 'Account ID:',
-                value: $("#selAccount").val(),
-                name:"account_id",
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                fieldLabel: 'Video ID:',
-                value: document.getElementById('divMeta.id').innerHTML,
-                disabled: true,
-                width: "100%"
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'URL Source:',
-                allowBlank: false,
-                width: "100%",
-                name:"thumbnail_source"
-            }
-            ]}),
+        items: [{
+            xtype: 'hidden',
+            id: 'limit',
+            name: 'limit',
+            value: paging.size
+        },{
+            xtype: 'hidden',
+            id: 'start',
+            name: 'start',
+            value:paging.generic
+        },{
+            xtype: 'hidden',
+            id: 'id',
+            name: 'id',
+            value: document.getElementById('divMeta.id').innerHTML,
+            width: "100%"
+        },{
+            xtype: 'hidden',
+            id: 'a',
+            name: 'a',
+            value: 'upload_image',
+            width: "100%"
+        }, {
+            xtype: 'hidden',
+            fieldLabel: 'Account ID:',
+            value: $("#selAccount").val(),
+            name:"account_id",
+            width: "100%"
+        },{
+            xtype: 'hidden',
+            fieldLabel: 'Video ID:',
+            value: document.getElementById('divMeta.id').innerHTML,
+            disabled: true,
+            width: "100%"
+        },{
+            xtype: 'textfield',
+            fieldLabel: 'URL Source:',
+            allowBlank: false,
+            width: "100%",
+            name:"thumbnail_source"
+        }
+        ]}),
         o = new CQ.Ext.Window({
             title: 'Upload Thumbnail',
             collapsible: true,
@@ -1029,93 +1029,93 @@ function uploadtrack()
                 disabled: true,
                 width: "100%"
             },{
-                xtype: "selection",
-                fieldLabel: "Kind:",
-                name: "track_kind",
-                type: "select",
-                value:"captions",
-                options: [
-                    {
-                        "value": "subtitles",
-                        "text": "Subtitles"
-                    },
-                    {
-                        "value": "descriptions",
-                        "text": "Description"
-                    },
-                    {
-                        "value": "chapters",
-                        "text": "Chapters"
-                    },
-                    {
-                        "value": "metadata",
-                        "text": "Metadata"
-                    },{
-                        "value": "captions",
-                        "text": "Captions"
-                    }]
+                    xtype: "selection",
+                    fieldLabel: "Kind:",
+                    name: "track_kind",
+                    type: "select",
+                    value:"captions",
+                    options: [
+                        {
+                            "value": "subtitles",
+                            "text": "Subtitles"
+                        },
+                        {
+                            "value": "descriptions",
+                            "text": "Description"
+                        },
+                        {
+                            "value": "chapters",
+                            "text": "Chapters"
+                        },
+                        {
+                            "value": "metadata",
+                            "text": "Metadata"
+                        },{
+                            "value": "captions",
+                            "text": "Captions"
+                        }]
             }
-                //     {
-                //     xtype: 'textfield',
-                //     fieldLabel: 'URL Source:',
-                //     fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
-                //     allowBlank: false,
-                //     width: "100%",
-                //     name:"track_source"
-                // },
+            //     {
+            //     xtype: 'textfield',
+            //     fieldLabel: 'URL Source:',
+            //     fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
+            //     allowBlank: false,
+            //     width: "100%",
+            //     name:"track_source"
+            // },
                 ,{
-                    xtype: 'selection',
-                    fieldLabel: 'Default Track:',
-                    fieldDescription: (default_tracks.length > 0) ? '<b style="color:red;">NOTE: Only a single text track should be set as the default</b>' :'Set new uploaded track as the default text track?',
-                    inputValue: true,
-                    name: 'track_default',
-                    type:'checkbox'
-                },{
-                    xtype: "dialogfieldset",
-                    collapsible: false,
-                    collapsed: false,
-                    fieldLabel: 'Source',
-                    fieldDescription: 'Note: Please choose only ONE text track source path',
-                    items: [
-                        {
-                            xtype: "dialogfieldset",
-                            collapsible: false,
-                            collapsed: false,
-                            items: [
-                                {
-                                    xtype: 'fileuploadfield',
-                                    id: 'filePath',
-                                    fieldDescription: 'Upload a text track from the file system (.vtt)',
-                                    fieldLabel: 'Upload File',
-                                    name: 'track_filepath',
-                                    buttonText: 'Browse',
-                                    width: "100%",
-                                    allowBlank: true
-                                }
-                            ]
-                        },
-                        {
-                            xtype: 'label',
-                            text: 'OR',
-                            margins: '0 0 0 10'
-                        },
-                        {
-                            xtype: "dialogfieldset",
-                            collapsible: false,
-                            collapsed: false,
-                            items: [
-                                {
-                                    xtype: 'textfield',
-                                    fieldLabel: 'From Source URL',
-                                    fieldDescription: 'Upload from website (warning: Non text/vtt sources will result in a submission error.)',
-                                    allowBlank: true,
-                                    width: "100%",
-                                    name:"track_source"
-                                }
-                            ]
-                        }
-                    ]
-                }
+                xtype: 'selection',
+                fieldLabel: 'Default Track:',
+                fieldDescription: (default_tracks.length > 0) ? '<b style="color:red;">NOTE: Only a single text track should be set as the default</b>' :'Set new uploaded track as the default text track?',
+                inputValue: true,
+                name: 'track_default',
+                type:'checkbox'
+            },{
+                xtype: "dialogfieldset",
+                collapsible: false,
+                collapsed: false,
+                fieldLabel: 'Source',
+                fieldDescription: 'Note: Please choose only ONE text track source path',
+                items: [
+                    {
+                        xtype: "dialogfieldset",
+                        collapsible: false,
+                        collapsed: false,
+                        items: [
+                            {
+                                xtype: 'fileuploadfield',
+                                id: 'filePath',
+                                fieldDescription: 'Upload a text track from the file system (.vtt)',
+                                fieldLabel: 'Upload File',
+                                name: 'track_filepath',
+                                buttonText: 'Browse',
+                                width: "100%",
+                                allowBlank: true
+                            }
+                        ]
+                    },
+                    {
+                        xtype: 'label',
+                        text: 'OR',
+                        margins: '0 0 0 10'
+                    },
+                    {
+                        xtype: "dialogfieldset",
+                        collapsible: false,
+                        collapsed: false,
+                        items: [
+                            {
+                                xtype: 'textfield',
+                                fieldLabel: 'From Source URL',
+                                fieldDescription: 'Upload from website (warning: Non text/vtt sources will result in a submission error.)',
+                                allowBlank: true,
+                                width: "100%",
+                                name:"track_source"
+                            }
+                        ]
+                    }
+                ]
+            }
             ]}),
 
         z = new CQ.Ext.Window({
@@ -1187,7 +1187,7 @@ function extMetaEdit() {
     sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
 
 
-    var combo = new CQ.Ext.form.ComboBox({
+         var combo = new CQ.Ext.form.ComboBox({
             store: CQ.Ext.brightcove.economics,
             fieldLabel: 'Economics:',
             displayField: 'text',

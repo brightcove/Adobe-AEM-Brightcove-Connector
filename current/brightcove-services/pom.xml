@@ -42,7 +42,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>parent</artifactId>
-        <version>5.1.5-SNAPSHOT</version>
+        <version>5.1.6</version>
     </parent>
 
     <!-- ====================================================================== -->
@@ -154,6 +154,16 @@
             <version>3.2.2</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jcodec</groupId>
+            <artifactId>jcodec</artifactId>
+            <version>0.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jcodec</groupId>
+            <artifactId>jcodec-javase</artifactId>
+            <version>0.2.1</version>
+        </dependency>
     </dependencies>
 
     <!-- ====================================================================== -->
@@ -173,7 +183,9 @@
                             httpclient;scope=compile,
                             httpcore;scope=compile,
                             httpmime;scope=compile,
-                            jsoup;scope=compile
+                            jsoup;scope=compile,
+                            jcodec;scope=compile,
+                            jcodec-javase;scope=compile
                         </Embed-Dependency>
                         <!--<Embed-Dependency>-->
                             <!--httpclient;scope=compile|runtime,-->
@@ -181,7 +193,7 @@
                             <!--&lt;!&ndash;java-jwt;scope=compile|runtime,&ndash;&gt;-->
                         <!--</Embed-Dependency>-->
                         <Import-Package>
-                            sun.net.www.protocol.https.*;resolution:=optional,*
+                            sun.net.www.protocol.https.*;resolution:=optional,javax.annotation;resolution:=optional,*
                         </Import-Package>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
