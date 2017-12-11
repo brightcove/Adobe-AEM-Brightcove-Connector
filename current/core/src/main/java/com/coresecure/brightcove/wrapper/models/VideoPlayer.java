@@ -1,0 +1,296 @@
+package com.coresecure.brightcove.wrapper.models;
+
+import com.adobe.granite.license.ProductInfo;
+import com.adobe.granite.license.ProductInfoService;
+import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
+import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
+import com.coresecure.brightcove.wrapper.utils.TextUtil;
+import com.day.cq.wcm.api.Page;
+import com.day.cq.wcm.api.PageManager;
+import com.day.cq.wcm.api.components.ComponentContext;
+import com.day.cq.wcm.api.components.DropTarget;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.Source;
+import org.apache.sling.models.annotations.injectorspecific.OSGiService;
+import org.apache.sling.models.annotations.injectorspecific.ScriptVariable;
+import org.apache.sling.models.annotations.injectorspecific.Self;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import javax.jcr.Node;
+import java.util.UUID;
+import org.apache.jackrabbit.util.Text;
+
+@Model(
+        adaptables=SlingHttpServletRequest.class
+)
+public class VideoPlayer {
+
+    @Self
+    private SlingHttpServletRequest slingHttpServletRequest;
+
+    @Inject @Source("sling-object")
+    private ResourceResolver resourceResolver;
+
+    @OSGiService
+    ConfigurationGrabber cg;
+
+    @OSGiService
+    ProductInfoService productInfo;
+
+    @ScriptVariable
+    private Page currentPage;
+
+    @ScriptVariable
+    private PageManager pageManager;
+
+
+    @ScriptVariable
+    private Node currentNode;
+
+    @ScriptVariable
+    private ComponentContext componentContext;
+
+    @ScriptVariable
+    private Resource resource;
+
+    @ScriptVariable
+    private ValueMap properties;
+
+    protected final static Logger LOGGER = LoggerFactory.getLogger(VideoPlayer.class);
+
+
+
+
+    String componentID;
+    String videoID;
+    String playlistID;
+    String account;
+    String playerPath;
+    String playerID;
+    String playerKey;
+    String playerDataEmbed;
+    String containerID;
+    String containerClass;
+    String align;
+    String width;
+    String height;
+    String version;
+    boolean hasSize = false;
+    boolean ignoreComponentProperties = false;
+    ConfigurationService cs = null;
+    Resource playerPageResource;
+    ValueMap playerProperties;
+    String inlineCSS;
+
+    public String getComponentID() {
+        return componentID;
+    }
+
+    public Node getCurrentNode() {
+        return currentNode;
+    }
+
+    public String getVideoID() {
+        return videoID;
+    }
+
+    public String getPlaylistID() {
+        return playlistID;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public String getPlayerPath() {
+        return playerPath;
+    }
+
+    public String getPlayerID() {
+        return playerID;
+    }
+
+    public String getPlayerDataEmbed() {
+        return playerDataEmbed;
+    }
+
+    public String getPlayerKey() {
+        return playerKey;
+    }
+
+    public String getContainerID() {
+        return containerID;
+    }
+
+    public String getContainerClass() {
+        return containerClass;
+    }
+
+    public String getAlign() {
+        return align;
+    }
+
+    public String getWidth() {
+        return hasSize? width+"px":null;
+    }
+
+    public String getHeight() {
+        return hasSize?height+"px":null;
+    }
+
+    public boolean getHasSize() {
+        return hasSize;
+    }
+
+    public boolean getIgnoreComponentProperties() {
+        return ignoreComponentProperties;
+    }
+
+    public Resource getPlayerPageResource() {
+        return playerPageResource;
+    }
+
+    public ValueMap getPlayerProperties() {
+        return playerProperties;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public ComponentContext getComponentContext() {
+        return componentContext;
+    }
+
+    public String getDropTargetPrefix() {
+        return DropTarget.CSS_CLASS_PREFIX;
+    }
+
+    public String getInlineCSS() {
+        return properties.get("inlineCSS", String.class);
+    }
+
+    @PostConstruct
+    protected void init(){
+        LOGGER.info(this.getClass().getName() + "INITAAAA");
+        try {
+            LOGGER.info(resource.getName() + "INIT");
+
+            if (productInfo != null) {
+                ProductInfo[] productInfos = productInfo.getInfos();
+                if (productInfos.length > 0) {
+                    version = productInfos[0].getShortVersion();
+                }
+
+            }
+            LOGGER.info("version");
+
+            //cg = ServiceUtil.getConfigurationGrabber();
+            componentID = Text.md5(currentNode.getPath());
+            LOGGER.info("componentID:"+ componentID);
+
+            videoID = properties.get("videoPlayer", "").trim();
+            playlistID = properties.get("videoPlayerPL", "").trim();
+
+            account = properties.get("account", "").trim();
+            playerPath = properties.get("playerPath", "").trim();
+            playerID = "";
+            playerKey = "";
+            playerDataEmbed = "";
+
+            containerID = properties.get("containerID", "");
+            containerClass = properties.get("containerClass", "");
+
+            // Default Values
+
+            align = "center";
+            width = "";
+            height = "";
+
+
+            //fallback to default
+            if (TextUtil.notEmpty(account)) {
+                cs = cg.getConfigurationService(account);
+                if (cs != null) {
+                    playerID = cs.getDefVideoPlayerID();
+                    playerDataEmbed = cs.getDefVideoPlayerDataEmbedded();
+                    playerKey = cs.getDefVideoPlayerKey();
+                }
+            }
+
+            playerID = properties.get("playerID", playerID).trim();
+            playerKey = properties.get("playerKey", playerKey).trim();
+            ;
+            playerDataEmbed = playerDataEmbed.isEmpty() ? "default" : playerDataEmbed;
+
+
+            // Load Player Configuration
+
+            if (!playerPath.isEmpty()) {
+
+                playerPageResource = resourceResolver.resolve(playerPath);
+
+                if (playerPageResource != null) {
+
+                    Page playerPage = playerPageResource.adaptTo(Page.class);
+
+                    if (playerPage != null) {
+
+                        playerProperties = playerPage.getProperties();
+
+                        playerID = playerProperties.get("playerID", playerID);
+                        playerKey = playerProperties.get("playerKey", playerKey);
+                        playerDataEmbed = playerProperties.get("data_embedded", playerDataEmbed);
+
+
+                        align = playerProperties.get("align", align);
+                        width = playerProperties.get("width", width);
+                        height = playerProperties.get("height", height);
+
+                        //append the class to the container wrap
+                        containerClass += " " + playerProperties.get("containerClass", "");
+
+                        ignoreComponentProperties = playerProperties.get("ignoreComponentProperties", ignoreComponentProperties);
+                    }
+
+                }
+
+            }
+
+            // Override with local component properties IF enabled
+
+            if (!ignoreComponentProperties) {
+
+                align = properties.get("align", align);
+
+                //we must override BOTH width and height to prevent one being set on Player Page and other set in component.
+                if (properties.containsKey("width") || properties.containsKey("height")) {
+                    width = properties.get("width", width);
+                    height = properties.get("height", height);
+                }
+            }
+
+            // Adjust size accordingly
+            if (TextUtil.notEmpty(width) || TextUtil.notEmpty(height)) {
+                hasSize = true;
+                if (TextUtil.isEmpty(width)) {
+                    width = String.valueOf((480 * Integer.parseInt(height, 10)) / 270);
+                } else if (TextUtil.isEmpty(height)) {
+                    height = String.valueOf((270 * Integer.parseInt(width, 10)) / 480);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Exception", e);
+        }
+
+    }
+
+
+}

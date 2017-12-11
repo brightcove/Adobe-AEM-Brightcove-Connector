@@ -1,5 +1,4 @@
 Adobe AEM Brightcove Connector
-==============================
 
 This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.com/en/video-cloud/ )** platform into Adobe Experience Manager (CQ5)
 
@@ -22,52 +21,31 @@ This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.co
 
 ## Content Packages
 
-Pre-compiled Content Packages can be found on the [Releases Page](https://github.com/coresecure/Adobe-AEM-Brightcove-Connector/releases)
+To build all the modules run in the project root directory the following command with Maven 3:
 
-## Maven Setup
+    mvn clean install
 
-This project was generated from the com.cqblueprints.archetypes:multi-module Maven Archetype.
-- Archetype background from [CQ Blueprints](http://www.cqblueprints.com/setup/maven.html)
+If you have a running AEM instance you can build and package the whole project and deploy into AEM with  
 
-To compile this project you will need access to the **Adobe** and **CQ Blueprints** Maven Repositories:
-- [Connecting to the CQ Blueprints Maven Repository](http://www.cqblueprints.com/setup/cqmavenrepo.html)
-- [Connecting to the Adobe Maven Repository](http://www.cqblueprints.com/setup/adobemavenrepo.html)
+    mvn clean install -PautoInstallPackage
+    
+Or to deploy it to a publish instance, run
 
+    mvn clean install -PautoInstallPackagePublish
+    
+Or to deploy only the bundle to the author, run
 
-## Building
+    mvn clean install -PautoInstallBundle
 
-The following Maven commands should be run from the *Project Root* directory:
+## Maven settings
 
-- ``mvn -Pauto-deploy-all clean install``
-   - Build the *services*, *view*, and *config* packages and install to a CQ instance.
+The project comes with the auto-public repository configured. To setup the repository in your Maven settings, refer to:
 
-- ``mvn -Pauto-deploy-view clean install``
-   - Build the *view* and *services* packages and install to a CQ instance.
-
-- ``mvn -Pauto-deploy-services clean install``
-   - Build the *services* bundle and install to a CQ instance.
-
-- ``mvn -Pauto-deploy-config clean install``
-   - Build the *config* bundle and install to a CQ instance.
-
-
-### Specifying CRX Host/Port
-
-The CRX host and port can be specified on the command line with:
-mvn -Dcq.host=otherhost -Dcq.port=5502 <goals>
-
-## Using with VLT
-
-To use vlt with this project, first build and install the package to your local CQ instance as described above. Then cd to `brightcove-view/src/main/content/jcr_root` and run
-
-    vlt --credentials admin:admin checkout --force http://localhost:4502/crx
-
-Once the working copy is created, you can use the normal ``vlt up`` and ``vlt ci`` commands.
-
+    http://helpx.adobe.com/experience-manager/kb/SetUpTheAdobeMavenRepository.html
 
 ##License
 
-Copyright (C) 2017 **[Coresecure Inc.](https://www.coresecure.com)**
+	Copyright (C) 2017 **[Coresecure Inc.](https://www.coresecure.com)**
 
 #####Authors:    
    - Alessandro Bonfatti

@@ -1,5 +1,0 @@
-#base=js
-
-jquery.js
-bootstrap.js
-bootstrap-tab.js
