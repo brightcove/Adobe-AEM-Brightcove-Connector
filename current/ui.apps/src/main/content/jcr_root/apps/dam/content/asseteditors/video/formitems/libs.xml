@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Widget"
+    collapsed="{Boolean}false"
+    collapsible="{Boolean}false"
+    xtype="dialogfieldset">
+    <items
+        jcr:primaryType="cq:Widget"
+        path="/apps/brightcove/components/shared/dialog/formitems.overlay.infinity.json"
+        xtype="cqinclude"/>
+</jcr:root>

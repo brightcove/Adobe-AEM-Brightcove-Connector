@@ -1,0 +1,11 @@
+#base=js
+
+vendor/com.iskitz.ajile.1.2.1.flat.js
+vendor/jquery-ui-personalized-1.5.2.packed.js
+
+vendor/console-shim.js
+
+cookies.js
+brcAdmin.js
+brcUI.js
+

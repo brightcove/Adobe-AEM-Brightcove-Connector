@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Panel"
+    title="Player Customization">
+    <items jcr:primaryType="cq:WidgetCollection">
+        <fieldset-player-styles
+            jcr:primaryType="cq:Widget"
+            path="/apps/brightcove/components/shared/dialog/fieldset_player_styles.infinity.json"
+            xtype="cqinclude"/>
+    </items>
+</jcr:root>
