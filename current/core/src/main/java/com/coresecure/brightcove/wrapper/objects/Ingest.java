@@ -32,6 +32,7 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -44,8 +45,8 @@ import java.util.Map;
 public class Ingest {
     private static final Logger LOGGER = LoggerFactory.getLogger(Ingest.class);
 
-    public String profile;
-    public Map<String, String> master;
+    public final String profile;
+    public final Map<String, String> master;
 
     public Ingest(String aProfile, Map<String, String> aMaster) {
         profile = aProfile;
@@ -55,7 +56,7 @@ public class Ingest {
 
     public Ingest(String aProfile, String aUrl) {
         master = new HashMap<String, String>();
-        master.put("url", aUrl);
+        master.put(Constants.URL, aUrl);
         profile = aProfile;
     }
 
@@ -65,11 +66,12 @@ public class Ingest {
     }
 
     public String toString() {
+        String result = new String();
         try {
-            return toJSON().toString();
+            result = toJSON().toString();
         } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
+            LOGGER.error(e.getClass().getName(),e);
         }
+        return result;
     }
 }

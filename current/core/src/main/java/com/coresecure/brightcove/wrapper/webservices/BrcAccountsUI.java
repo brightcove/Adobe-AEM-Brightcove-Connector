@@ -39,6 +39,7 @@ import com.adobe.granite.ui.components.ds.ValueMapResource;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.iterators.TransformIterator;
@@ -52,6 +53,7 @@ import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ResourceMetadata;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
@@ -97,7 +99,59 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
         routeUIrequest(request, response);
     }
 
+    private List<JSONObject>  buildList(SlingHttpServletRequest request) {
+        boolean is_authorized = false;
+        List<JSONObject> accountsList = new ArrayList<JSONObject>();
 
+        try {
+            ResourceResolver resourceResolver = request.getResourceResolver();
+            Session session = resourceResolver.adaptTo(Session.class);
+            UserManager userManager = resourceResolver.adaptTo(UserManager.class);
+
+            if(session==null || userManager == null) return accountsList;
+
+            Authorizable auth = userManager.getAuthorizable(session.getUserID());
+            if (auth == null) {
+                LOGGER.debug("Not authorized");
+                return accountsList;
+            }
+            List<String> memberOf = new ArrayList<String>();
+            Iterator<Group> groups = auth.memberOf();
+            while (groups.hasNext() && !is_authorized) {
+                Group group = groups.next();
+                memberOf.add(group.getID());
+            }
+            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+
+            int i = 0;
+            for (String account : cg.getAvailableServices()) {
+                LOGGER.debug("get account: " + account);
+                ConfigurationService cs = cg.getConfigurationService(account);
+                List<String> allowedGroups = new ArrayList<String>();
+                allowedGroups.addAll(cs.getAllowedGroupsList());
+                allowedGroups.retainAll(memberOf);
+
+                String optionText = account;
+                String alias = cs.getAccountAlias();
+                if (TextUtil.notEmpty(alias)) {
+                    optionText = String.format("%s [%s]", alias, account);
+                }
+                if (allowedGroups.size() > 0) {
+                    JSONObject accountJson = new JSONObject();
+                    accountJson.put("text", optionText);
+                    accountJson.put("value", account);
+                    accountJson.put("id", i);
+                    i++;
+                    accountsList.add(accountJson);
+                }
+            }
+        } catch (JSONException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        } catch (RepositoryException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return accountsList;
+    }
     public void api(final SlingHttpServletRequest request,
                     final SlingHttpServletResponse response) throws ServletException,
             IOException {
@@ -105,54 +159,7 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
 
         boolean is_authorized = false;
 
-        List<JSONObject> accountsList = new ArrayList<JSONObject>();
-
-        LOGGER.debug("get account");
-        try {
-            Session session = request.getResourceResolver().adaptTo(Session.class);
-            UserManager userManager = request.getResourceResolver().adaptTo(UserManager.class);
-                /* to get the current user */
-            Authorizable auth = userManager.getAuthorizable(session.getUserID());
-            if (auth != null) {
-                List<String> memberOf = new ArrayList<String>();
-                Iterator<Group> groups = auth.memberOf();
-                while (groups.hasNext() && !is_authorized) {
-                    Group group = groups.next();
-                    memberOf.add(group.getID());
-                }
-                ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-
-                int i = 0;
-                for (String account : cg.getAvailableServices()) {
-                    LOGGER.debug("get account: " + account);
-                    ConfigurationService cs = cg.getConfigurationService(account);
-                    List<String> allowedGroups = new ArrayList<String>();
-                    allowedGroups.addAll(cs.getAllowedGroupsList());
-                    allowedGroups.retainAll(memberOf);
-
-                    String optionText = account;
-                    String alias = cs.getAccountAlias();
-                    if (TextUtil.notEmpty(alias)) {
-                        optionText = String.format("%s [%s]", alias, account);
-                    }
-                    if (allowedGroups.size() > 0) {
-                        JSONObject accountJson = new JSONObject();
-                        accountJson.put("text", optionText);
-                        accountJson.put("value", account);
-                        accountJson.put("id", i);
-                        i++;
-                        accountsList.add(accountJson);
-                    }
-                }
-
-            } else {
-                LOGGER.debug("not authorized");
-            }
-        } catch (JSONException e) {
-            LOGGER.error("JSONException", e);
-        } catch (RepositoryException e) {
-            LOGGER.error("RepositoryException", e);
-        }
+        List<JSONObject> accountsList = buildList(request);
 
 
         DataSource ds = new SimpleDataSource(new TransformIterator(accountsList.iterator(), new Transformer() {
@@ -161,9 +168,9 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                     JSONObject item = (JSONObject) input;
 
                     ValueMap vm = new ValueMapDecorator(new HashMap<String, Object>());
-                    vm.put("value", item.getString("value"));
-                    vm.put("text", item.getString("text"));
-                    vm.put("id", item.getString("id"));
+                    vm.put(Constants.VALUE, item.getString(Constants.VALUE));
+                    vm.put(Constants.TEXT, item.getString(Constants.TEXT));
+                    vm.put(Constants.ID, item.getString(Constants.ID));
 
                     return new ValueMapResource(request.getResourceResolver(), new ResourceMetadata(), "nt:unstructured", vm);
                 } catch (Exception e) {

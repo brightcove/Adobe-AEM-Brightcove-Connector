@@ -312,15 +312,49 @@ function startVideoImageUpload() {
 }
 //See createPlaylistBox for more info
 function createPlaylistSubmit() {
-    var form = document.getElementById("createPlaylistForm");
+    var formObject = document.getElementById("createPlaylistForm");
 
-    form.action = apiLocation+"?account_id="+$("#selAccount").val();
-    form.submit();
-    $('#createPlstVideoTable').empty();
-    loadStart();
-    //noWrite();
-    closeBox('createPlaylistDiv', form);
-    Load(getAllPlaylistsURL());
+    formObject.action = apiLocation+"?account_id="+$("#selAccount").val();
+    //form.submit();
+
+    var id = $("#selAccount").val();
+    var datap = formObject.getElementsByTagName("input");
+    if(datap!=undefined)
+    {
+    $.ajax({
+        url: formObject.action,    //give your url here
+        type: 'GET',
+        data: {
+            "a": "create_playlist",
+            "account_id": id,
+            "id": id,
+            "plst.name": datap["plst.name"].value,
+            "plst.shortDescription": datap["plst.shortDescription"].value,
+            "plst.referenceId": datap["plst.referenceId"].value,
+            "playlist": datap["playlist"].value,
+        },
+        success: function ( data ){
+            //  alert(data);    do your stuff
+            $('#createPlstVideoTable').empty();
+            closeBox('createPlaylistDiv', formObject);
+            Load(getAllPlaylistsURL());
+            loadEnd();
+        },
+        error: function ( data )
+        {
+            if(data.status==409)
+            {
+                window.alert("Invalid Playlist Reference ID");
+            }
+            else
+            {
+                window.alert("Error Creating Playlist - Check Logs");
+            }
+        }
+    });
+
+
+    }
 }
 
 function modPlstSubmit() {

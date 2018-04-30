@@ -23,7 +23,7 @@ import java.util.Set;
 public class BrightcoveAdminPage {
 
     protected final static Logger LOGGER = LoggerFactory.getLogger(BrightcoveAdminPage.class);
-    public static final String favIconPath = "/etc/designs/cs/brightcove/favicon.ico";
+    public static final String FAVICONPATH = "/etc/designs/cs/brightcove/favicon.ico";
 
     @Self
     private SlingHttpServletRequest slingHttpServletRequest;
@@ -76,37 +76,35 @@ public class BrightcoveAdminPage {
     @PostConstruct
     protected void init()
     {
-        if (cg != null) {
-            services = cg.getAvailableServices(slingHttpServletRequest);
-            ConfigurationService cs;
-            LOGGER.debug("services " + services);
+        services = cg.getAvailableServices(slingHttpServletRequest);
+        ConfigurationService cs;
+        LOGGER.debug("services {}", services);
 
-            if (services.size() > 0) {
-                defaultAccount = (String) services.toArray()[0];                                        //Set first account as the default
-                cookieAccount = ServiceUtil.getAccountFromCookie(slingHttpServletRequest);              //If old session holds account in cookie, set that as default
-                selectedAccount = (cookieAccount.trim().isEmpty()) ? defaultAccount : cookieAccount;    //Only if cookie acct is not empty - else default
+        if (services.size() > 0) {
+            defaultAccount = (String) services.toArray()[0];                                        //Set first account as the default
+            cookieAccount = ServiceUtil.getAccountFromCookie(slingHttpServletRequest);              //If old session holds account in cookie, set that as default
+            selectedAccount = (cookieAccount.trim().isEmpty()) ? defaultAccount : cookieAccount;    //Only if cookie acct is not empty - else default
 
-                cs = cg.getConfigurationService(selectedAccount) != null ? cg.getConfigurationService(selectedAccount) : cg.getConfigurationService(defaultAccount);
-                if (cs != null) {
-                    LOGGER.debug("config service: " + cs.getAccountAlias());
-                    //Preview location
-                    previewPlayerLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?videoId=", cs.getAccountID(), cs.getDefVideoPlayerID());
-                    previewPlayerListLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?playlistId=", cs.getAccountID(), cs.getDefPlaylistPlayerID());
-                    selectedAccountAlias = cs.getAccountAlias();
-                    //DEBUGGING
-                    LOGGER.debug(previewPlayerLoc);
-                    LOGGER.debug(previewPlayerListLoc);
-                    LOGGER.debug(cs.getAccountID());
-                    LOGGER.debug(selectedAccountAlias);
-                }
+            cs = cg.getConfigurationService(selectedAccount) != null ? cg.getConfigurationService(selectedAccount) : cg.getConfigurationService(defaultAccount);
+            try {
+                LOGGER.debug("config service: " + cs.getAccountAlias());
+                //Preview location
+                previewPlayerLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?videoId=", cs.getAccountID(), cs.getDefVideoPlayerID());
+                previewPlayerListLoc = String.format("https://players.brightcove.net/%s/%s_default/index.html?playlistId=", cs.getAccountID(), cs.getDefPlaylistPlayerID());
+                selectedAccountAlias = cs.getAccountAlias();
+                //DEBUGGING
+                LOGGER.debug(previewPlayerLoc);
+                LOGGER.debug(previewPlayerListLoc);
+                LOGGER.debug(cs.getAccountID());
+                LOGGER.debug(selectedAccountAlias);
+            } catch (Exception e) {
                 //OPTIONS RENDER FUNCTION
-                for (String service : services) {
-                    cs = cg.getConfigurationService(service);
-                    if (cs != null) {
-                        configurationServices.add(cs);
-                    }
-                }
+                LOGGER.error(e.getClass().getName(),e);
+            }
+            for (String service : services) {
+                configurationServices.add(cg.getConfigurationService(service));
             }
         }
     }
+
 }

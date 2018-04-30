@@ -37,6 +37,8 @@ import java.awt.image.BufferedImage;
 
 public class ImageUtil {
 
+    private ImageUtil(){/* default implementation ignored */}
+
     public static BufferedImage cropImage(BufferedImage src, Rectangle rect) {
         BufferedImage dest = src.getSubimage(0, 0, rect.width, rect.height);
         return dest;

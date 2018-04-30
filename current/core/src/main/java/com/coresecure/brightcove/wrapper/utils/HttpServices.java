@@ -32,11 +32,14 @@
  */
 package com.coresecure.brightcove.wrapper.utils;
 
-import com.coresecure.brightcove.wrapper.objects.Binary;
+import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.CertificateListService;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.webdav.DavMethods;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
+import org.apache.sling.servlets.post.JSONResponse;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -70,6 +73,7 @@ public class HttpServices {
     private static final String TLS = "TLS";
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpServices.class);
 
+
     public static void setProxy(Proxy proxy) {
         if (proxy == null) {
             PROXY = Proxy.NO_PROXY;
@@ -90,11 +94,11 @@ public class HttpServices {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
             connection = getSSLConnection(url, targetURL);
-            connection.setRequestMethod("DELETE");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Content-Length",
+            connection.setRequestMethod(DavMethods.METHOD_DELETE);
+            connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
+            connection.setRequestProperty(Constants.CONTENT_LENGTH_HEADER,
                     "" + Integer.toString(payload.getBytes().length));
-            connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
             }
@@ -123,7 +127,7 @@ public class HttpServices {
                 delResponse= "{'error_code':"+connection.getResponseCode()+",'message':'"+connection.getResponseMessage()+"'}";
             }
         } catch (Exception e) {
-            LOGGER.error("error! ",e);
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
             delResponse= "{'error_code':-1,'message':'Exception in executeDelete'}";
 
         } finally {
@@ -135,7 +139,7 @@ public class HttpServices {
                 try {
                     rd.close();
                 } catch (IOException e) {
-                    LOGGER.error("error! ",e);
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
                 }
             }
             if (null != wr) {
@@ -143,7 +147,7 @@ public class HttpServices {
                     wr.flush();
                     wr.close();
                 } catch (IOException e) {
-                    LOGGER.error("error! ",e);
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
                 }
             }
 
@@ -166,7 +170,6 @@ public class HttpServices {
         BufferedReader rd = null;
         DataOutputStream wr = null;
         try {
-
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
             LOGGER.debug("URL :"+targetURL);
@@ -175,12 +178,12 @@ public class HttpServices {
             connection = getSSLConnection(url, targetURL);
 
             connection = (HttpsURLConnection) url.openConnection(PROXY);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type",
+            connection.setRequestMethod(DavMethods.METHOD_POST);
+            connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
                     contentType);
-            connection.setRequestProperty("Content-Length",
+            connection.setRequestProperty(Constants.CONTENT_LENGTH_HEADER,
                     "" + Integer.toString(payload.getBytes().length));
-            connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
             }
@@ -188,12 +191,16 @@ public class HttpServices {
             connection.setDoInput(true);
             connection.setDoOutput(true);
 
+
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
             wr.writeBytes(payload);
 
+
+
             // Get Response
-            if (connection.getResponseCode() < 400) {
+            if (connection.getResponseCode() < 400)
+            {
                 InputStream is = connection.getInputStream();
                 rd = new BufferedReader(new InputStreamReader(is));
                 String line;
@@ -204,13 +211,21 @@ public class HttpServices {
                 }
 
                 exPostResponse = response.toString();
-            } else {
-                LOGGER.debug("getResponseCode: " + connection.getResponseCode() + " getResponseMessage: " + connection.getResponseMessage());
+            }
+            else if (connection.getResponseCode() == 422)
+            {
+                exPostResponse = "{\"error\":422}";
+            }
+            else if (connection.getResponseCode() == 409)
+            {
+                exPostResponse = "{\"error\":409}";
+            }
+            else {
+                LOGGER.debug("getResponseCode: {}  getResponseMessage:  {}" ,connection.getResponseCode(), connection.getResponseMessage());
             }
 
         } catch (Exception e) {
-            LOGGER.error("error! ",e);
-
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         } finally {
 
             if (connection != null) {
@@ -221,7 +236,7 @@ public class HttpServices {
                 try {
                     rd.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error(e.getClass().getName(),e);
                 }
             }
             if (null != wr) {
@@ -229,12 +244,11 @@ public class HttpServices {
                     wr.flush();
                     wr.close();
                 } catch (IOException e) {
-
-                    e.printStackTrace();
+                    LOGGER.error(e.getClass().getName(),e);
                 }
             }
         }
-        LOGGER.debug("exPostResponse[1]: " + exPostResponse);
+        LOGGER.debug("exPostResponse[1]: {}", exPostResponse);
 
         return exPostResponse;
     }
@@ -257,7 +271,7 @@ public class HttpServices {
             connection = (HttpsURLConnection) url.openConnection(PROXY);
             connection.setRequestProperty("X-HTTP-Method-Override", "PATCH");
             setRequestMethod(connection,"PATCH");
-            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
             }
@@ -281,14 +295,12 @@ public class HttpServices {
 
                 exPostResponse = response.toString();
             } else {
-                LOGGER.debug("getResponseCode: " + connection.getResponseCode());
-                LOGGER.debug("getResponseCode: " + connection.getResponseMessage());
-
+                LOGGER.debug("getResponseCode: {} {}",connection.getResponseCode() ,connection.getResponseMessage());
             }
-            LOGGER.debug("exPostResponse[2]: " + exPostResponse);
+            LOGGER.debug("exPostResponse[2]: {}" , exPostResponse);
 
         } catch (Exception e) {
-            LOGGER.error("error! ",e);
+            LOGGER.error(Constants.ERROR_LOG_TMPL,e);
 
         } finally {
 
@@ -300,7 +312,7 @@ public class HttpServices {
                 try {
                     rd.close();
                 } catch (IOException e) {
-                    LOGGER.error("error! ",e);
+                    LOGGER.error(Constants.ERROR_LOG_TMPL,e);
                 }
             }
             if (null != wr) {
@@ -309,7 +321,7 @@ public class HttpServices {
                     wr.close();
                 } catch (IOException e) {
 
-                    LOGGER.error("error! ",e);
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
                 }
             }
         }
@@ -339,12 +351,10 @@ public class HttpServices {
         String exGetResponse = null;
         try {
             JSONObject response = executeFullGet(targetURL, urlParameters, headers);
-            exGetResponse = response.has("response") ? response.getString("response") : null;
+            exGetResponse = response.has(Constants.RESPONSE) ? response.getString(Constants.RESPONSE) : null;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            LOGGER.error("error! ",e);
-
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         }
         return exGetResponse;
     }
@@ -364,11 +374,11 @@ public class HttpServices {
                 connection = getSSLConnection(url, targetURL, HttpsURLConnection.class);
 
             }
-            connection.setRequestProperty("Content-Type",
-                    "application/x-www-form-urlencoded");
-            connection.setRequestProperty("Content-Length",
+            connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
+                    com.adobe.granite.rest.Constants.CT_WWW_FORM_URLENCODED);
+            connection.setRequestProperty(Constants.CONTENT_LENGTH_HEADER,
                     "" + Integer.toString(urlParameters.getBytes().length));
-            connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
                 LOGGER.trace("-H \""+key+": "+headers.get(key)+"\"");
@@ -390,13 +400,11 @@ public class HttpServices {
             }
             LOGGER.trace("response committed!");
 
-            exGetResponse.put("response",new String(response.toByteArray(), "UTF-8"));
-            exGetResponse.put("binary",response.toByteArray());
-            exGetResponse.put("mime_type", connection.getContentType());
+            exGetResponse.put(Constants.RESPONSE,new String(response.toByteArray(), "UTF-8"));
+            exGetResponse.put(Constants.BINARY,response.toByteArray());
+            exGetResponse.put(Constants.MIME_TYPE, connection.getContentType());
         } catch (Exception e) {
-            e.printStackTrace();
-            LOGGER.error("error! ",e);
-
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         } finally {
 
             if (connection != null) {
@@ -421,26 +429,33 @@ public class HttpServices {
 
     private static <T> T getSSLConnection(URL url, String targetURL, Class<T> classType)
             throws IOException {
+        T connection = (T) url.openConnection(PROXY);
 
-        T connection = (T) url
-                .openConnection(PROXY);
-        if ("HttpsURLConnection".equals(classType.getClass().getName())) {
-            CertificateListService certificateListService = getServiceReference();
-            if (null != certificateListService) {
-                String enableCert = certificateListService
-                        .getEnableTrustedCertificate();
-                String certPath = getCertificatePath(targetURL);
+        try {
 
-                if (null != enableCert && "YES".equalsIgnoreCase(enableCert)) {
-                    SSLContext context = getSSlContext(certPath);
-                    if (null != context) {
-                        HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                        sslConn.setSSLSocketFactory(context.getSocketFactory());
-                        return (T) sslConn;
+            if (classType.getClass().isInstance(HttpsURLConnection.class)) {
+                CertificateListService certificateListService = getServiceReference();
+                if (null != certificateListService) {
+                    String enableCert = certificateListService
+                            .getEnableTrustedCertificate();
+                    String certPath = getCertificatePath(targetURL);
+
+                    if (null != enableCert && "YES".equalsIgnoreCase(enableCert)) {
+                        SSLContext context = getSSlContext(certPath);
+                        if (null != context) {
+                            HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                            sslConn.setSSLSocketFactory(context.getSocketFactory());
+                            return (T) sslConn;
+                        }
                     }
                 }
             }
+
+        } catch (Exception e)
+        {
+            LOGGER.error(e.getClass().getName(), e);
         }
+
         return connection;
     }
 
@@ -476,17 +491,23 @@ public class HttpServices {
      */
     private static CertificateListService getServiceReference() {
         CertificateListService serviceRef = null;
-        BundleContext bundleContext = FrameworkUtil.getBundle(
-                CertificateListService.class).getBundleContext();
-        if (null != bundleContext) {
-            ServiceReference osgiRef = bundleContext
-                    .getServiceReference(CertificateListService.class.getName());
-            if (null != osgiRef) {
-                serviceRef = (CertificateListService) bundleContext
-                        .getService(osgiRef);
+        try {
+
+            BundleContext bundleContext = FrameworkUtil.getBundle(
+                    CertificateListService.class).getBundleContext();
+            if (null != bundleContext) {
+                ServiceReference osgiRef = bundleContext
+                        .getServiceReference(CertificateListService.class.getName());
+                if (null != osgiRef) {
+                    serviceRef = (CertificateListService) bundleContext
+                            .getService(osgiRef);
+                }
             }
         }
-
+        catch (Exception e)
+        {
+            LOGGER.error(e.getClass().getName(), e);
+        }
         return serviceRef;
     }
 
@@ -526,23 +547,21 @@ public class HttpServices {
 
             }
         } catch (IOException ioe) {
-            ioe.printStackTrace();
+            LOGGER.error(ioe.getClass().getName(), ioe);
         } catch (NoSuchAlgorithmException nae) {
-            nae.printStackTrace();
+            LOGGER.error(nae.getClass().getName(),nae);
         } catch (KeyStoreException kse) {
-            kse.printStackTrace();
-        }
-
-        catch (CertificateException ce) {
-            ce.printStackTrace();
+            LOGGER.error(kse.getClass().getName(),kse);
+        } catch (CertificateException ce) {
+            LOGGER.error(ce.getClass().getName(),ce);
         } catch (KeyManagementException ke) {
-            ke.printStackTrace();
+            LOGGER.error(ke.getClass().getName(),ke);
         } finally {
             if (null != caInput) {
                 try {
                     caInput.close();
                 } catch (IOException ioe) {
-                    ioe.printStackTrace();
+                    LOGGER.error(ioe.getClass().getName(),ioe);
                 }
             }
         }
@@ -554,19 +573,13 @@ public class HttpServices {
         return path.startsWith("/") && !path.startsWith("//");
     }
 
-    public static Binary getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException {
-        Binary binary = new Binary();
+    public static BinaryObj getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException {
+        BinaryObj binary = new BinaryObj();
         JSONObject get_response = HttpServices.executeFullGet(path, urlParameters, headers!= null ? headers :new HashMap<String, String>());
-        if (get_response != null && get_response.has("binary")) {
-            InputStream binarystream = new ByteArrayInputStream((byte[]) get_response.get("binary"));
-            String mime_type = get_response.getString("mime_type"); //< SET MIME TYPE
-
-            if (binarystream == null) //IF REMOTE IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
-            {
-                LOGGER.error("External thumbnail could not be read");
-            } else {
-                binary = new Binary(binarystream,mime_type);
-            }
+        if (get_response != null && get_response.has(Constants.BINARY)) {
+            InputStream binarystream = new ByteArrayInputStream((byte[]) get_response.get(Constants.BINARY));
+            String mime_type = get_response.getString(Constants.MIME_TYPE); //< SET MIME TYPE
+            binary = new BinaryObj(binarystream,mime_type);
         }
         return binary;
     }

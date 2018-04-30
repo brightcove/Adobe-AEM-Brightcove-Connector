@@ -36,8 +36,8 @@ import java.util.EnumSet;
 
 public enum PlaylistFieldEnum {
     ID("ID", "id"),
-    REFERENCEID("REFERENCEID", "referenceId"),
-    ACCOUNTID("ACCOUNTID", "accountId"),
+    REFERENCEID("REFERENCEID", "reference_id"),
+    ACCOUNTID("ACCOUNTID", "account_id"),
     NAME("NAME", "name"),
     SHORTDESCRIPTION("SHORTDESCRIPTION", "shortDescription"),
     VIDEOIDS("VIDEOIDS", "video_ids"),

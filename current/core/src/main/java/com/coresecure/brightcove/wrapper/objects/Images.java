@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -42,44 +43,40 @@ import org.slf4j.LoggerFactory;
 
 public class Images {
 
-    public Thumbnail thumbnail;
-    public Poster poster;
+    public final Thumbnail thumbnail;
+    public final Poster poster;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Images.class);
 
 
-    public Images() {
-
-    }
-    public Images(JSONObject aImagesObj) throws JSONException
-    {
-
-            thumbnail = new Thumbnail(aImagesObj.getJSONObject("thumbnail"));
-            poster = new Poster(aImagesObj.getJSONObject("poster"));
-    }
-
     public Images(Poster aPoster, Thumbnail aThumbnail)
     {
-
         thumbnail = aThumbnail;
         poster = aPoster;
     }
 
+    public Images(JSONObject aImagesObj) throws JSONException
+    {
+        this(new Poster(aImagesObj.getJSONObject(Constants.POSTER)),new Thumbnail(aImagesObj.getJSONObject(Constants.THUMBNAIL)));
+    }
+
+
+
     public JSONObject toJSON() throws JSONException
     {
 
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"poster","thumbnail"});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.POSTER,Constants.THUMBNAIL});
         return json;
     }
 
-    public String toString()
-    {
+    public String toString() {
+        String result = new String();
         try {
-            return toJSON().toString();
+            result = toJSON().toString();
         } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
+            LOGGER.error(e.getClass().getName(),e);
         }
+        return result;
     }
 
 }

@@ -50,7 +50,7 @@
     <groupId>com.coresecure.brightcove.cq5</groupId>
     <artifactId>brightcove_connector</artifactId>
     <packaging>pom</packaging>
-    <version>5.3.1</version>
+    <version>5.5.0</version>
     <description>
         Parent Maven POM for the 'Adobe CQ5 Brightcove Connector API' project.
     </description>
@@ -69,6 +69,7 @@
         <sling.password>admin</sling.password>
         <vault.user>admin</vault.user>
         <vault.password>admin</vault.password>
+        <maven.test.skip>true</maven.test.skip>
     </properties>
     <build>
         <plugins>
@@ -200,7 +201,7 @@
                         </execution>
                     </executions>
                     <configuration>
-                               <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                        <outputDirectory>${project.build.directory}/classes</outputDirectory>
                     </configuration>
                     <dependencies>
                         <dependency>
@@ -326,7 +327,7 @@
                                         </goals>
                                     </pluginExecutionFilter>
                                     <action>
-                                         <ignore />
+                                        <ignore />
                                     </action>
                                 </pluginExecution>
                                 <pluginExecution>
@@ -353,7 +354,7 @@
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
-                </plugin>  
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -477,8 +478,15 @@
                 <artifactId>cq-wcm-taglib</artifactId>
                 <version>5.7.4</version>
                 <scope>provided</scope>
-            </dependency>            
+            </dependency>
             <!-- Testing -->
+            <!-- https://mvnrepository.com/artifact/org.apache.sling/org.apache.sling.testing.sling-mock -->
+            <dependency>
+                <groupId>org.apache.sling</groupId>
+                <artifactId>org.apache.sling.testing.sling-mock</artifactId>
+                <version>1.0.0</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>

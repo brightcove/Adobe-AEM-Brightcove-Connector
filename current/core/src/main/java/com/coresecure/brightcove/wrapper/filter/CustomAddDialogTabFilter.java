@@ -37,6 +37,7 @@ import org.apache.felix.scr.annotations.*;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.apache.sling.api.wrappers.SlingHttpServletResponseWrapper;
 import org.apache.sling.commons.json.JSONException;
@@ -44,6 +45,7 @@ import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
@@ -65,7 +67,7 @@ import java.util.Map;
 })
 public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements Filter {
 
-    final private Logger LOGGER = LoggerFactory.getLogger(CustomAddDialogTabFilter.class);
+    final static private Logger LOGGER = LoggerFactory.getLogger(CustomAddDialogTabFilter.class);
 
     @Override
     public void init(FilterConfig filterConfig) {
@@ -125,35 +127,18 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
                 String fullRequestPath = slingRequest.getRequestURI();
                 String componentPath = fullRequestPath.substring(0, fullRequestPath.lastIndexOf("/"));
                 String dialogPath = getInheritDialog(slingRequest);
-
-                Node dialogNode = slingRequest.getResourceResolver().getResource(dialogPath).adaptTo(Node.class);
-                TidyJsonItemWriter td = new TidyJsonItemWriter(null);
-                StringWriter writer = new StringWriter();
-                td.dump(dialogNode, writer, 1000);
-                JSONObject originalDialog = new JSONObject(writer.toString());
-                JSONObject originalTabs = originalDialog.getJSONObject("items").getJSONObject("tabs").getJSONObject("items");
-
-                Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
-                if (componentRes != null) {
-                    for (Resource item : getInheritResources(componentRes)) {
-
-                        NodeIterator additionalTabs = item.adaptTo(Node.class).getNodes("additional_tab_*");
-                        while (additionalTabs.hasNext()) {
-                            Node tab = additionalTabs.nextNode();
-                            String includeURL = tab.getPath() + ".infinity.json";
-                            LOGGER.trace(includeURL);
-
-                            JSONObject newTab = new JSONObject();
-                            newTab.put("xtype", "cqinclude");
-                            newTab.put("jcr:primaryType", "cq:Widget");
-                            newTab.put("path", includeURL);
-                            if (!originalTabs.has(tab.getName())) {
-                                originalTabs.put(tab.getName(), newTab);
-                            }
-                        }
+                if (dialogPath != null) {
+                    Resource dialogNodeRes = slingRequest.getResourceResolver().getResource(dialogPath);
+                    if (dialogNodeRes != null) {
+                        Node dialogNode = dialogNodeRes.adaptTo(Node.class);
+                        TidyJsonItemWriter td = new TidyJsonItemWriter(null);
+                        StringWriter writer = new StringWriter();
+                        td.dump(dialogNode, writer, 1000);
+                        JSONObject originalDialog = new JSONObject(writer.toString());
+                        JSONObject originalTabs =  getOriginalTabs(componentPath, originalDialog, slingRequest);
+                        slingResponse.getWriter().write(originalDialog.toString());
                     }
                 }
-                slingResponse.getWriter().write(originalDialog.toString());
                 slingResponse.getWriter().close();
             } catch (JSONException je) {
                 LOGGER.error("JE " + je.getMessage());
@@ -168,6 +153,46 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
         }
     }
 
+    private JSONObject getOriginalTabs(String componentPath, JSONObject originalDialog, final SlingHttpServletRequest slingRequest) throws JSONException, RepositoryException{
+        JSONObject originalTabs = originalDialog.getJSONObject("items").getJSONObject("tabs").getJSONObject("items");
+        Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
+        if (componentRes != null) {
+            for (Resource item : getInheritResources(componentRes))
+            {
+                if (item != null)
+                {
+                    Node nodeItem = item.adaptTo(Node.class);
+                    if(nodeItem!=null)
+                    {
+                        getOriginalTabsFromRes(nodeItem,originalTabs);
+                    }
+                }
+            }
+        }
+        return originalTabs;
+    }
+
+    private void getOriginalTabsFromRes(Node nodeItem, JSONObject originalTabs) throws JSONException, RepositoryException{
+
+        NodeIterator additionalTabs = nodeItem.getNodes("additional_tab_*");
+        while (additionalTabs.hasNext())
+        {
+            Node tab = additionalTabs.nextNode();
+            String includeURL = tab.getPath() + ".infinity.json";
+            LOGGER.trace(includeURL);
+
+            JSONObject newTab = new JSONObject();
+            newTab.put("xtype", "cqinclude");
+            newTab.put("jcr:primaryType", "cq:Widget");
+            newTab.put("path", includeURL);
+            if (!originalTabs.has(tab.getName())) {
+                originalTabs.put(tab.getName(), newTab);
+            }
+        }
+
+    }
+
+
     private String getInheritDialog(SlingHttpServletRequest slingRequest) throws RepositoryException {
         String fullRequestPath = slingRequest.getRequestURI();
         String componentPath = fullRequestPath.substring(0, fullRequestPath.lastIndexOf("/"));
@@ -175,23 +200,33 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
 
         Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
         int avoidLoop = 0;
+
+
         while (componentRes != null && result == null && avoidLoop < 1000) {
             LOGGER.trace("getInheritDialog loop --> " + componentRes.getPath());
-
             Resource dialog = componentRes.getChild("dialog");
-            if (dialog != null && (!dialog.adaptTo(Node.class).hasProperty("cs_include") || !dialog.adaptTo(Node.class).getProperty("cs_include").getBoolean())) {
-                result = componentRes.getChild("dialog").getPath();
-                LOGGER.debug("found dialog {}", result);
-                break;
-            } else {
-                componentRes = (componentRes.getResourceSuperType() != null && !componentRes.getResourceSuperType().equals(componentRes.getResourceType())) ? componentRes.getResourceResolver().getResource(componentRes.getResourceSuperType()) : null;
+            if (dialog != null) {
+                ValueMap properties = dialog.getValueMap();
+                if (!properties.containsKey("cs_include") || !properties.get("cs_include",false)) {
+                    result = dialog.getPath();
+                    LOGGER.debug("found dialog {}", dialog.getPath());
+                    break;
+                } else {
+                    String resSuperType = componentRes.getResourceSuperType();
+                    if ( resSuperType != null && !resSuperType.equals(componentRes.getResourceType())) {
+                        componentRes = componentRes.getResourceResolver().getResource(resSuperType);
+                    } else {
+                        componentRes = null;
+                    }
+                }
+
             }
             avoidLoop++;
         }
 
-
         return result;
     }
+
 
     private List<Resource> getInheritResources(Resource res) {
         List<Resource> result = new ArrayList<Resource>();
@@ -199,7 +234,13 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
         while (temp != null) {
             if (result.contains(temp)) break; //prevent loop
             result.add(temp);
-            temp = (temp.getResourceSuperType() != null && !temp.getResourceSuperType().equals(temp.getResourceType())) ? temp.getResourceResolver().getResource(temp.getResourceSuperType()) : null;
+            String resSuperType = temp.getResourceSuperType();
+            if(resSuperType!=null && !resSuperType.equals(temp.getResourceType()))
+            {
+                temp = temp.getResourceResolver().getResource(resSuperType);
+            } else {
+                temp = null;
+            }
         }
         return result;
     }

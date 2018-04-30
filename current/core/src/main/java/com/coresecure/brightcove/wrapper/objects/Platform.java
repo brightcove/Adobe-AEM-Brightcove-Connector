@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import org.apache.sling.servlets.post.JSONResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,17 +46,17 @@ public class Platform {
     private final static String DEFAULT_PLAYERS_API_URL = "https://players.api.brightcove.com/v2";
     private final static String DEFAULT_API_URL = "https://cms.api.brightcove.com/v1";
     private final static String DEFAULT_DI_API_URL = "https://ingest.api.brightcove.com/v1";
-    private static String OAUTH_Url;
-    private static String PLAYERS_API_Url;
-    private static String API_Url;
-    private static String DI_API_Url;
-    private static Proxy PROXY = Proxy.NO_PROXY;
+    private final String OAUTH_Url;
+    private final String PLAYERS_API_Url;
+    private final String API_Url;
+    private final String DI_API_Url;
+    private Proxy PROXY = Proxy.NO_PROXY;
     private static final Logger LOGGER = LoggerFactory.getLogger(Platform.class);
 
-    public Platform() {
-
+    public Platform()
+    {
+        this(null,null,null,null);
     }
-
 
     public Platform(String aOAUTH_Url, String aAPI_Url, String aDI_API_Url, String aPLAYERS_API_Url) {
         OAUTH_Url = aOAUTH_Url;
@@ -78,18 +79,6 @@ public class Platform {
 
     public String getDI_API_Url() {
         return (DI_API_Url != null && !DI_API_Url.isEmpty()) ? DI_API_Url : DEFAULT_DI_API_URL;
-    }
-
-    public void setOAUTH_Url(String aOAUTH_Url) {
-        OAUTH_Url = aOAUTH_Url;
-    }
-
-    public void setAPI_Url(String aAPI_Url) {
-        API_Url = aAPI_Url;
-    }
-
-    public void setDI_API_Url(String aDI_API_Url) {
-        DI_API_Url = aDI_API_Url;
     }
 
     public String getAPI(String targetURL, String urlParameters, Map<String, String> headers) {
@@ -140,7 +129,7 @@ public class Platform {
     public String postDIRequest_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
         LOGGER.trace("postDI_API: "+URL);
-        String response = HttpServices.executePost(URL, payload, headers,"application/json");
+        String response = HttpServices.executePost(URL, payload, headers, JSONResponse.RESPONSE_CONTENT_TYPE);
         LOGGER.trace(response);
         return response;
     }

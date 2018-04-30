@@ -50,7 +50,7 @@ import java.util.Map;
 				"https://cms.api.brightcove.com/v1:::D:/cert/cms_api.cer",
 				"https://ingest.api.brightcove.com/v1:::D:/cert/ingest_api.cer",
 				"https://oauth.brightcove.com/v4/access_token:::D:/cert/oath_brightcove.cer" }),
-		@Property(name = "enable-trusted-certificate", label = "Enable Trusted Certificate", description = "To Enable Enable Trusted Certificate, Value should be YES else NO", value = { "YES" }) })
+		@Property(name = "enable-trusted-certificate", label = "Enable Trusted Certificate", description = "To Enable Enable Trusted Certificate, Value should be YES else NO", value = { "NO" }) })
 /**
  * This class is used to get the certificate per domain. These certificate
  * is used to fix the Fortify scan issue.

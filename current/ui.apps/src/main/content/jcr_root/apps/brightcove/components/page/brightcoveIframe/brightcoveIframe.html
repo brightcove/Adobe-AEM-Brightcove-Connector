@@ -49,10 +49,11 @@
         </head>
         <body style="background:black;">
             <div style="margin-bottom: 0;margin-left:auto;margin-right:auto;margin-top: 0;overflow-x: hidden;overflow-y: hidden;text-align: center;text-align:center">
-                <sly data-sly-test="${properties.height && properties.width}" data-sly-unwrap>
+                <sly data-sly-test="${properties.height && properties.width}" data-sly-use.globals="" data-sly-unwrap>
                 <div id="container-${request.requestParameterMap['playerid'][0].toString}" class="brightcove-container" data-playerid="${request.requestParameterMap['playerid'][0].toString}" data-account="${request.requestParameterMap['account'][0].toString}"
                      data-player="${request.requestParameterMap['player'][0].toString}"
                      data-embed="${request.requestParameterMap['embed'][0].toString}"
+                     data-usage="cms:aem${version}:javascript"
                      data-video-id="${request.requestParameterMap['videoid'][0].toString}"
                      data-width="${properties.width}px"
                      data-height="${properties.height}px"/>
@@ -61,6 +62,7 @@
                     <div id="container-${request.requestParameterMap['playerid'][0].toString}" class="brightcove-container" data-playerid="${request.requestParameterMap['playerid'][0].toString}" data-account="${request.requestParameterMap['account'][0].toString}"
                          data-player="${request.requestParameterMap['player'][0].toString}"
                          data-embed="${request.requestParameterMap['embed'][0].toString}"
+                         data-usage="cms:aem${version}:javascript"
                          data-video-id="${request.requestParameterMap['videoid'][0].toString}"
                          data-width="480px"
                          data-height="270px"/>

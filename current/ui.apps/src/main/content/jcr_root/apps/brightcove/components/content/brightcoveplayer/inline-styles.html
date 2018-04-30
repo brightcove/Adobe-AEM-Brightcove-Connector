@@ -74,7 +74,7 @@
             overflow-x: hidden;
             overflow-y: hidden;
             width: 100%;
-            text-align: ${player.align @context='unsafe'};
+            text-align: left;
         }
 
         #component-wrap-${player.componentID @context='unsafe'}.brc-align-left .player-embed-wrap {
@@ -85,9 +85,24 @@
             margin-right: 0;
         }
 
-        #component-wrap-${player.componentID @context='unsafe'} .brightcove-container {
+        #component-wrap-${player.componentID @context='unsafe'}.brc-align-center .brightcove-container {
             width: 100%;
         }
+
+        #component-wrap-${player.componentID @context='unsafe'}.brc-align-left .player-embed-wrap .brightcove-container{
+            margin-left: 0;
+            float:left;
+        }
+
+        #component-wrap-${player.componentID @context='unsafe'}.brc-align-center .player-embed-wrap .brightcove-container .video-js{
+            display:block;
+        }
+
+        #component-wrap-${player.componentID @context='unsafe'}.brc-align-right .player-embed-wrap .brightcove-container{
+            margin-right: 0;
+            float:right;
+        }
+
 
     </style>
 

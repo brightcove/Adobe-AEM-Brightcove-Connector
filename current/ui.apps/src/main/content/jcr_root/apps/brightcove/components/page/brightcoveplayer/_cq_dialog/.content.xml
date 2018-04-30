@@ -115,7 +115,6 @@
                                             />
                                 </items>
                             </title>
-
                             <player_customization
                                     jcr:primaryType="nt:unstructured"
                                     jcr:title="Player Customization"
@@ -150,6 +149,7 @@
                                             jcr:primaryType="nt:unstructured"
                                             sling:resourceType="granite/ui/components/foundation/form/select"
                                             emptyText="Select"
+                                            emptyOption="{Boolean}true"
                                             fieldDescription="When configuring an HTML5 Playlist the following rules apply: Left:  Playlist appears after the Video element. Center:  Playlist appears after the Video element. Right:  Playlist appears before the Video element. Update your CSS accordingly."
                                             fieldLabel="Player Alignment:"
                                             name="./align"
@@ -182,15 +182,15 @@
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Width"
                                                 name="./width"
-                                                >
-                                        </width>
+                                                min="0"
+                                                defaultValue=""/>
                                         <height
                                                 jcr:primaryType="nt:unstructured"
                                                 sling:resourceType="granite/ui/components/foundation/form/numberfield"
                                                 emptyText="Height"
                                                 name="./height"
-                                                >
-                                        </height>
+                                                min="0"
+                                                defaultValue=""/>
                                     </size>
                                 </items>
                             </fieldset_player_styles>

@@ -34,12 +34,15 @@ package com.coresecure.brightcove.wrapper.webservices;
 
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
+import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.day.cq.security.util.RequestConstants;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.commons.json.JSONObject;
+import org.apache.sling.servlets.post.JSONResponse;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
@@ -58,21 +61,21 @@ public class BrcSuggestions extends SlingAllMethodsServlet {
                          final SlingHttpServletResponse response) throws ServletException,
             IOException {
         PrintWriter outWriter = response.getWriter();
-        response.setContentType("application/json");
+        response.setContentType(JSONResponse.RESPONSE_CONTENT_TYPE);
         JSONObject root = new JSONObject();
 
 
         int requestedAPI = 0;
         String requestedAccount = "";
-        if (request.getParameter("query") != null && request.getParameter("account_id") != null) {
+        if (request.getParameter(Constants.QUERY) != null && request.getParameter(Constants.ACCOUNT_ID) != null) {
             requestedAccount = AccountUtil.getSelectedAccount(request);
             ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
             response.setContentType("application/json");
             if ("playlist".equalsIgnoreCase(request.getParameter("type"))) {
-                outWriter.write(serviceUtil.getPlaylistByID(request.getParameter("query")).toString());
+                outWriter.write(serviceUtil.getPlaylistByID(request.getParameter(Constants.QUERY)).toString());
             } else {
-                outWriter.write(serviceUtil.getList(false, request.getParameter("query")));
+                outWriter.write(serviceUtil.getList(false, request.getParameter(Constants.QUERY)));
             }
 
         } else {

@@ -35,13 +35,19 @@ package com.coresecure.brightcove.wrapper.sling;
 import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.*;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.coresecure.brightcove.wrapper.utils.S3UploadUtil;
+import com.day.cq.commons.jcr.JcrConstants;
 import com.day.cq.dam.api.Asset;
+import com.day.cq.dam.api.DamConstants;
 import com.day.cq.dam.api.Rendition;
+import com.day.cq.dam.commons.handler.StandardImageHandler;
 import com.day.cq.tagging.InvalidTagFormatException;
 import com.day.cq.tagging.Tag;
+import com.day.cq.tagging.TagConstants;
 import com.day.cq.tagging.TagManager;
+import com.day.cq.wcm.api.NameConstants;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.*;
 import org.apache.sling.commons.json.JSONArray;
@@ -52,6 +58,7 @@ import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import javax.servlet.http.Cookie;
@@ -66,10 +73,10 @@ import java.util.concurrent.TimeUnit;
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-    private static final String[] fields = {"name", "created_at"  , "duration", "complete", "id", "account_id" ,"description" , "link", "tags","long_description", "reference_id", "economics", "updated_at" , "schedule", "state", "geo" , "custom_fields","text_tracks" , "images" ,"projection"};
+    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION};
 
     private String account_id;
-    public static int DEFAULT_LIMIT = 100;
+    public static final int DEFAULT_LIMIT = 100;
     private BrightcoveAPI brAPI = null;
 
     public ServiceUtil(String aAccount_id) {
@@ -145,14 +152,14 @@ public class ServiceUtil {
     private String getLength(String videoId, String accountKeyStr) {
         String result = "";
         try {
-            long millis = brAPI.cms.getVideoByRef(videoId).getLong("duration");
+            long millis = brAPI.cms.getVideoByRef(videoId).getLong(Constants.DURATION);
             result = String.format("%02d:%02d",
                     TimeUnit.MILLISECONDS.toMinutes(millis),
                     TimeUnit.MILLISECONDS.toSeconds(millis) -
                             TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis))
             );
         } catch (JSONException je) {
-            //todo log
+            LOGGER.error(je.getClass().getName(), je);
         }
         return result;
     }
@@ -160,9 +167,9 @@ public class ServiceUtil {
     public String getName(String videoId, String accountKeyStr) {
         String result = "";
         try {
-            result = brAPI.cms.getVideoByRef(videoId).getString("name");
+            result = brAPI.cms.getVideoByRef(videoId).getString(Constants.NAME);
         } catch (JSONException je) {
-            //todo log
+            LOGGER.error(je.getClass().getName(), je);
         }
         return result;
     }
@@ -182,13 +189,18 @@ public class ServiceUtil {
     }
 
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query) {
-        return getList(exportCSV, offset, limit, full_scroll, query, "name");
+        return getList(exportCSV, offset, limit, full_scroll, query, Constants.NAME);
     }
     public JSONArray getVideoSources(String videoID) {
         return brAPI.cms.getVideoSources(videoID);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false);
+    }
+    public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
         LOGGER.debug("getList: " + query);
+
+
         JSONObject items = new JSONObject();
         String result = "";
         limit = limit > 0 ? limit : 100;
@@ -201,7 +213,7 @@ public class ServiceUtil {
                 totalItems = brAPI.cms.getVideosCount(query).getLong("count");
 
                 while (offset < totalItems && full_scroll) {
-                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort));
+                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort, dam_only));
                     for (int i = 0; i < videos_page.length(); i++) {
                         JSONObject video = videos_page.getJSONObject(i);
                         videos.put(video);
@@ -218,7 +230,7 @@ public class ServiceUtil {
 
                 for (int key = 0; key < videos.length(); key++) {
                     tempJSON = videos.getJSONObject(key);
-                    csvString += "\"" + tempJSON.getString("name") + "\",\"" + tempJSON.getString("id") + "\"\r\n";
+                    csvString += "\"" + tempJSON.getString(Constants.NAME) + "\",\"" + tempJSON.getString(Constants.ID) + "\"\r\n";
                 }
                 result = csvString;
             } else {
@@ -227,10 +239,7 @@ public class ServiceUtil {
                 result = items.toString(1);
             }
         } catch (JSONException e) {
-            LOGGER.error("JSONException", e);
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -253,12 +262,15 @@ public class ServiceUtil {
         return result;
     }
 
-    public String searchVideo(String querystr, int offset, int limit, String sort) {
+    public String searchVideo(String querystr, int offset, int limit, String sort, boolean dam_only) {
         //Fixed the performance issue at the component authoring side.
         //String result = getList(false, offset, limit, true, querystr);
         boolean fullscroll = !(limit > 0);
-        String result = getList(false, offset, limit, fullscroll, querystr, sort);
+        String result = getList(false, offset, limit, fullscroll, querystr, sort, dam_only);
         return result;
+    }
+    public String searchVideo(String querystr, int offset, int limit, String sort) {
+        return searchVideo(querystr, offset, limit, sort, false);
     }
 
     public JSONObject getSelectedVideo(String videoIdstr) {
@@ -266,9 +278,7 @@ public class ServiceUtil {
         try {
             result = brAPI.cms.getVideo(videoIdstr);
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -278,9 +288,7 @@ public class ServiceUtil {
         try {
             result = brAPI.cms.getCustomFields();
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -292,9 +300,7 @@ public class ServiceUtil {
             JSONObject video = brAPI.cms.getVideoByRef(videoIdstr);
             result = video.toString();
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -306,14 +312,14 @@ public class ServiceUtil {
             int limit = DEFAULT_LIMIT;
             int firstElement = 0;
             int lastElement = limit;
-            if (limits != null && !limits.trim().isEmpty() && limits.split("\\.\\.")[0] != null) {
-                firstElement = Integer.parseInt(limits.split("\\.\\.")[0]);
-                lastElement = Integer.parseInt(limits.split("\\.\\.")[1]);
+            if (limits != null && !limits.trim().isEmpty() && limits.split(Constants.DELIMETER_STRING_DOUBLE)[0] != null) {
+                firstElement = Integer.parseInt(limits.split(Constants.DELIMETER_STRING_DOUBLE)[0]);
+                lastElement = Integer.parseInt(limits.split(Constants.DELIMETER_STRING_DOUBLE)[1]);
                 limit = lastElement - firstElement;
             }
             result = getList(false, firstElement, limit, false, "");
         } catch (Exception e) {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -328,9 +334,7 @@ public class ServiceUtil {
         try {
             result = brAPI.cms.getPlayers();
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -341,9 +345,7 @@ public class ServiceUtil {
         try {
             result = brAPI.cms.getPlaylist(id);
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
 
@@ -359,15 +361,15 @@ public class ServiceUtil {
         try {
             int pageNumber = 0;
             long totalItems = 0;
-            JSONArray playlists = brAPI.cms.getPlaylists(q, limit, offset, "name");
+            JSONArray playlists = brAPI.cms.getPlaylists(q, limit, offset, Constants.NAME);
             offset = offset + limit;
             if (playlists.length() > 0) {
                 totalItems = brAPI.cms.getPlaylistsCount().getLong("count");
 
-                double totalPages = Math.floor(totalItems / limit);
+                double totalPages = Math.floor((double)totalItems / limit);
 
                 while (offset < totalItems && full_scroll) {
-                    JSONArray videos_page = brAPI.cms.getPlaylists(q, limit, offset, "name");
+                    JSONArray videos_page = brAPI.cms.getPlaylists(q, limit, offset, Constants.NAME);
                     for (int i = 0; i < videos_page.length(); i++) {
                         playlists.put(videos_page.get(i));
                     }
@@ -383,19 +385,16 @@ public class ServiceUtil {
 
                 for (int key = 0; key < playlists.length(); key++) {
                     tempJSON = playlists.getJSONObject(key);
-                    csvString += "\"" + tempJSON.getString("name") + "\",\"" + tempJSON.getString("id") + "\"\r\n";
+                    csvString += "\"" + tempJSON.getString(Constants.NAME) + "\",\"" + tempJSON.getString(Constants.ID) + "\"\r\n";
                 }
                 result = csvString;
             } else {
                 items.put("items", playlists);
                 items.put("totals", totalItems);
-
                 result = items.toString(1);
             }
         } catch (JSONException e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -409,9 +408,7 @@ public class ServiceUtil {
                 jsa.put(brAPI.cms.getVideo(id));
             }
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return jsa;
     }
@@ -423,23 +420,23 @@ public class ServiceUtil {
         try {
             JSONObject videoItem = brAPI.cms.updateVideo(aVideo);
             try {
-                if (videoItem != null && videoItem.has("id")) {
-                    String newVideoId = videoItem.getString("id");
-                    LOGGER.info("New video id: '" + newVideoId + "'.");
-                    result.put("videoid", newVideoId);
-                    result.put("sent", true);
+                if (videoItem != null && videoItem.has(Constants.ID)) {
+                    String newVideoId = videoItem.getString(Constants.ID);
+                    LOGGER.info(Constants.RESULT_LOG_NEW_VIDEO_TMPL, newVideoId);
+                    result.put(Constants.VIDEOID, newVideoId);
+                    result.put(Constants.SENT, true);
                 } else {
-                    result.put("error", "updateVideo Error");
-                    result.put("sent", false);
+                    result.put(Constants.ERROR, "updateVideo Error");
+                    result.put(Constants.SENT, false);
                 }
 
-            } catch (Exception exIngest) {
-                LOGGER.error("updateVideo", exIngest);
-                result.put("error", "updateVideo Exception");
-                result.put("sent", false);
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+                result.put(Constants.ERROR, "updateVideo Exception");
+                result.put(Constants.SENT, false);
             }
         } catch (JSONException e) {
-            LOGGER.error("updateVideo", e);
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
@@ -449,27 +446,27 @@ public class ServiceUtil {
         JSONObject result = new JSONObject();
         try {
             JSONObject videoItem = brAPI.cms.createVideo(aVideo);
-            String newVideoId = videoItem.getString("id");
+            String newVideoId = videoItem.getString(Constants.ID);
             JSONObject videoIngested = new JSONObject();
             try {
                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
                 videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
-                if (videoIngested != null && videoIngested.has("id")) {
-                    LOGGER.info("New video id: '" + newVideoId + "'.");
-                    result.put("videoid", newVideoId);
+                if (videoIngested != null && videoIngested.has(Constants.ID)) {
+                    LOGGER.info(Constants.RESULT_LOG_NEW_VIDEO_TMPL, newVideoId);
+                    result.put(Constants.VIDEOID, newVideoId);
                     result.put("output", videoIngested);
                 } else {
-                    result.put("error", "createIngest Error");
+                    result.put(Constants.ERROR, "createIngest Error");
                     brAPI.cms.deleteVideo(newVideoId);
                 }
 
             } catch (Exception exIngest) {
                 LOGGER.error("createVideo", exIngest);
-                result.put("error", "createIngest Exception");
+                result.put(Constants.ERROR, "createIngest Exception");
                 brAPI.cms.deleteVideo(newVideoId);
             }
         } catch (JSONException e) {
-            LOGGER.error("JSON Error - createVideo", e);
+            LOGGER.error(e.getClass().getName() + "Create Video", e);
         }
         return result;
     }
@@ -478,75 +475,62 @@ public class ServiceUtil {
         JSONObject result = new JSONObject();
         try {
             JSONObject videoItem = brAPI.cms.createVideo(aVideo);
-            String newVideoId = videoItem.getString("id");
+            String newVideoId = videoItem.getString(Constants.ID);
             JSONObject videoIngested = new JSONObject();
             try {
                 videoIngested = brAPI.cms.getIngestURL(newVideoId, filename);
-                if (videoIngested != null && videoIngested.has("bucket")) {
-                    LOGGER.info("New video id: '" + newVideoId + "'.");
-                    result.put("bucket", videoIngested.get("bucket"));
-                    result.put("videoid", newVideoId);
-                    result.put("object_key", videoIngested.get("object_key"));
-                    result.put("api_request_url", videoIngested.get("api_request_url"));
-                    result.put("signed_url", videoIngested.get("signed_url"));
-                    boolean sent = S3UploadUtil.uploadToUrl(new URL(videoIngested.getString("signed_url")), is);
-
-                    result.put("sent", sent);
-                    if (!sent) {
-                        brAPI.cms.deleteVideo(newVideoId);
-                    } else {
-                        result.put("job", brAPI.cms.requestIngestURL(newVideoId, "high-resolution", videoIngested.getString("api_request_url"), true));
-                    }
-                } else {
-                    LOGGER.trace("createIngest: " + videoIngested.toString(1));
-
-                    result.put("error", "createIngest Error");
+                LOGGER.info(Constants.RESULT_LOG_NEW_VIDEO_TMPL, newVideoId);
+                result.put(Constants.BUCKET, videoIngested.get(Constants.BUCKET));
+                result.put(Constants.VIDEOID, newVideoId);
+                result.put(Constants.OBJECT_KEY, videoIngested.get(Constants.OBJECT_KEY));
+                result.put(Constants.API_REQUEST_URL, videoIngested.get(Constants.API_REQUEST_URL));
+                result.put(Constants.SIGNED_URL, videoIngested.get(Constants.SIGNED_URL));
+                boolean sent = S3UploadUtil.uploadToUrl(new URL(videoIngested.getString(Constants.SIGNED_URL)), is);
+                result.put(Constants.SENT, sent);
+                if (!sent) {
                     brAPI.cms.deleteVideo(newVideoId);
                 }
-
-            } catch (Exception exIngest) {
-                LOGGER.error("createIngest", exIngest);
-                result.put("error", "createIngest Exception");
+                else
+                {
+                    ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+                    ConfigurationService brcService = cg.getConfigurationService(account_id);
+                    String ingest_profile = brcService.getIngestProfile();
+                    result.put("job", brAPI.cms.requestIngestURL(newVideoId, ingest_profile, videoIngested.getString(Constants.API_REQUEST_URL), true));
+                }
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+                result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
                 brAPI.cms.deleteVideo(newVideoId);
             }
-            LOGGER.trace("result: " + result.toString(1));
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toString(1));
 
         } catch (JSONException e) {
-            LOGGER.error("createVideo", e);
+            LOGGER.error(e.getClass().getName(), e);
         }
-
         return result;
     }
 
     public JSONObject createAssetS3(String newVideoId, String filename, InputStream is) {
         JSONObject result = new JSONObject();
         try {
-            JSONObject assetIngested = new JSONObject();
             try {
-                assetIngested = brAPI.cms.getIngestURL(newVideoId, filename);
-                if (assetIngested != null && assetIngested.has("bucket")) {
-                    LOGGER.info("New video id: '" + newVideoId + "'.");
-                    result.put("bucket", assetIngested.get("bucket"));
-                    result.put("videoid", newVideoId);
-                    result.put("object_key", assetIngested.get("object_key"));
-                    result.put("api_request_url", assetIngested.get("api_request_url"));
-                    result.put("signed_url", assetIngested.get("signed_url"));
-                    boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.getString("signed_url")), is);
-                    result.put("sent", sent);
-                } else {
-                    LOGGER.trace("createIngest: " + assetIngested.toString(1));
-                    result.put("error", "createIngest Error");
-                }
-
-            } catch (Exception exIngest) {
-                LOGGER.error("createIngest", exIngest);
-                result.put("error", "createIngest Exception");
+                JSONObject assetIngested = brAPI.cms.getIngestURL(newVideoId, filename);
+                LOGGER.info(Constants.RESULT_LOG_NEW_VIDEO_TMPL,newVideoId);
+                result.put(Constants.BUCKET, assetIngested.get(Constants.BUCKET));
+                result.put(Constants.VIDEOID, newVideoId);
+                result.put(Constants.OBJECT_KEY, assetIngested.get(Constants.OBJECT_KEY));
+                result.put(Constants.API_REQUEST_URL, assetIngested.get(Constants.API_REQUEST_URL));
+                result.put(Constants.SIGNED_URL, assetIngested.get(Constants.SIGNED_URL));
+                boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.getString(Constants.SIGNED_URL)), is);
+                result.put(Constants.SENT, sent);
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+                result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
                 brAPI.cms.deleteVideo(newVideoId);
             }
-            LOGGER.trace("result: " + result.toString(1));
-
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toString(1));
         } catch (JSONException e) {
-            LOGGER.error("createAssetS3", e);
+            LOGGER.error(e.getClass().getName(), e);
         }
 
         return result;
@@ -559,456 +543,418 @@ public class ServiceUtil {
             int limit = DEFAULT_LIMIT;
             int firstElement = 0;
             int lastElement = limit;
-            if (limits != null && !limits.trim().isEmpty() && limits.split("\\.\\.")[0] != null) {
-                firstElement = Integer.parseInt(limits.split("\\.\\.")[0]);
-                lastElement = Integer.parseInt(limits.split("\\.\\.")[1]);
+            if (limits != null && !limits.trim().isEmpty() && limits.split(Constants.DELIMETER_STRING_DOUBLE)[0] != null) {
+                firstElement = Integer.parseInt(limits.split(Constants.DELIMETER_STRING_DOUBLE)[0]);
+                lastElement = Integer.parseInt(limits.split(Constants.DELIMETER_STRING_DOUBLE)[1]);
                 limit = lastElement - firstElement;
             }
             result = getPlaylists(firstElement, limit, false, false);
         } catch (Exception e) {
-
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
 
-    public void updateAsset(Asset newAsset, JSONObject innerObj, ResourceResolver resourceResolver, String requestedAccount) throws JSONException, RepositoryException, PersistenceException {
+    private String getKey(String x){
+        String key = x;
+        if (x.equals(Constants.TAGS))
+        {
+            key = NameConstants.PN_TAGS;
+        }
+        else if (Constants.NAME.equals(x))
+        {
+            key = DamConstants.DC_TITLE;      //NAME -> ASSET TITLE
+        }
+        else
+        {
+            key = "brc_".concat(x); //ALL ELSE -> BRC_KEYNAME
+        }
+        return key;
+    }
+
+    private void setMapJSONArray(String key, JSONArray objArray, ResourceResolver resourceResolver, ModifiableValueMap map) {
+        TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
+        if (tagManager == null) return;
+        try {
+            if (key.equals(NameConstants.PN_TAGS)) {
+                List<String> tags = new ArrayList<String>();
+                for (int cnt = 0; cnt < objArray.length(); cnt++) {
+                    String tagValue = objArray.getString(cnt);
+
+                    String tagKey = tagValue.replaceAll(": ", ":").trim();
+
+
+                    try {
+                        if (tagManager.canCreateTag(tagKey)) {
+
+                            Tag tag = tagManager.createTag(tagKey, tagValue, "");
+
+                            //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
+                            resourceResolver.commit();
+                            LOGGER.trace("tag created > {}", tagValue);
+                            //tagManager.setTags(assetRes, new Tag[]{tag}, true);
+                        } else {
+                            //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
+                            //tagManager.setTags(assetRes, tags, true);
+                            LOGGER.warn("tag create failed [exists] > added >  {}", tagValue);
+
+                        }
+                        tags.add(tagKey);
+                    } catch (InvalidTagFormatException e) {
+                        LOGGER.error(e.getClass().getName(), e);
+                    }
+                }
+                resourceResolver.commit();
+                map.put(key, tags.toArray());
+            } else {
+                map.put(key, objArray.join("#@#").split("#@#"));
+            }
+        }catch (Exception e) {
+            LOGGER.error(e.getClass().getName(),e);
+        }
+    }
+
+    private void setImages(JSONObject objObject, Asset newAsset) {
+        try {
+            if (objObject.has(Constants.POSTER)) {
+                JSONObject images_poster_obj = objObject.getJSONObject(Constants.POSTER);
+                String src = images_poster_obj.getString(Constants.SRC);
+                //DO GET FOR RENDITION -> TO ASSET "brc_poster"
+                URL srcURL = new URL(src);
+                InputStream ris = srcURL.openStream();
+                //Map<String,Object> rendition_map = new HashMap<String,Object>();
+                newAsset.addRendition(Constants.BRC_POSTER_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+            } else {
+                newAsset.removeRendition(Constants.BRC_POSTER_PNG);
+            }
+            if (objObject.has(Constants.THUMBNAIL))
+            {
+                JSONObject images_poster_obj = objObject.getJSONObject(Constants.THUMBNAIL);
+                String src = images_poster_obj.getString(Constants.SRC);
+                //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
+
+                InputStream ris = new URL(src).openStream();
+                //Map<String,Object> rendition_map = new HashMap<String,Object>();
+                newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+            } else {
+                newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
+            }
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failure to initialize remote source for {0}", newAsset.getPath(), e);
+        }
+    }
+    private void setSchedule(JSONObject objObject, ModifiableValueMap assetmap){
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+            String starts_at = objObject.getString(Constants.STARTS_AT);
+            if (starts_at != null && !starts_at.toString().equals(Constants.NULLSTRING)) {
+                assetmap.put(DamConstants.PN_ON_TIME, starts_at);
+            } else {
+                if (assetmap.containsKey(DamConstants.PN_ON_TIME)) assetmap.remove(DamConstants.PN_ON_TIME);
+            }
+            String ends_at = objObject.getString(Constants.ENDS_AT);
+            if (ends_at != null && !ends_at.toString().equals(Constants.NULLSTRING)) {
+                assetmap.put(DamConstants.PN_OFF_TIME, ends_at);
+            } else {
+                if (assetmap.containsKey(DamConstants.PN_OFF_TIME)) assetmap.remove(DamConstants.PN_OFF_TIME);
+            }
+        } catch (JSONException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+    }
+
+    private void setLink(JSONObject objObject, ModifiableValueMap map) {
+        try {
+            String link_url = objObject.getString(Constants.URL);
+            if (link_url != null && !link_url.toString().equals(Constants.NULLSTRING)) {
+                map.put(Constants.BRC_LINK_URL, link_url);
+            } else {
+                if (map.containsKey(Constants.BRC_LINK_URL)) map.remove(Constants.BRC_LINK_URL);
+            }
+            String link_text = objObject.getString(Constants.TEXT);
+            if (link_text != null && !link_text.toString().equals(Constants.NULLSTRING)) {
+                map.put(Constants.BRC_LINK_TEXT, link_text);
+            } else {
+                if (map.containsKey(Constants.BRC_LINK_TEXT)) map.remove(Constants.BRC_LINK_TEXT);
+            }
+        } catch (JSONException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+    }
+    private void setObject(JSONObject objObject, Resource metadataRes, String key) {
+        try {
+            Node metadataNode = metadataRes.adaptTo(Node.class);
+            if (metadataNode == null) return;
+
+            Node subNode;
+            if (metadataRes.getChild(key) == null) {
+                subNode = metadataNode.addNode(key);
+            } else {
+                subNode = metadataNode.getNode(key);
+            }
+            if (subNode == null) return;
+            Resource subResource = metadataRes.getChild(key);
+            if (subResource == null) return;
+            ModifiableValueMap submap = subResource.adaptTo(ModifiableValueMap.class);
+            if(submap==null) return;
+
+            Iterator<String> itrObj = objObject.keys();
+            while (itrObj.hasNext()) {
+                String selectorKey = itrObj.next();
+                submap.put(selectorKey, objObject.get(selectorKey));
+            }
+        } catch (RepositoryException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        } catch (JSONException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+    }
+
+    private void removeObject(String key, String x, ModifiableValueMap map, Asset newAsset, ModifiableValueMap assetmap ) {
+        if (x.equals(Constants.IMAGES)) {
+            //NULL ON IMAGES MEANS NULL SOURCES OF IMAGES
+            newAsset.removeRendition(Constants.BRC_POSTER_PNG);
+            newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
+        } else if (x.equals(Constants.SCHEDULE)) {
+            //NULL OBJECT OF SCHEDULE = EMPTY SCHEDULE METADATA
+            if (assetmap.containsKey(DamConstants.PN_ON_TIME))
+                assetmap.remove(DamConstants.PN_ON_TIME);
+            if (assetmap.containsKey(DamConstants.PN_OFF_TIME))
+                assetmap.remove(DamConstants.PN_OFF_TIME);
+        } else if (x.equals(Constants.LINK)) {
+            //NULL LINK OBJECT MEANS EMPTY URL + TEXT METADATA
+            if (map.containsKey(Constants.BRC_LINK_TEXT)) map.remove(Constants.BRC_LINK_TEXT);
+            if (map.containsKey(Constants.BRC_LINK_URL)) map.remove(Constants.BRC_LINK_URL);
+        } else {
+            //IF ANY OTHER ARE NULL AND WERE ACTIVE - ARE NOW EQUIVALENT
+            if (map.containsKey(key)) map.remove(key);
+        }
+    }
+
+    private void setObject(Object obj, String key, String x, ModifiableValueMap map, Asset newAsset, ModifiableValueMap assetmap) {
+        if (obj != null && !obj.toString().toString().equals(Constants.NULLSTRING)) {
+            if (key.equals(Constants.BRC_DURATION)) {
+                int input = Integer.parseInt(obj.toString());
+                input = input / 1000;
+                obj = String.format("%02d:%02d:%02d", input / 3600, (input % 3600) / 60, (input % 3600) % 60);
+            }
+            map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
+        } else {
+
+            //Improve this check, this is the handle for null object / string
+            //WE TAKE THESE NULL VALUES AS ACTUAL VALUES AND EXECUTE
+            removeObject(key, x, map, newAsset, assetmap );
+        }
+    }
+
+    public void updateAsset(@Nonnull Asset newAsset, JSONObject innerObj, ResourceResolver resourceResolver, String requestedAccount) throws JSONException, RepositoryException, PersistenceException {
 
         try {
-            if (newAsset != null)
-            {
 
-                // LOGGER.trace(innerObj.toString(1));//TODO: Debugger print statement
+                // LOGGER.trace(innerObj.toString(1));
                 LOGGER.trace("UPDATING ASSET>>: " + newAsset.getPath());
 
                 Resource assetRes = newAsset.adaptTo(Resource.class);                        //INITIALIZE THE ASSET RESOURCE
-                ModifiableValueMap assetmap = assetRes.getChild("jcr:content").adaptTo(ModifiableValueMap.class);
+                ModifiableValueMap assetmap = assetRes.getChild(NameConstants.NN_CONTENT).adaptTo(ModifiableValueMap.class);
 
-                Resource metadataRes = assetRes.getChild("jcr:content/metadata");            //INITIALIZE THE ASSET BC METADATA MAP RESOURCE
+                Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);            //INITIALIZE THE ASSET BC METADATA MAP RESOURCE
                 ModifiableValueMap map = metadataRes.adaptTo(ModifiableValueMap.class);
 
                 //SET FIRST PIECE OF METADATA
-                map.put("brc_account_id", requestedAccount);
+                map.put(Constants.BRC_ACCOUNTID, requestedAccount);
 
                 //HANDLE TAG S
                 TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
                 List<String> tags = new ArrayList<String>();
 
 
-                map.put("cq:tags", tags.toArray());
+                map.put(TagConstants.PN_TAGS, tags.toArray());
 
-                for (String x : fields)
-                {
-
-                    if(innerObj.has(x))
-                    {
-                        LOGGER.trace("[X] {} " + innerObj.getString(x), x);
-                    }
+                for (String x : fields) {
 
                     //ADAPT NAME OF METADATA COMPING IN -> AEM PROPERTIES TO BE STORED
-                    if (innerObj.has(x))
-                    {
-                        String key = x;
-                        if (x.equals("tags"))
-                        {
-                            key = "cq:".concat(x); //TAGS -> CQ TAGS
-                        }
-                        else if ("name".equals(x))
-                        {
-                            key = "dc:title";      //NAME -> ASSET TITLE
-                        }
-                        else
-                        {
-                            key = "brc_".concat(x); //ALL ELSE -> BRC_KEYNAME
-                        }
-                        // SECOND PRINT STATEMNT - LOGGER.trace("" + x + " -> " + "[" + innerObj.get(x) + "] is null? -> " + innerObj.get(x).equals(null));
-
-                        Object obj = innerObj.get(x);
-
-                        //IF THE CURRENT METADATA IS AN ARRAY
-                        if (obj instanceof JSONArray)
-                        {
-                            JSONArray objArray = (JSONArray) obj;
-                            if (x.equals("tags")) {
-
-
-                                //LOGGER.trace("TAG ARRAY "+objArray.toString(1));
-
-                                for (int cnt = 0; cnt < objArray.length(); cnt++)
-                                {
-                                    String tagValue = objArray.getString(cnt);
-
-                                    String tagKey = tagValue.replaceAll(": ",":").trim();
-
-
-                                    try {
-                                        if (tagManager.canCreateTag(tagKey)) {
-
-                                            Tag tag = tagManager.createTag(tagKey, tagValue, "");
-
-                                            //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
-                                            resourceResolver.commit();
-                                            LOGGER.trace("tag created > " + tagValue);
-                                            //tagManager.setTags(assetRes, new Tag[]{tag}, true);
-                                        } else {
-                                            //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
-                                            //tagManager.setTags(assetRes, tags, true);
-                                            LOGGER.warn("tag create failed [exists] > added >  ", tagValue);
-
-                                        }
-                                        tags.add(tagKey);
-                                    } catch (InvalidTagFormatException e) {
-                                        LOGGER.error("Invalid Tag Format", e);
-                                    }
-                                }
-                                resourceResolver.commit();
-                                map.put(key, tags.toArray());
-                            } else {
-                                map.put(key, objArray.join("#@#").split("#@#"));
-                            }
-                        }
-                        else if (obj instanceof JSONObject)
-                        {
-
-                            //ELSE IF IT IS AN OBJECT
-                            JSONObject objObject = (JSONObject) obj;
-
-                            //CASE IMAGES
-                            if (x.equals("images"))
-                            {
-                                if (objObject != null) {
-
-                                    try {
-
-                                        //LOGGER.trace(objObject.toString());
-                                        if (objObject.has("poster")) {
-                                            JSONObject images_poster_obj = objObject.getJSONObject("poster");
-                                            String src = images_poster_obj.getString("src");
-                                            //DO GET FOR RENDITION -> TO ASSET "brc_poster"
-                                            URL srcURL = new URL(src);
-                                            InputStream ris = srcURL.openStream();
-                                            //Map<String,Object> rendition_map = new HashMap<String,Object>();
-                                            newAsset.addRendition("brc_poster.png", ris, "image/jpeg");
-                                        }
-
-                                        if (objObject.has("thumbnail"))
-                                        {
-                                            JSONObject images_poster_obj = objObject.getJSONObject("thumbnail");
-                                            String src = images_poster_obj.getString("src");
-                                            //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
-
-                                            InputStream ris = new URL(src).openStream();
-                                            //Map<String,Object> rendition_map = new HashMap<String,Object>();
-                                            newAsset.addRendition("brc_thumbnail.png", ris, "image/jpeg");
-                                        }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        LOGGER.error("Failure to initialize remote source for "+ newAsset.getPath(), e);
-                                    }
-
-
-                                } else {
-                                    newAsset.removeRendition("brc_poster.png");
-                                    newAsset.removeRendition("brc_thumbnail.png");
-                                }
-                            } //CASE SCHEDULE
-                            else if (x.equals("schedule"))
-                            {
-                                if (objObject != null) {
-
-
-                                    LOGGER.trace("PRE-PARSE>>>>>>>");
-                                    SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
-
-
-                                    String starts_at = objObject.getString("starts_at");
-                                    if (starts_at != null && !starts_at.equals("null")) {
-                                        assetmap.put("onTime", starts_at);
-                                    } else {
-                                        if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
-                                    }
-                                    String ends_at = objObject.getString("ends_at");
-                                    if (ends_at != null && !ends_at.equals("null")) {
-                                        assetmap.put("offTime", ends_at);
-                                    } else {
-                                        if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
-                                    }
-                                } else {
-                                    LOGGER.trace("PRE-REMOVE>>>>>>>");
-                                    if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
-                                    if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
-                                }
-                            } //ELSE - LINK
-                            else if (x.equals("link"))
-                            {
-
-                                //"link":{"text":"Sample related link","url":"www.brightcove.com"},"
-                                if (objObject != null)
-                                {
-                                    String link_url = objObject.getString("url");
-                                    if (link_url != null && !link_url.equals("null")) {
-                                        map.put("brc_link_url", link_url);
-                                    } else {
-                                        if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
-                                    }
-                                    String link_text = objObject.getString("text");
-                                    if (link_text != null && !link_text.equals("null")) {
-                                        map.put("brc_link_text", link_text);
-                                    } else {
-                                        if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
-                                    }
-                                }
-                                else
-                                {
-                                    if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
-                                    if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
-                                }
-                            }
-                            else
-                            {
-
-                                //TODO: CHECK - SUBMODULE NECESSARY ? This is else JSON Object Case
-
-                                Node subNode;
-                                Resource subResource;
-                                if (metadataRes.getChild(key) == null) {
-                                    subNode = metadataRes.adaptTo(Node.class).addNode(key);
-                                } else {
-                                    subNode = metadataRes.adaptTo(Node.class).getNode(key);
-                                }
-
-                                if (subNode != null) {
-                                    subResource = metadataRes.getChild(key);
-                                    ModifiableValueMap submap = subResource.adaptTo(ModifiableValueMap.class);
-                                    Iterator<String> itrObj = objObject.keys();
-                                    while (itrObj.hasNext()) {
-                                        String selectorKey = itrObj.next();
-                                        submap.put(selectorKey, objObject.get(selectorKey));
-                                    }
-                                }
-
-
-
-                            }
-                        }
-                        else //NOT ARRAY NOR OBJECT
-                        {
-                            //DURATION SETTING AND CHECK
-                            try {
-                                //Check format of brc_duration
-                                if (key.equals("brc_duration") && obj!=null)
-                                {
-                                    //LOGGER.trace("*!*!*! current key : " + key.toString() + " value: " + obj.toString());
-                                    //conditional conversion
-                                    int input = Integer.parseInt(obj.toString());
-                                    input = input / 1000 ;
-                                    obj = String.format("%02d:%02d:%02d", input/3600,(input % 3600) / 60,(input % 3600) % 60);
-                                    //LOGGER.trace("*!*!*! is now :" + obj.toString());
-                                }
-                            }
-                            catch (IllegalStateException e)
-                            {
-                                LOGGER.warn("Duration Check Error! Invalid / empty video duration");
-                            }
-                            catch (NumberFormatException e)
-                            {
-                                LOGGER.warn("Duration Check Error! Invalid / empty video duration");
-                            }
-                            catch (Exception e)
-                            {
-                                LOGGER.warn("Duration Check Error!", e);
-                            }
-                            //END DURATION CHECK AND SET
-
-
-
-                            //THIS HANDLES REST OF NULL SET KEYS WHICH MAP TO PROPERTY VALUES
-                            if (obj != null && !obj.equals(null) && !obj.equals("null"))
-                            {
-                                map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
-                            }
-                            else
-                            {
-
-                                //TODO: Improvie this check, this is the handle for null object / string
-                                //WE TAKE THESE NULL VALUES AS ACTUAL VALUES AND EXECUTE
-                                if (x.equals("images"))
-                                {
-                                    //NULL ON IMAGES MEANS NULL SOURCES OF IMAGES
-                                    newAsset.removeRendition("brc_poster.png");
-                                    newAsset.removeRendition("brc_thumbnail.png");
-                                }
-                                else if (x.equals("schedule"))
-                                {
-                                    //NULL OBJECT OF SCHEDULE = EMPTY SCHEDULE METADATA
-                                    if (assetmap.containsKey("onTime")) assetmap.remove("onTime");
-                                    if (assetmap.containsKey("offTime")) assetmap.remove("offTime");
-                                }
-                                else if (x.equals("link"))
-                                {
-                                    //NULL LINK OBJECT MEANS EMPTY URL + TEXT METADATA
-                                    if (map.containsKey("brc_link_text")) map.remove("brc_link_text");
-                                    if (map.containsKey("brc_link_url")) map.remove("brc_link_url");
-                                }
-                                else
-                                {
-                                    //IF ANY OTHER ARE NULL AND WERE ACTIVE - ARE NOW EQUIVALENT
-                                    if (map.containsKey(key)) map.remove(key);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
+                    if (!innerObj.has(x)) {
                         LOGGER.trace("##HAS KEY BUT OBJECT IT LEADS TO IS NULL!");
-                        LOGGER.trace("## HAS OBJECT WITH KEY : " + x +" ? "+innerObj.has(x) + " isnull? : "+ innerObj.get(x).equals(null));
+                        LOGGER.trace("## HAS OBJECT WITH KEY : " + x +" ? "+innerObj.has(x) + " isnull? : "+ (innerObj.get(x)==null));
+                        break;
+                    }
+
+
+                    String key = getKey(x);
+
+                    Object obj = innerObj.get(x);
+
+                    LOGGER.trace("[X] {} {}", obj, key);
+
+                    //IF THE CURRENT METADATA IS AN ARRAY
+                    if (obj instanceof JSONArray) {
+                        JSONArray objArray = (JSONArray) obj;
+                        setMapJSONArray(key, objArray, resourceResolver, map);
+                    } else if (obj instanceof JSONObject) {
+
+                        JSONObject objObject = (JSONObject) obj;
+                        //CASE IMAGES
+                        if (x.equals(Constants.IMAGES)) {
+                            setImages(objObject, newAsset);
+                        } //CASE SCHEDULE
+                        else if (x.equals(Constants.SCHEDULE)) {
+                            setSchedule(objObject, assetmap);
+                        } //ELSE - LINK
+                        else if (x.equals(Constants.LINK)) {
+                            setLink(objObject, map);
+                        } else {
+                            setObject(objObject, metadataRes, key);
+                        }
+                    } else //NOT ARRAY NOR OBJECT
+                    {
+
+                        //THIS HANDLES REST OF NULL SET KEYS WHICH MAP TO PROPERTY VALUES
+                        setObject(obj, key, x, map, newAsset, assetmap);
                     }
                 }
 
-
-
-
                 //AFTER SETTING ALL THE METADATA - SET THE LAST UPDATE TIME
-
                 //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-
-
-                map.put("brc_lastsync", com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
+                map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
                 resourceResolver.commit();
-
-
-                LOGGER.trace(">>UPDATED METADATA FOR VIDEO : [" + map.get("brc_id")+ "]");
-            }
-            else
-            {
-                LOGGER.error("BC ASSET UPDATE FAILED - ASSET IS NULL ! ERROR");
-            }
+                LOGGER.trace(">>UPDATED METADATA FOR VIDEO : [{}]",map.get(Constants.BRC_ID));
 
             //MAIN TRY
-        }
-        catch (JSONException e)
-        {
-            LOGGER.error("JSON EXCEPTION", e);
-        } catch (NullPointerException e) {
-            LOGGER.error("NULL POINTER", e);
-        }  catch (IOException e)
-        {
-            LOGGER.error("FILE NOT FOUND", e);
+        } catch (IOException e) {
+            LOGGER.error(e.getClass().getName(), e);
         }
 
     }
 
+    private JSONObject setOriginalRendition(Rendition original_rendition, Date brc_lastsync_time, Asset _asset, ServiceUtil serviceUtil, Video currentVideo) throws JSONException{
+        JSONObject master = new JSONObject();
+        ValueMap original_map = original_rendition.getProperties();
+        Date orig_lastmod_time = original_map.get(JcrConstants.JCR_LASTMODIFIED,new Date(0));
+        LOGGER.trace("ORGINAL RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,orig_lastmod_time, brc_lastsync_time);
+        //LOGGER.trace("{}",original_map);
+
+        if(orig_lastmod_time.compareTo(brc_lastsync_time)  > 0)
+        {
+            LOGGER.trace("UPLOADING ORIGINAL");
+            //CHECK FOR Null BRC _ ID?
+            InputStream original_rendition_is = _asset.getRendition(DamConstants.ORIGINAL_FILE) != null ? _asset.getRendition(DamConstants.ORIGINAL_FILE).getStream() : null;
+            JSONObject s3_url_resp_original = serviceUtil.createAssetS3(currentVideo.id, _asset.getName() ,original_rendition_is);
+
+            LOGGER.trace("S3RESP : " + s3_url_resp_original);
+            LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
+            if (s3_url_resp_original != null && s3_url_resp_original.getBoolean(Constants.SENT)) {
+                master = new JSONObject("{'master': {'url': '" + s3_url_resp_original.getString(Constants.API_REQUEST_URL) + "'},'profile': 'high-resolution','capture-images': false}");
+            }
+
+        }
+        else
+        {
+            LOGGER.trace("Original Rendition Update Skipped");
+        }
+        return master;
+    }
+
+    private void addPoster(Rendition poster_rendition, Date brc_lastsync_time, Asset _asset, ServiceUtil serviceUtil, Video currentVideo, JSONObject master) throws JSONException {
+        ValueMap poster_map = poster_rendition.getProperties();
+        Date poster_lastmod_time = poster_map.get(JcrConstants.JCR_LASTMODIFIED,new Date(0));
+
+        LOGGER.trace("POSTER RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,poster_lastmod_time, brc_lastsync_time);
+
+        if(poster_lastmod_time.compareTo(brc_lastsync_time) > 0)
+        {
+            LOGGER.trace("UPLOADING POSTER");
+            //CHECK FOR Null BRC _ ID?
+            InputStream poster_rendition_is = _asset.getRendition(Constants.BRC_POSTER_PNG) != null ? _asset.getRendition(Constants.BRC_POSTER_PNG).getStream() : null;
+            JSONObject s3_url_resp_poster = serviceUtil.createAssetS3(currentVideo.id,Constants.BRC_POSTER_PNG,poster_rendition_is);
+
+            LOGGER.trace("S3RESP : " + s3_url_resp_poster);
+            LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
+            //POSTER
+            if (s3_url_resp_poster != null && s3_url_resp_poster.getBoolean(Constants.SENT)) {
+                //IF SUCCESS - PUT
+                Poster poster = new Poster(s3_url_resp_poster.getString(Constants.API_REQUEST_URL));
+                master.put(Constants.POSTER, poster.toJSON());
+            }
+        }
+        else
+        {
+            LOGGER.trace("Poster Rendition Update Skipped");
+        }
+    }
+
+
+    private void addThumb(Rendition thumb_rendition, Date brc_lastsync_time, Asset _asset, ServiceUtil serviceUtil, Video currentVideo, JSONObject master) throws JSONException {
+        ValueMap thumbnail_map = thumb_rendition.getProperties(); //RETURNED NULL EACH TIME
+        Date thumbnail_lastmod_time = thumbnail_map.get(JcrConstants.JCR_LASTMODIFIED, new Date(0));
+        LOGGER.trace("THUMBNAIL RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,thumbnail_lastmod_time, brc_lastsync_time);
+        if (thumbnail_lastmod_time.compareTo(brc_lastsync_time) > 0)
+        {
+            LOGGER.trace("UPLOADING THUMBNAIL");
+            InputStream thumbnail_rendition = _asset.getRendition(Constants.BRC_THUMBNAIL_PNG) != null ? _asset.getRendition(Constants.BRC_THUMBNAIL_PNG).getStream() : null;
+            JSONObject s3_url_resp_thumbnail = serviceUtil.createAssetS3(currentVideo.id, Constants.BRC_THUMBNAIL_PNG, thumbnail_rendition);
+
+            if (s3_url_resp_thumbnail != null && s3_url_resp_thumbnail.getBoolean(Constants.SENT)) {
+                //IF SUCCESS - PUT
+                Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString(Constants.API_REQUEST_URL));
+                master.put(Constants.THUMBNAIL, thumbnail.toJSON());
+            }
+        }
+        else
+        {
+            LOGGER.trace("Thumbnail Rendition Update Skipped");
+        }
+    }
     public boolean updateRenditions(Asset _asset, Video currentVideo) throws JSONException
     {
         boolean result = false;
         Long asset_lastmod = _asset.getLastModified();
-        Resource metadataRes = _asset.adaptTo(Resource.class).getChild("jcr:content/metadata");
-        ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
-        Date brc_lastsync_time = brc_lastsync_map.get("brc_lastsync",new Date(0));
-
+        Resource assetRes = _asset.adaptTo(Resource.class);
+        if (assetRes == null) return false;
+        Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
+        if (metadataRes == null) return false;
+        ValueMap brc_lastsync_map = metadataRes.adaptTo(ValueMap.class);
+        if (brc_lastsync_map == null) return false;
+        Date brc_lastsync_time = brc_lastsync_map.get(Constants.BRC_LASTSYNC,new Date(0));
+        if (brc_lastsync_time == null) return false;
         ServiceUtil serviceUtil = new ServiceUtil(account_id);
 
-        Rendition poster_rendition = _asset.getRendition("brc_poster.png");
-        Rendition thumb_rendition = _asset.getRendition("brc_thumbnail.png");
-        Rendition original_rendition = _asset.getRendition("original");
+        Rendition poster_rendition = _asset.getRendition(Constants.BRC_POSTER_PNG);
+        Rendition thumb_rendition = _asset.getRendition(Constants.BRC_THUMBNAIL_PNG);
+        Rendition original_rendition = _asset.getRendition(DamConstants.ORIGINAL_FILE);
 
         JSONObject master = new JSONObject();
 
-
+        if (currentVideo.id == null) return false;
         //ORGINAL RENDITION - REPLACE CHECK -  RENDITION PROCESS
-        if (currentVideo.id != null && original_rendition != null)
+        if (original_rendition != null)
         {
-
-            ValueMap original_map = original_rendition.getProperties();
-            Date orig_lastmod_time = original_map.get("jcr:lastModified",new Date(0));
-            LOGGER.trace("ORGINAL RENDITION LASTMOD: " + orig_lastmod_time + " VS LASTSYNC " + brc_lastsync_time);
-            LOGGER.trace(""+original_map);
-
-            if(orig_lastmod_time.compareTo(brc_lastsync_time)  > 0)
-            {
-                LOGGER.trace("UPLOADING ORIGINAL");
-                //CHECK FOR Null BRC _ ID?
-                InputStream original_rendition_is = _asset.getRendition("original") != null ? _asset.getRendition("original").getStream() : null;
-                JSONObject s3_url_resp_original = serviceUtil.createAssetS3(currentVideo.id, _asset.getName() ,original_rendition_is);
-
-                LOGGER.trace("S3RESP : " + s3_url_resp_original);
-                LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
-                if (s3_url_resp_original != null && s3_url_resp_original.getBoolean("sent")) {
-                    master = new JSONObject("{'master': {'url': '" + s3_url_resp_original.getString("api_request_url") + "'},'profile': 'high-resolution','capture-images': false}");
-                }
-
-            }
-
+            master = setOriginalRendition(original_rendition, brc_lastsync_time, _asset, serviceUtil, currentVideo);
         }
 
 
         //POSTER RENDITION PROCESS
         if (poster_rendition != null)
         {
-            ValueMap poster_map = poster_rendition.getProperties();
-            Date poster_lastmod_time = poster_map.get("jcr:lastModified",new Date(0));
-            LOGGER.trace("POSTER RENDITION LASTMOD: " + poster_lastmod_time);
-
-
-            if(poster_lastmod_time.compareTo(brc_lastsync_time) > 0)
-            {
-                LOGGER.trace("UPLOADING POSTER");
-                //CHECK FOR Null BRC _ ID?
-                InputStream poster_rendition_is = _asset.getRendition("brc_poster.png") != null ? _asset.getRendition("brc_poster.png").getStream() : null;
-                JSONObject s3_url_resp_poster = serviceUtil.createAssetS3(currentVideo.id,"brc_poster.png",poster_rendition_is);
-
-                LOGGER.trace("S3RESP : " + s3_url_resp_poster);
-                LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
-                //POSTER
-                if (s3_url_resp_poster != null && s3_url_resp_poster.getBoolean("sent"))
-                {
-                    //IF SUCCESS - PUT
-                    Poster poster = new Poster(s3_url_resp_poster.getString("api_request_url"));
-                    master.put("poster", poster.toJSON());
-
-                }
-            }
-
+            addPoster(poster_rendition, brc_lastsync_time, _asset, serviceUtil, currentVideo, master);
         }
 
 
         //THUMBNAIL RENDITION PROCESS
         if (thumb_rendition != null) {
-
-            LOGGER.trace("ASSET LASTMOD: " + asset_lastmod);
-
-            ValueMap thumbnail_map = thumb_rendition.getValueMap(); //RETURNED NULL EACH TIME
-
-
-            Date thumbnail_lastmod_time = thumbnail_map.get("jcr:lastModified", new Date(0));
-            LOGGER.trace("THUMBNAIL RENDITION LASTMOD: " + thumbnail_lastmod_time);
-
-            if (thumbnail_lastmod_time.compareTo(brc_lastsync_time) > 0)
-            {
-                LOGGER.trace("UPLOADING THUMBNAIL");
-                InputStream thumbnail_rendition = _asset.getRendition("brc_thumbnail.png") != null ? _asset.getRendition("brc_thumbnail.png").getStream() : null;
-                JSONObject s3_url_resp_thumbnail = serviceUtil.createAssetS3(currentVideo.id, "brc_thumbnail.png", thumbnail_rendition);
-
-                if (s3_url_resp_thumbnail != null && s3_url_resp_thumbnail.getBoolean("sent")) {
-                    //IF SUCCESS - PUT
-                    Thumbnail thumbnail = new Thumbnail(s3_url_resp_thumbnail.getString("api_request_url"));
-                    master.put("thumbnail", thumbnail.toJSON());
-                }
-            }
+            addThumb(thumb_rendition, brc_lastsync_time, _asset, serviceUtil, currentVideo, master);
         }
 
 
         //UPLOAD INJEST SENDS THE IMAGE OBJECT TO THE  API - UPDATES THE METADATA TO POINT TO THE NEW URLS
-        if (master.has("poster") || master.has("thumbnail") || master.has("master") ) {
+        if (master.has(Constants.POSTER) || master.has(Constants.THUMBNAIL) || master.has(Constants.MASTER) ) {
 
-            LOGGER.trace("master OBJ    ECT : " + master.toString());
-
+            LOGGER.trace("master OBJ    ECT : {}" , master);
             JSONObject response = brAPI.cms.uploadInjest(currentVideo.id, master);
-
-            LOGGER.trace("response: " + response.toString());
-
-            JSONObject api_resp = new JSONObject(response.getString("response"));
-            if (api_resp.has("id")) {
+            LOGGER.trace(Constants.RESPONSE , response);
+            JSONObject api_resp = new JSONObject(response.getString(Constants.RESPONSE));
+            if (api_resp.has(Constants.ID)) {
                 result = true;
             }
         } else {
@@ -1020,45 +966,60 @@ public class ServiceUtil {
         return result;
     }
 
+
+    private Schedule getSchedule(ValueMap assetMap) {
+        //SCHEDULE
+        SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+
+        Date sched_start = assetMap.get(DamConstants.PN_ON_TIME, Date.class);
+        Date sched_ends  = assetMap.get(DamConstants.PN_OFF_TIME, Date.class);
+        Schedule schedule = null;
+        String start = sched_start != null ? sdf.format(sched_start): null;
+        String end = sched_ends != null ? sdf.format(sched_ends): null;
+
+        if(sched_start!=null || sched_ends != null)
+        {
+            schedule = new Schedule(start,end );
+        }
+        return schedule;
+    }
+
+
+
     public Video createVideo(String request, Asset asset, String aState)
     {
-        LOGGER.trace("VIDEO CREATION CALLED FOR"  + asset.getName() + " req? : " + request);
+
+
+
+        LOGGER.trace("VIDEO CREATION CALLED FOR {} req: {}", asset.getName() , request);
 
         Resource assetRes = asset.adaptTo(Resource.class);
-        LOGGER.trace("assetRes: " + assetRes.getPath());
+        LOGGER.trace("assetRes: {}" , assetRes.getPath());
 
-        Resource metadataRes = assetRes.getChild("jcr:content/metadata");
+        Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
         //SUB ASSETS
-        Resource custom_node = metadataRes.getChild("brc_custom_fields")!= null ? metadataRes.getChild("brc_custom_fields") : null;
+        Resource custom_node = metadataRes.getChild(Constants.BRC_CUSTOM_FIELDS)!= null ? metadataRes.getChild(Constants.BRC_CUSTOM_FIELDS) : null;
 
         //MAIN MAP
-        ValueMap assetMap = assetRes.getChild("jcr:content").adaptTo(ValueMap.class);
+        ValueMap assetMap = assetRes.getChild(NameConstants.NN_CONTENT).adaptTo(ValueMap.class);
         ValueMap map = metadataRes.adaptTo(ValueMap.class);
 
         //SUBMAPS
         ValueMap custom_node_map = custom_node != null ? custom_node.adaptTo(ValueMap.class) : null;
 
         //RELATED LINK
-        String aUrl = map.get("brc_link_url", null);
-        String aText  = map.get("brc_link_text", null);
+        String aUrl = map.get(Constants.BRC_LINK_URL, String.class);
+        String aText  = map.get(Constants.BRC_LINK_TEXT, String.class);
         RelatedLink alink  = new RelatedLink( (aUrl != null ? (aText != null ? aText : "" ) : null),  (aText != null ? (aUrl != null ? aUrl : "" ): null));
 
-        //SCHEDULE
-        SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+        //Schedule
+        Schedule schedule = getSchedule(assetMap);
 
-        Date sched_start = assetMap.get("onTime", Date.class);
-        Date sched_ends  = assetMap.get("offTime", Date.class);
-        Schedule schedule = null;
-        if(sched_start!=null || sched_ends != null)
-        {
-
-            schedule = new Schedule(sdf.format(sched_start), sdf.format(sched_ends) );
-        }
-
-        Geo geo = null; //NOT SUPPORTED
+        //Geo
+        Geo geo = null;
 
         //TAGS
-        String[] tagsList = metadataRes.getValueMap().get("cq:tags",new String[]{});
+        String[] tagsList = metadataRes.getValueMap().get(TagConstants.PN_TAGS,new String[]{});
         List<String> list = new ArrayList<String>(Arrays.asList(tagsList));
         tagsList = list.toArray(new String[0]);
         //REMOVE BRIGHTCOVE TAG BEFORE PUSH
@@ -1067,42 +1028,40 @@ public class ServiceUtil {
 
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
-        String name = map.get("dc:title", asset.getName());
-        String id = map.get("brc_id", null);
-        String referenceId = map.get("brc_reference_id", "");
-        String shortDescription = map.get("brc_description","");
-        String longDescription = map.get("brc_long_description","");
-        String projection = "equirectangular".equals(map.get("brc_projection",""))? "equirectangular" : "";
+        String name = map.get(DamConstants.DC_TITLE, asset.getName());
+        String id = map.get(Constants.BRC_ID, String.class);
+        String referenceId = map.get(Constants.BRC_REFERENCE_ID, "");
+        String shortDescription = map.get(Constants.BRC_DESCRIPTION,"");
+        String longDescription = map.get(Constants.BRC_LONG_DESCRIPTION,"");
+        String projection = "equirectangular".equals(map.get(Constants.BRC_PROJECTION,""))? Constants.EQUIRECTANGULAR : "";
 
 
         Map<String, Object> custom_fields = new HashMap();
 
         LOGGER.trace("###CUSTOM NODEMAP###");
-
-
         try
         {
             JSONObject custom_fields_obj = getCustomFields();
-            JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
+            JSONArray custom_fields_arr = custom_fields_obj.getJSONArray(Constants.CUSTOM_FIELDS);
             for(int z = 0 ; z < custom_fields_arr.length() ; z ++ )
             {
                 JSONObject current = custom_fields_arr.getJSONObject(z);
-                custom_fields.put( current.getString("id"), custom_node_map.get(current.getString("id"),""));
+                custom_fields.put( current.getString(Constants.ID), custom_node_map.get(current.getString(Constants.ID),""));
             }
 
         }
         catch (Exception e)
         {
-            LOGGER.error("REPO EXCEPTION " + e);
+            LOGGER.error("REPO EXCEPTION {}" , e);
         }
 
         //economics enum initialization
-        EconomicsEnum economics = EconomicsEnum.valueOf(map.get("brc_economics", "AD_SUPPORTED"));
+        EconomicsEnum economics = EconomicsEnum.valueOf(map.get(Constants.BRC_ECONOMICS, "AD_SUPPORTED"));
 
         //ININTIALIZING WRAPPER OBJECTS
 
         //COMPLETE
-        Boolean complete = map.get("brc_complete",false);
+        Boolean complete = map.get(Constants.BRC_COMPLETE,false);
 
         //THIS VIDEO
         Video video;
@@ -1123,9 +1082,8 @@ public class ServiceUtil {
                 economics,
                 projection
         );
-        LOGGER.trace("Video "+video.toString());
+        LOGGER.trace("Video {}", video);
         LOGGER.trace(">>>>>>>>>>///>>>>>>>>>>");
-
         return video;
     }
 }

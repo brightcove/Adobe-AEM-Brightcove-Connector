@@ -32,7 +32,7 @@
  */
 package com.coresecure.brightcove.wrapper.utils;
 
-import com.coresecure.brightcove.wrapper.objects.Binary;
+import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import org.apache.jackrabbit.commons.JcrUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -45,6 +45,9 @@ import javax.jcr.RepositoryException;
 import java.util.*;
 
 public class JcrUtil {
+
+    private JcrUtil(){/* default implementation ignored */}
+
     private static final Logger LOGGER = LoggerFactory.getLogger(JcrUtil.class);
 
     public static Calendar now2calendar() {
@@ -53,12 +56,11 @@ public class JcrUtil {
         return calendar;
     }
 
-    public static Binary getLocalBinary(ResourceResolver resourceResolver, String path, MimeTypeService mType) throws RepositoryException{
-        Binary binary = new Binary();
+    public static BinaryObj getLocalBinary(ResourceResolver resourceResolver, String path, MimeTypeService mType) throws RepositoryException{
+
         Resource thumbRes = resourceResolver.resolve(path); //RESOLVE TO IMAGE
         //READ THUMBNAIL FROM LOCAL ADDRESS
-        binary.mime_type = mType.getMimeType(thumbRes.getName());                //MATCH TO THUMBNAIL SOURCE MIME TYPE
-        binary.binary = JcrUtils.readFile(thumbRes.adaptTo(Node.class));
+        BinaryObj binary = new BinaryObj(JcrUtils.readFile(thumbRes.adaptTo(Node.class)), mType.getMimeType(thumbRes.getName()));
         LOGGER.trace("MIME TYPE COMING IN:\t" + binary.mime_type + " NEW THUMBNAIL RESOURCE: " + path);
         return binary;
     }

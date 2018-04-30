@@ -32,28 +32,31 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.sling.commons.json.JSONException;
+import org.apache.sling.commons.json.JSONObject;
 
-import java.io.InputStream;
+public class TokenObj {
+    private final String token_type;
+    private final String token;
+    private final int expire_in;
 
-
-public class Binary {
-
-    public InputStream binary;
-
-    public String mime_type;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(Binary.class);
-
-    public Binary()
-    {
-        binary = null;
-        mime_type = null;
+    public TokenObj(String aToken, String aToken_type, int aExpire_in) {
+        token = aToken;
+        token_type = aToken_type;
+        expire_in = aExpire_in;
     }
-    public Binary(InputStream aBinary, String aType)
-    {
-        binary = aBinary;
-        mime_type = aType;
+
+    public String getToken() {
+        return token;
     }
+
+    public String getTokenType() {
+        return token_type;
+    }
+
+    public int getExpire_in() {
+        return expire_in;
+    }
+
+
 }

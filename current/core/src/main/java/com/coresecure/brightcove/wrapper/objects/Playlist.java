@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.enums.PlaylistTypeEnum;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -125,14 +126,15 @@ import java.util.List;
  *
  */
 public class Playlist {
-    private Long    id;
-    private String  referenceId;
-    private Long    accountId;
-    private String  name;
-    private String  description;
-
-    private List<Long>   video_ids;
-
+    private String      id;
+    private String      created_at;
+    private String      updated_at;
+    private Boolean     favorite;
+    private String      reference_id;
+    private String      account_id;
+    private String      name;
+    private String      description;
+    private List<String>   video_ids;
     private PlaylistTypeEnum type;
 
     /**
@@ -141,9 +143,7 @@ public class Playlist {
      * <p>All fields set to null to start - required fields must be set before calling Write Media API.</p>
      *
      */
-    public Playlist(){
-        initAll();
-    }
+    public Playlist(){/* default */}
 
     /**
      * <p>Constructor using JSON string.</p>
@@ -152,8 +152,6 @@ public class Playlist {
      *
      */
     public Playlist(String json) throws JSONException {
-        initAll();
-
         if(json == null){
             throw new JSONException("[ERR] Playlist can not be parsed from null JSON string.");
         }
@@ -181,82 +179,48 @@ public class Playlist {
      */
     private void finishConstruction(JSONObject jsonObj) throws JSONException {
         Iterator<String> rootKeys = jsonObj.keys();
-
-        while(rootKeys.hasNext()) {
-            String rootKey = rootKeys.next();
-            Object rootValue = jsonObj.get(rootKey);
-
-            if((rootValue == null) || ("null".equals(rootValue.toString()))){
-                // Don't bother setting the attribute, it should already be null
-            }
-            else if("name".equals(rootKey)){
-                name = (String)rootValue;
-            }
-            else if("id".equals(rootKey)){
-                id = (Long)rootValue;
-            }
-            else if("accountId".equals(rootKey)){
-                Long rootLong = jsonObj.getLong(rootKey);
-                accountId = rootLong;
-            }
-            else if("referenceId".equals(rootKey)){
-                referenceId = rootValue.toString();
-            }
-            else if("shortDescription".equals(rootKey)){
-                description = rootValue.toString();
-            }
-            else if("video_ids".equals(rootKey)){
-                video_ids = new ArrayList<Long>();
-
-                JSONArray idsArray = jsonObj.getJSONArray(rootKey);
-                for(int idIdx=0;idIdx<idsArray.length();idIdx++){
-                    Long id = new Long((idsArray.get(idIdx)).toString());
-                    video_ids.add(id);
-                }
-            }
-            else if("type".equals(rootKey)){
-                if(rootValue.toString().equals("OLDEST_TO_NEWEST")){
-                    type = PlaylistTypeEnum.OLDEST_TO_NEWEST;
-                }
-                else if(rootValue.toString().equals("NEWEST_TO_OLDEST")){
-                    type = PlaylistTypeEnum.NEWEST_TO_OLDEST;
-                }
-                else if(rootValue.toString().equals("ALPHABETICAL")){
-                    type = PlaylistTypeEnum.ALPHABETICAL;
-                }
-                else if(rootValue.toString().equals("PLAYSTOTAL")){
-                    type = PlaylistTypeEnum.PLAYSTOTAL;
-                }
-                else if(rootValue.toString().equals("PLAYS_TRAILING_WEEK")){
-                    type = PlaylistTypeEnum.PLAYS_TRAILING_WEEK;
-                }
-                else if(rootValue.toString().equals("EXPLICIT")){
-                    type = PlaylistTypeEnum.EXPLICIT;
-                }
-                else{
-                    throw new JSONException("[ERR] Media API specified invalid value for playlist type '" + rootValue + "'.  Acceptable values are 'OLDEST_TO_NEWEST', 'NEWEST_TO_OLDEST', 'ALPHABETICAL', 'PLAYSTOTAL', 'PLAYS_TRAILING_WEEK', 'EXPLICIT'.");
-                }
-            }
-            else{
-                throw new JSONException("[ERR] Unknown root key '" + rootKey + "'='" + rootValue + "'.");
+        if(jsonObj.has(Constants.NAME)) name = jsonObj.getString(Constants.NAME);
+        if(jsonObj.has(Constants.ID)) id = jsonObj.getString(Constants.ID);
+        if(jsonObj.has(Constants.FAVORITE)) favorite = jsonObj.getBoolean(Constants.FAVORITE);
+        if(jsonObj.has(Constants.ACCOUNT_ID)) account_id = jsonObj.getString(Constants.ACCOUNT_ID);
+        if(jsonObj.has(Constants.CREATED_AT)) created_at = jsonObj.getString(Constants.CREATED_AT);
+        if(jsonObj.has(Constants.UPDATED_AT)) updated_at = jsonObj.getString(Constants.UPDATED_AT);
+        if(jsonObj.has(Constants.REFERENCE_ID)) reference_id = jsonObj.getString(Constants.REFERENCE_ID);
+        if(jsonObj.has(Constants.DESCRIPTION)) description = jsonObj.getString(Constants.DESCRIPTION);
+        if(jsonObj.has(Constants.VIDEO_IDS)) {
+            video_ids = new ArrayList<String>();
+            JSONArray idsArray = jsonObj.getJSONArray(Constants.VIDEO_IDS);
+            for(int idIdx=0;idIdx<idsArray.length();idIdx++){
+                video_ids.add(idsArray.getString(idIdx));
             }
         }
-
-        String jsonName = (String)jsonObj.get("name");
-        name = jsonName;
+        if(jsonObj.has(Constants.PLAYLIST_TYPE)) type = getType(jsonObj.getString(Constants.PLAYLIST_TYPE));
     }
 
-    /**
-     * <p>Fully initializes the playlist object by setting all fields to null</p>
-     */
-    public void initAll() {
-        id                  = null;
-        referenceId         = null;
-        accountId            = null;
-        name                 = null;
-        description          = null;
-        video_ids            = null;
-        type       = null;
+    private PlaylistTypeEnum getType(String value) throws JSONException{
+        PlaylistTypeEnum type = null;
+        if(value.equals("OLDEST_TO_NEWEST")){
+            type = PlaylistTypeEnum.OLDEST_TO_NEWEST;
+        }
+        else if(value.equals("NEWEST_TO_OLDEST")){
+            type = PlaylistTypeEnum.NEWEST_TO_OLDEST;
+        }
+        else if(value.equals("ALPHABETICAL")){
+            type = PlaylistTypeEnum.ALPHABETICAL;
+        }
+        else if(value.equals("PLAYSTOTAL")){
+            type = PlaylistTypeEnum.PLAYSTOTAL;
+        }
+        else if(value.equals("PLAYS_TRAILING_WEEK")){
+            type = PlaylistTypeEnum.PLAYS_TRAILING_WEEK;
+        }
+        else if(value.equals("EXPLICIT")){
+            type = PlaylistTypeEnum.EXPLICIT;
+        }
+        else{
+            throw new JSONException("[ERR] Media API specified invalid value for playlist type '" + value + "'.  Acceptable values are 'OLDEST_TO_NEWEST', 'NEWEST_TO_OLDEST', 'ALPHABETICAL', 'PLAYSTOTAL', 'PLAYS_TRAILING_WEEK', 'EXPLICIT'.");
+        }
+        return type;
     }
 
     /**
@@ -266,7 +230,7 @@ public class Playlist {
      *
      * @return The id for this Playlist
      */
-    public Long getId(){
+    public String getId(){
         return id;
     }
 
@@ -278,7 +242,7 @@ public class Playlist {
      * @return Reference id for this Playlist
      */
     public String getReferenceId(){
-        return referenceId;
+        return reference_id;
     }
 
     /**
@@ -288,8 +252,8 @@ public class Playlist {
      *
      * @return Account id for this Playlist
      */
-    public Long getAccountId(){
-        return accountId;
+    public String getAccountId(){
+        return account_id;
     }
 
     /**
@@ -321,7 +285,7 @@ public class Playlist {
      *
      * @return Video Ids for this Playlist
      */
-    public List<Long> getVideoIds(){
+    public List<String> getVideoIds(){
         return video_ids;
     }
 
@@ -345,7 +309,7 @@ public class Playlist {
      *
      * @param id The id for this Playlist
      */
-    public void setId(Long id){
+    public void setId(String id){
         this.id = id;
     }
 
@@ -357,7 +321,7 @@ public class Playlist {
      * @param referenceId Reference id for this Playlist
      */
     public void setReferenceId(String referenceId){
-        this.referenceId = referenceId;
+        this.reference_id = referenceId;
     }
 
     /**
@@ -365,10 +329,10 @@ public class Playlist {
      *
      * <p><code>A number that uniquely identifies the account to which this Playlist belongs, assigned by Brightcove.</code></p>
      *
-     * @param accountId Account id for this Playlist
+     * @param account_id Account id for this Playlist
      */
-    public void setAccountId(Long accountId){
-        this.accountId = accountId;
+    public void setAccountId(String account_id){
+        this.account_id = account_id;
     }
 
     /**
@@ -400,7 +364,7 @@ public class Playlist {
      *
      * @param video_ids Video Ids for this Playlist
      */
-    public void setVideoIds(List<Long> video_ids){
+    public void setVideoIds(List<String> video_ids){
         this.video_ids = video_ids;
     }
 
@@ -429,19 +393,29 @@ public class Playlist {
         if(id != null){
             json.put("id", id);
         }
-        if(referenceId != null){
-            json.put("referenceId", referenceId);
+        if(reference_id != null){
+            json.put("reference_id", reference_id);
         }
-        if(accountId != null){
-            json.put("accountId", accountId);
+        if(account_id != null){
+            json.put("account_id", account_id);
         }
+        if(favorite != null){
+            json.put("favorite", favorite);
+        }
+        if(created_at != null){
+            json.put("created_at", created_at);
+        }
+        if(updated_at != null){
+            json.put("updated_at", updated_at);
+        }
+
         if(description != null){
             json.put("description", description);
         }
         if(video_ids != null){
             JSONArray idArray = new JSONArray();
-            for(Long videoId : video_ids){
-                idArray.put(String.valueOf(videoId));
+            for(String videoId : video_ids){
+                idArray.put(videoId);
             }
             json.put("video_ids", idArray);
         }
@@ -453,20 +427,4 @@ public class Playlist {
         return json;
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
-    public String toString(){
-        String ret = "[com.brightcove.proserve.mediaapi.wrapper.apiobjects.Playlist (\n" +
-                "\tname:'"             + name             + "'\n" +
-                "\tid:'"               + id               + "'\n" +
-                "\treferenceId:'"      + referenceId      + "'\n" +
-                "\taccountId:'"        + accountId        + "'\n" +
-                "\tdescription:'" + description + "'\n" +
-                "\tvideo_ids:'"         + video_ids         + "'\n" +
-                "\ttype:'"     + type     + "'\n" +
-                ")]";
-
-        return ret;
-    }
 }

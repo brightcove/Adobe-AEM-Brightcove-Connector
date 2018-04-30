@@ -4,9 +4,10 @@
     allowBlank="{Boolean}true"
     brcAccountFieldName="./account"
     fieldDescription=""
+    brcApiCommand="local_players"
     fieldLabel="Player:"
     fieldSubLabel=""
     forceSelection="{Boolean}true"
     hiddenName="./playerPath"
-    storePath="/apps/brightcove/components/tools/players.html"
+    storePath="/bin/brightcove/api.json"
     xtype="brc_combobox"/>

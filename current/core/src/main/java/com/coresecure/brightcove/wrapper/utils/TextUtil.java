@@ -37,6 +37,9 @@ import org.slf4j.LoggerFactory;
 
 
 public class TextUtil {
+
+    public TextUtil(){/* default implementation ignored */}
+
     private static final Logger LOGGER = LoggerFactory.getLogger(TextUtil.class);
 
     public static boolean isEmpty(final String str) {

@@ -39,6 +39,7 @@ import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.callables.V
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.commons.jcr.JcrUtil;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -86,8 +87,16 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
         LOGGER.trace("BRIGHTCOVE ASSET INTEGRATION - SYNCHRONIZING DATABASE");
         try
         {
-
-
+                //IF ACCOUNT IS VALID - INITIATE SYNC CONFIGURATION
+            final Map<String, Object> authInfo = Collections.singletonMap(
+                    ResourceResolverFactory.SUBSERVICE,
+                    (Object) SERVICE_ACCOUNT_IDENTIFIER);
+            ResourceResolverFactory rrf = resourceResolverFactory;
+            final ResourceResolver resourceResolver = rrf.getServiceResourceResolver(authInfo);
+            Session session = resourceResolver.adaptTo(Session.class); //GET CURRENT SESSION
+            if (session == null) {
+                return;
+            }
             //MAIN TRY - CONFIGURATION GRAB SERVICE
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();    //GETCONFIG SERVICE
             Set<String> services = cg.getAvailableServices();                            //BUILD SERVICES
@@ -97,51 +106,37 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 //GET CURRENT CONFIGURATION
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
 
-                if (cs != null)
-                {
-                    //IF ACCOUNT IS VALID - INITIATE SYNC CONFIGURATION
-                    final Map<String, Object> authInfo = Collections.singletonMap(
-                            ResourceResolverFactory.SUBSERVICE,
-                            (Object) SERVICE_ACCOUNT_IDENTIFIER);
-                    ResourceResolverFactory rrf = resourceResolverFactory;
-                    final ResourceResolver resourceResolver = rrf.getServiceResourceResolver(authInfo);
-                    synchronized (resourceResolver) {
-                        Session session = resourceResolver.adaptTo(Session.class); //GET CURRENT SESSION
-                        final String confPath = cs.getAssetIntegrationPath();                     //GET PRECONFIGURED SYNC DAM TARGET PATH
-                        final String basePath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount).concat("/"); //CREATE BASE PATH
-                        //CREATE AND NAME BRIGHTCOVE ASSET FOLDERS PER ACCOUNT
-                        Node accountFolder = JcrUtil.createPath(basePath, "sling:OrderedFolder", session);
-                        accountFolder.setProperty("jcr:title", cs.getAccountAlias());
-                        session.save();
-                        final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
-
-                        //GET VIDEOS
-                        int startOffset = 0;
-                        JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0)); //QUERY<------
-                        final JSONArray itemsArr = jsonObject.getJSONArray("items");
-
-                        int success = 0;
-                        int failure = 0;
-                        int equal = 0;
-
-                        LOGGER.trace("<<< " + itemsArr.length() + " INCOMING VIDEOS");
-
-                        //FOR EACH VIDEO IN THE ITEMS ARRAY
-                        for (int i = 0; i < itemsArr.length(); i++) {
-                            final JSONObject innerObj = itemsArr.getJSONObject(i);
-
-                            Callable<String> callable = new VideoImportCallable(innerObj,confPath,requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
-                            Future<String> future = executor.submit(callable);
-                            //add Future to the list, we can get return value using Future
-                            list.add(future);
-                        }
-
-                        LOGGER.trace(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
-                        LOGGER.warn(">>>> SYNC DATA: nochange: " + equal + " success: " + success + " skipped or failed: " + failure + " >>>>");
-                    }
-                } else {
+                if (cs == null) {
                     throw new Exception("[Invalid or missing Brightcove configuration]");
                 }
+                final String confPath = cs.getAssetIntegrationPath();                     //GET PRECONFIGURED SYNC DAM TARGET PATH
+                final String basePath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount).concat("/"); //CREATE BASE PATH
+                //CREATE AND NAME BRIGHTCOVE ASSET FOLDERS PER ACCOUNT
+                Node accountFolder = JcrUtil.createPath(basePath, "sling:OrderedFolder", session);
+                accountFolder.setProperty("jcr:title", cs.getAccountAlias());
+                session.save();
+                final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+
+                //GET VIDEOS
+                int startOffset = 0;
+                JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0, Constants.NAME, true)); //QUERY<------
+                final JSONArray itemsArr = jsonObject.getJSONArray("items");
+
+
+                LOGGER.trace("<<< " + itemsArr.length() + " INCOMING VIDEOS");
+
+                //FOR EACH VIDEO IN THE ITEMS ARRAY
+                for (int i = 0; i < itemsArr.length(); i++) {
+                    final JSONObject innerObj = itemsArr.getJSONObject(i);
+
+                    Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
+                    Future<String> future = executor.submit(callable);
+                    //add Future to the list, we can get return value using Future
+                    list.add(future);
+                }
+
+                LOGGER.trace(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
+
             }
 
 

@@ -39,6 +39,7 @@ import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,9 +54,11 @@ public class AccountUtil
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AccountUtil.class);
 
+    private AccountUtil(){/* default implementation ignored */}
+
     public static String getSelectedAccount(SlingHttpServletRequest req)
     {
-        String accountParam = req.getParameter("account_id");
+        String accountParam = req.getParameter(Constants.ACCOUNT_ID);
         String selectedaccount = accountParam != null && !accountParam.isEmpty() ? accountParam : ServiceUtil.getAccountFromCookie(req);
         return selectedaccount;
     }
@@ -85,8 +88,12 @@ public class AccountUtil
 
     public static boolean isAuthorized(SlingHttpServletRequest req, ConfigurationService service) {
         boolean is_authorized = false;
-        Session session = req.getResourceResolver().adaptTo(Session.class); //GET CURRENT SESSION
-        UserManager userManager = req.getResourceResolver().adaptTo(UserManager.class);
+        ResourceResolver resourceResolver =  req.getResourceResolver();
+        Session session = resourceResolver.adaptTo(Session.class); //GET CURRENT SESSION
+        if (session == null) return false;
+        UserManager userManager = resourceResolver.adaptTo(UserManager.class);
+        if(userManager==null)  return false;
+
         List<String> allowedGroups = service.getAllowedGroupsList();
         try {
             Authorizable auth = userManager.getAuthorizable(session.getUserID());
@@ -100,6 +107,7 @@ public class AccountUtil
         } catch (RepositoryException re) {
             LOGGER.error("executeRequest", re);
         }
+
         return is_authorized;
     }
 

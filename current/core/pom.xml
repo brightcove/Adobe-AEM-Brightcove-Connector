@@ -46,23 +46,43 @@
  |  limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>brightcove_connector</artifactId>
-        <version>5.3.1</version>
+        <version>5.5.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>brightcove-services</artifactId>
     <packaging>bundle</packaging>
     <name>brightcove - Core</name>
     <description>Core bundle for Brightcove</description>
+    <properties>
+        <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+        <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
+    </properties>
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-scr-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.9</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <destFile>${sonar.jacoco.reportPath}</destFile>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.felix</groupId>
@@ -112,6 +132,113 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>integrationTests</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.7.2.201409121644</version>
+                        <configuration>
+                            <append>true</append>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                                <configuration>
+                                    <dumpOnExit>true</dumpOnExit>
+                                    <output>file</output>
+                                    <includes>
+                                        <include>com.ninedemons.*</include>
+                                    </includes>
+                                    <append>true</append>
+                                    <propertyName>jacoco.agent.it.arg</propertyName>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>jacoco-site</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>report-integration</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+                                </configuration>
+                            </execution>
+
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <argLine>-Xmx1024m -XX:MaxPermSize=256m ${jacoco.agent.it.arg}</argLine>
+                            <debugForkedProcess>${maven.surefire.debug}</debugForkedProcess>
+                            <includes>
+                                <include>${tests.to.run}</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <test.server.url>${test.server.url}</test.server.url>
+                                <test.server.hostname>${test.server.hostname}</test.server.hostname>
+                                <test.server.username>${test.server.username}</test.server.username>
+                                <test.server.password>${test.server.password}</test.server.password>
+                                <jar.executor.server.port>${http.port}</jar.executor.server.port>
+                                <jar.executor.vm.options>${jar.executor.vm.options}  ${jacoco.agent.it.arg}</jar.executor.vm.options>
+                                <jar.executor.jar.folder>${project.basedir}/target/dependency</jar.executor.jar.folder>
+                                <jar.executor.jar.name.regexp>cq-quickstart.*jar$</jar.executor.jar.name.regexp>
+                                <jar.executor.work.folder>${jar.executor.work.folder}</jar.executor.work.folder>
+                                <jar.executor.jar.options>${jar.executor.jar.options}</jar.executor.jar.options>
+                                <additional.bundles.path>${project.basedir}/target/sling/additional-bundles</additional.bundles.path>
+                                <keepJarRunning>${keepJarRunning}</keepJarRunning>
+                                <server.ready.timeout.seconds>6000</server.ready.timeout.seconds>
+                                <sling.testing.timeout.multiplier>${sling.testing.timeout.multiplier}</sling.testing.timeout.multiplier>
+                                <server.ready.path.1>/libs/granite/core/content/login.html:QUICKSTART_HOMEPAGE</server.ready.path.1>
+                                <start.bundles.timeout.seconds>40</start.bundles.timeout.seconds>
+                                <bundle.install.timeout.seconds>30</bundle.install.timeout.seconds>
+
+                                <!--
+                                    Define additional bundles to install by specifying the beginning of their artifact name.
+                                    The bundles are installed in lexical order of these property names.
+                                    All bundles must be listed as dependencies in this pom, or they won't be installed.
+                                -->
+                                <sling.additional.bundle.1>org.apache.sling.junit.core</sling.additional.bundle.1>
+                                <sling.additional.bundle.2>org.apache.sling.junit.scriptable</sling.additional.bundle.2>
+                                <sling.additional.bundle.3>example.models</sling.additional.bundle.3>
+                                <sling.additional.bundle.5>example.core</sling.additional.bundle.5>
+                                <sling.additional.bundle.6>org.apache.sling.junit.remote</sling.additional.bundle.6>
+                                <sling.additional.bundle.7>org.apache.sling.testing.tools</sling.additional.bundle.7>
+                                <sling.additional.bundle.8>httpclient-osgi</sling.additional.bundle.8>
+                                <sling.additional.bundle.9>httpcore-osgi</sling.additional.bundle.9>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+
     </profiles>
     <dependencies>
 
@@ -220,16 +347,40 @@
             <artifactId>org.apache.sling.models.api</artifactId>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-        </dependency>
-        <dependency>
             <groupId>junit-addons</groupId>
             <artifactId>junit-addons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.5.6</version>
+        </dependency>
+        <!--JacocoTests-->
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.7.9</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.sling/org.apache.sling.testing.sling-mock -->
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.testing.sling-mock</artifactId>
+            <version>1.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/junit/junit -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.10.19</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
