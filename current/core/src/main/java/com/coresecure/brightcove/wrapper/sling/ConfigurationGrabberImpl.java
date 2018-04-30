@@ -38,6 +38,7 @@ import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
@@ -76,31 +77,40 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
         Set<String> result = new HashSet<String>();
         boolean is_authorized = false;
         try {
-            Session session = request.getResourceResolver().adaptTo(Session.class);
-            UserManager userManager = request.getResourceResolver().adaptTo(UserManager.class);
-                /* to get the current user */
+
+            ResourceResolver resourceResolver = request.getResourceResolver();
+
+            Session session = resourceResolver.adaptTo(Session.class);
+            UserManager userManager = resourceResolver.adaptTo(UserManager.class);
+
+            if (session == null || userManager == null) {
+                return null;
+            }
             Authorizable auth = userManager.getAuthorizable(session.getUserID());
-            if (auth != null) {
-                List<String> memberOf = new ArrayList<String>();
-                Iterator<Group> groups = auth.memberOf();
-                while (groups.hasNext() && !is_authorized) {
-                    Group group = groups.next();
-                    memberOf.add(group.getID());
-                }
-                int i = 0;
-                for (String account : getAvailableServices()) {
-                    ConfigurationService cs = getConfigurationService(account);
-                    List<String> allowedGroups = new ArrayList<String>(cs.getAllowedGroupsList());
-                    allowedGroups.retainAll(memberOf);
-                    if (allowedGroups.size() > 0) {
-                        result.add(account);
-                        i++;
-                    }
+            if (auth == null) {
+                return null;
+            }
+
+            List<String> memberOf = new ArrayList<String>();
+            Iterator<Group> groups = auth.memberOf();
+            while (groups.hasNext() && !is_authorized) {
+                Group group = groups.next();
+                memberOf.add(group.getID());
+            }
+            int i = 0;
+            for (String account : getAvailableServices()) {
+                ConfigurationService cs = getConfigurationService(account);
+                List<String> allowedGroups = new ArrayList<String>(cs.getAllowedGroupsList());
+                allowedGroups.retainAll(memberOf);
+                if (allowedGroups.size() > 0) {
+                    result.add(account);
+                    i++;
                 }
             }
 
-        } catch (RepositoryException e) {
-            LOGGER.error("RepositoryException",e);
+
+        } catch(RepositoryException e){
+            LOGGER.error("RepositoryException", e);
         }
         return result;
     }

@@ -45,6 +45,9 @@ import java.net.URL;
  * Created by alessandro.bonfatti on 7/14/17.
  */
 public class S3UploadUtil {
+
+    public S3UploadUtil() {/* default implementation ignored */}
+
     static int BUFFER_SIZE = 4096;
     private static final Logger LOGGER = LoggerFactory.getLogger(S3UploadUtil.class);
 
@@ -56,8 +59,7 @@ public class S3UploadUtil {
             connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("PUT");
-            OutputStream out =
-                    connection.getOutputStream();
+            OutputStream out = connection.getOutputStream();
 
             byte[] buf = new byte[1024];
             int count;
@@ -67,7 +69,7 @@ public class S3UploadUtil {
             {
                 if (Thread.interrupted())
                 {
-                    throw new InterruptedException();
+                    throw new IOException();
                 }
                 out.write(buf, 0, count);
                 total += count;
@@ -85,8 +87,6 @@ public class S3UploadUtil {
             }
         } catch (IOException e) {
             LOGGER.error("IOException",e);
-        } catch (InterruptedException e) {
-            LOGGER.error("InterruptedException",e);
         }
         return responseCode == 200;
 

@@ -331,7 +331,7 @@ function showMetaData(idx) {
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
 
-    //TODO: CURRENTLY
+    //CURRENTLY
     var v = oCurrentVideoList[idx];
 
 
@@ -523,6 +523,7 @@ function openBox(id) {
         .css("left", ($(window).width() / 4))
         .css("top", ($(window).height() / 6))
         .draggable();
+
     //TODO: replace jquery ui with extjs for consistency
 
     if (!$.browser.msie) {

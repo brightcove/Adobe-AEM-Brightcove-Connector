@@ -99,7 +99,6 @@ public class BrcAccounts extends SlingAllMethodsServlet {
         PrintWriter outWriter = response.getWriter();
         response.setContentType("application/json");
         JSONObject root = new JSONObject();
-        boolean is_authorized = false;
         JSONArray accounts = new JSONArray();
 
         LOGGER.debug("get account");
@@ -111,7 +110,7 @@ public class BrcAccounts extends SlingAllMethodsServlet {
             if (auth != null) {
                 List<String> memberOf = new ArrayList<String>();
                 Iterator<Group> groups = auth.memberOf();
-                while (groups.hasNext() && !is_authorized) {
+                while (groups.hasNext()) {
                     Group group = groups.next();
                     memberOf.add(group.getID());
                 }

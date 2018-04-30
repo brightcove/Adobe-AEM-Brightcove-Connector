@@ -42,9 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 
 public class RelatedLink {
-    public String text;
-    public String url;
-    public Collection<GeoFilterCodeEnum> countries;
+    public final String text;
+    public final String url;
     private static final Logger LOGGER = LoggerFactory.getLogger(RelatedLink.class);
 
     public RelatedLink(String aText, String aUrl) {
@@ -53,8 +52,7 @@ public class RelatedLink {
     }
 
     public RelatedLink(JSONObject aLink) throws JSONException {
-        text = aLink.getString("text");
-        url = aLink.getString("url");
+        this(aLink.getString("text"), aLink.getString("url"));
     }
 
     public JSONObject toJSON() throws JSONException {
@@ -63,12 +61,13 @@ public class RelatedLink {
     }
 
     public String toString() {
+        String result = new String();
         try {
-            return toJSON().toString();
+            result = toJSON().toString();
         } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
+            LOGGER.error(e.getClass().getName(),e);
         }
+        return result;
     }
 
 }

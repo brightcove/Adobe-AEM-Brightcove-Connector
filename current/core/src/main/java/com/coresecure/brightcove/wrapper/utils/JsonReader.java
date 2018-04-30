@@ -40,6 +40,8 @@ import java.io.IOException;
 
 public class JsonReader {
 
+    private JsonReader(){/* default implementation ignored */};
+
     public static JSONObject readJsonFromString(String jsonText) throws IOException, JSONException {
         JSONObject json = new JSONObject(jsonText);
         return json;

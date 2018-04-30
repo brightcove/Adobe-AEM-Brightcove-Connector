@@ -32,12 +32,14 @@
  */
 package com.coresecure.brightcove.wrapper.schedulers.asset_integrator.callables;
 
-import com.coresecure.brightcove.wrapper.objects.Binary;
+import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.ImageUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.AssetManager;
+import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.json.JSONException;
@@ -51,10 +53,7 @@ import javax.imageio.ImageIO;
 import javax.jcr.RepositoryException;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -86,9 +85,133 @@ public class VideoImportCallable implements Callable<String> {
         this.resourceResolverFactory = resourceResolverFactory;
     }
 
+    private String getItemFromJson(JSONObject innerObj, String key) throws JSONException{
+        return innerObj.has(key) && innerObj.get(key)!=null ? innerObj.getString(key) : "";
+    }
+
+    private Asset createAsset(String localpath, String id, String brightcove_filename) throws JSONException, IOException, RepositoryException {
+        Asset newAsset = null;
+
+        String mime_type = "";
+        InputStream binary = null;
+
+        //GET THUMBNAIL - SOURCE CHECK? - CONDITION THREE? WHy?
+        String thumbnail_src =getItemFromJson(innerObj,Constants.THUMBNAIL_URL);
+
+        BinaryObj binaryRes = null;
+
+        if (HttpServices.isLocalPath(thumbnail_src)) //HAS LOCAL THUMB PATH
+        {
+            //IF THE THUMBNAIL SOURCE IST /CONTENT/DAM/ IT IS LOCAL - IF LOCAL >>
+            LOGGER.trace("->>Pulling local image as this video's thumbnail image binary");
+            LOGGER.trace("->>Thumbnail Source is/: " + thumbnail_src);
+            LOGGER.trace("->>Looking for local thumbnail source at [INTERNAL]: " + localpath);
+            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, thumbnail_src, mType);
+        } else {
+            LOGGER.trace("->>Pulling external image as this video's thumbnail image binary - Must do a GET");
+            LOGGER.trace("->>Thumbnail Source is/: " + thumbnail_src + " DESTINATION >> " + localpath);
+            binaryRes = HttpServices.getRemoteBinary(thumbnail_src, "", null);
+            LOGGER.trace("->>[PULLING THUMBNAIL] : " + thumbnail_src);
+        }
+        if (binaryRes.binary != null) {
+            binary = binaryRes.binary;
+            mime_type = binaryRes.mime_type;
+        } else {
+            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, "/etc/designs/cs/brightcove/shared/img/noThumbnail.jpg", mType);
+            if (binaryRes.binary != null) {
+                binary = binaryRes.binary;
+                mime_type = binaryRes.mime_type;
+            } else {
+                LOGGER.trace("FAIL EXTERNAL");
+                return null;
+            }
+        }
+
+        //CALL ASSET MANAGER
+        AssetManager assetManager = resourceResolver.adaptTo(AssetManager.class);
+        if (assetManager == null) {
+            return null;
+        }
+        BufferedImage image = ImageIO.read(binary);
+
+        //CRATE TEMPORARY MP4 FILE
+        String prefix = id + "-";
+        String suffix = ".mp4";
+        File tempFile2 = File.createTempFile(prefix, suffix);
+        tempFile2.deleteOnExit();
+
+        AWTSequenceEncoder enc = AWTSequenceEncoder.createSequenceEncoder(tempFile2, 30);
+
+        LOGGER.trace("ENCODING PROCESS");
+        LOGGER.trace("height: {}" ,image.getType());
+        LOGGER.trace("height: {}" ,image.getHeight());
+        LOGGER.trace("width: {}" ,image.getWidth());
+
+
+        if (image.getHeight() % 2 != 0) {
+            image = ImageUtil.cropImage(image, new Rectangle(image.getWidth(), image.getHeight() - (image.getHeight() % 2)));
+        }
+        if (image.getWidth() % 2 != 0) {
+            image = ImageUtil.cropImage(image, new Rectangle(image.getWidth() - (image.getWidth() % 2), image.getHeight()));
+        }
+
+        enc.encodeImage(image);
+        enc.finish();
+
+        InputStream in = null;
+        FileInputStream fis = null;
+        try {
+
+            fis = new FileInputStream(tempFile2);
+            in = new BufferedInputStream(fis);
+
+
+            LOGGER.trace("***IMAGE->VIDEO: " + localpath + "  {}", mType.getMimeType(brightcove_filename));
+
+
+            //CREATE ASSET - NEEDS BINARY OF THUMBNAIL IN ORDER TO SET IT FOR THE NEW ASSET
+            newAsset = assetManager.createAsset(localpath, in, mType.getMimeType(brightcove_filename), true);
+
+
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("VideoImportCallable {}",e);
+        }
+        finally {
+            //Close binary
+            if (in != null) in.close();
+            if (fis != null) fis.close();
+            if (tempFile2 != null && tempFile2.delete()) {
+                LOGGER.trace("Temp File Removed");
+            }
+        }
+
+
+        //SAVE CHANGES
+        resourceResolver.commit();
+        return newAsset;
+    }
+
+    private String cleanPath(String confPath, String filename){
+        return (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedServiceAccount + "/").concat(filename);
+    }
+    private String cleanFilename(JSONObject innerObj) throws JSONException{
+        return innerObj.getString(Constants.ORIGINAL_FILENAME) != null ? innerObj.getString(Constants.ORIGINAL_FILENAME).replaceAll("%20", " ") : null;
+    }
+    private Asset getAsset(String oldpath, String localpath ){
+        Resource resource = resourceResolver.getResource(oldpath);
+        if(resource != null) {
+            return resource.adaptTo(Asset.class);
+        }
+        resource = resourceResolver.getResource(localpath);
+        if(resource != null) {
+            return resource.adaptTo(Asset.class);
+        }
+        return null;
+    }
     public String call(){
         // Get the Service resource resolver
-
         try {
             final Map<String, Object> authInfo = Collections.singletonMap(
                     ResourceResolverFactory.SUBSERVICE,
@@ -98,216 +221,80 @@ public class VideoImportCallable implements Callable<String> {
 
 
             //CHECK IF VIDEO'S STATE IS SET TO ACTIVE - CONDITION ONE
-            Boolean active = false;
-            if (innerObj.has("state") && !innerObj.get("state").equals(null)) {
-                active = "ACTIVE".equals(innerObj.getString("state"));
-            }
+            Boolean active = innerObj.has(Constants.STATE) && innerObj.get(Constants.STATE) != null && "ACTIVE".equals(innerObj.getString(Constants.STATE)) &&  innerObj.has(Constants.ID) && innerObj.get(Constants.ID) != null;
 
             //CONDITIONN TWO - MUST HAVE AN ID
-            Boolean hasID = innerObj.has("id") && !innerObj.get("id").equals(null);
-            String ID = innerObj.has("id") ? innerObj.getString("id") : null;
+            String id = getItemFromJson(innerObj,Constants.ID);
 
 
-            LOGGER.trace(">>>>START>>>>>{" + ID + "}>> " + (active && hasID) + ">>>>>");
+            LOGGER.trace(">>>>START>>>>> {} >> {}", id ,active);
 
             //TODO: CHECK IF VIDEO COMING INTO DAM (1) IS ACTIVE (2) HAS AN ID + SRC IMAGE??
-            if (active && hasID) {
-                String name = innerObj.getString("name");
-                String brightcove_filename = ID + ".mp4"; //BRIGHTCOVE FILE NAME IS ID + . MP4 <-
-                String original_filename = innerObj.getString("original_filename") != null ? innerObj.getString("original_filename").replaceAll("%20", " ") : null;
+            if (!active) {
+                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toString(1));
+                if (resourceResolver != null) {
+                    resourceResolver.close();
+                }
+                return  Thread.currentThread().getName();
+            }
 
-                LOGGER.trace("SYNCING VIDEO>>[" + name + "\tSTATE:ACTIVE\tTO BE:" + original_filename + "]");
+            String name = innerObj.getString(Constants.NAME);
+            String brightcove_filename = id + ".mp4"; //BRIGHTCOVE FILE NAME IS ID + . MP4 <-
+            String original_filename = cleanFilename(innerObj);
 
-                //INITIALIZING ASSET SEARCH // INITIALIZATION
-                Asset newAsset = null;
-                InputStream binary = null;
+            LOGGER.trace("SYNCING VIDEO>>[" + name + "\tSTATE:ACTIVE\tTO BE:" + original_filename + "]");
 
-                //TODO: PRINTING DEBUGGER (ENABLE TO DEBUG)
+            //INITIALIZING ASSET SEARCH // INITIALIZATION
+            Asset newAsset = null;
 
-                //USNIG THE CONFIGURATION - BUILD THE DIRECTORY TO SEARCH FOR THE LOCAL ASSETS OR BUILD INTO
-                String localpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedServiceAccount + "/").concat(brightcove_filename);
-                String oldpath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedServiceAccount + "/").concat(original_filename);
+            //TODO: PRINTING DEBUGGER (ENABLE TO DEBUG)
 
-                LOGGER.trace("SEARCHING FOR LOCAL ASSET");
-                LOGGER.trace(">>ORIGINAL: " + oldpath);
-                LOGGER.trace(">>PATH: " + localpath);
+            //USNIG THE CONFIGURATION - BUILD THE DIRECTORY TO SEARCH FOR THE LOCAL ASSETS OR BUILD INTO
+            String localpath = cleanPath(confPath,brightcove_filename);
+            String oldpath = cleanPath(confPath,original_filename);
 
-
-                //TRY TO GET THIS ASSET IN THE CONFIGURED BC NODE PATH - IF IT IS NULL - IT MUST BE CREATED
-                newAsset = resourceResolver.getResource(oldpath) != null ? resourceResolver.getResource(oldpath).adaptTo(Asset.class) : resourceResolver.getResource(localpath) != null ? resourceResolver.getResource(localpath).adaptTo(Asset.class) : null;
-
-                if (newAsset == null) {
-                    //IF NEW ASSET IS NULL MEANS THAT - IT MUST BE CREATED
-
-
-                    String mime_type = "";
-
-                    //GET THUMBNAIL - SOURCE CHECK? - CONDITION THREE? WHy?
-                    String thumbnail_src = innerObj.has("thumbnailURL") && !innerObj.get("thumbnailURL").equals(null) ? innerObj.getString("thumbnailURL") : "";
+            LOGGER.trace("SEARCHING FOR LOCAL ASSET");
+            LOGGER.trace(">>ORIGINAL: " + oldpath);
+            LOGGER.trace(">>PATH: " + localpath);
 
 
-                    Binary remoteBinary = null;
-                    Binary binaryRes = null;
+            //TRY TO GET THIS ASSET IN THE CONFIGURED BC NODE PATH - IF IT IS NULL - IT MUST BE CREATED
+            newAsset = getAsset(oldpath,localpath);
+            if (newAsset == null) {
+                newAsset = createAsset(localpath,id,brightcove_filename);
+                if (newAsset != null) serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
+            } else {
+                //START CASE - ASSET HAS BEEN FOUND LOCALLY - CAN BE UPDATED
+                LOGGER.trace("ASSET FOUND - UPDATING");
 
+                //DATE COMPARISON TO MAKE SURE IT MUST BE UPDATED
+                Date local_mod_date = new Date(newAsset.getLastModified());
 
-                    if (HttpServices.isLocalPath(thumbnail_src)) //HAS LOCAL THUMB PATH
-                    {
-                        //IF THE THUMBNAIL SOURCE IST /CONTENT/DAM/ IT IS LOCAL - IF LOCAL >>
+                SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
+                Date remote_date = sdf.parse(innerObj.getString(Constants.UPDATED_AT));
 
-                        LOGGER.trace("->>Pulling local image as this video's thumbnail image binary");
-                        LOGGER.trace("->>Thumbnail Source is/: " + thumbnail_src);
-                        LOGGER.trace("->>Looking for local thumbnail source at [INTERNAL]: " + localpath);
-
-
-                        binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, thumbnail_src, mType);
-                        if (binaryRes.binary != null) {
-                            binary = binaryRes.binary;
-                            mime_type = binaryRes.mime_type;
-
-                            if (binary == null) //IF REMOTE IMAGE LOAD UNSUCCESSFUL - LOAD DEFAULT
-                            {
-                                LOGGER.error("External thumbnail could not be read");
-                                LOGGER.error("FAILURE TO LOAD THUMBNAIL SOURCE FOR VIDEO " + newAsset.getPath());
-
-
-                                LOGGER.trace("FAIL INTERNAL");
-                                //failure++;
-                                return Thread.currentThread().getName();
-                            }
-                        }
-                    } else {
-                        LOGGER.trace("->>Pulling external image as this video's thumbnail image binary - Must do a GET");
-                        LOGGER.trace("->>Thumbnail Source is/: " + thumbnail_src + " DESTINATION >> " + localpath);
-                        remoteBinary = HttpServices.getRemoteBinary(thumbnail_src, "", null);
-                        LOGGER.trace("->>[PULLING THUMBNAIL] : " + thumbnail_src);
-
-                        if (remoteBinary.binary != null) {
-                            binary = remoteBinary.binary;
-                            mime_type = remoteBinary.mime_type;
-                        } else {
-                            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, "/etc/designs/cs/brightcove/shared/img/noThumbnail.jpg", mType);
-                            if (binaryRes.binary != null) {
-                                binary = binaryRes.binary;
-                                mime_type = binaryRes.mime_type;
-                            } else {
-                                LOGGER.trace("FAIL EXTERNAL");
-                                //failure++;
-                                return Thread.currentThread().getName();
-                            }
-                        }
-                    }
-
-
-                    //CALL ASSET MANAGER
-                    AssetManager assetManager = resourceResolver.adaptTo(AssetManager.class);
-
-                    BufferedImage image = ImageIO.read(binary);
-
-                    //CRATE TEMPORARY MP4 FILE
-                    String prefix = ID + "-";
-                    String suffix = ".mp4";
-                    File tempFile2 = File.createTempFile(prefix, suffix);
-                    tempFile2.deleteOnExit();
-
-                    AWTSequenceEncoder enc = AWTSequenceEncoder.createSequenceEncoder(tempFile2, 30);
-
-                    LOGGER.trace("ENCODING PROCESS");
-
-
-                    LOGGER.trace("height" + image.getType());
-                    LOGGER.trace("height" + image.getHeight());
-                    LOGGER.trace("width" + image.getWidth());
-
-
-                    if (image.getHeight() % 2 != 0) {
-                        image = ImageUtil.cropImage(image, new Rectangle(image.getWidth(), image.getHeight() - (image.getHeight() % 2)));
-                    }
-                    if (image.getWidth() % 2 != 0) {
-                        image = ImageUtil.cropImage(image, new Rectangle(image.getWidth() - (image.getWidth() % 2), image.getHeight()));
-                    }
-
-                    enc.encodeImage(image);
-                    enc.finish();
-
-
-                    InputStream in = new BufferedInputStream(new FileInputStream(tempFile2));
-
-
-                    LOGGER.trace("***IMAGE->VIDEO: " + "video/mp4");
-
-
-                    //CREATE ASSET - NEEDS BINARY OF THUMBNAIL IN ORDER TO SET IT FOR THE NEW ASSET
-                    newAsset = assetManager.createAsset(localpath, in, "video/mp4", true);
-
-
-                    //SAVE CHANGES
-                    resourceResolver.commit();
-
-                    //Close binary
-                    in.close();
-                    tempFile2.delete();
-
-                    //AFTER ASSET HAS BEEN CREATED --> UPDATE THE ASSET WITH THE INNER OBJ WE ARE STiLL PROCESSING
+                //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
+                if (local_mod_date.compareTo(remote_date) < 0) {
+                    LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
+                    LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
+                    LOGGER.trace(local_mod_date + " < " + remote_date);
+                    LOGGER.trace("MODIFICATION DETECTED");
                     serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
 
-                    //END CASE - ASSET NOT FOUND - MUST BE CREATED
-                    //success++;
-
-
                 } else {
-
-                    //START CASE - ASSET HAS BEEN FOUND LOCALLY - CAN BE UPDATED
-                    LOGGER.trace("ASSET FOUND - UPDATING");
-
-                    //DATE COMPARISON TO MAKE SURE IT MUST BE UPDATED
-                    Date local_mod_date = new Date(newAsset.getLastModified());
-
-                    SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
-                    Date remote_date = sdf.parse(innerObj.getString("updated_at"));
-
-                    //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
-                    if (local_mod_date.compareTo(remote_date) < 0) {
-                        LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
-                        LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
-                        LOGGER.trace(local_mod_date + " < " + remote_date);
-                        LOGGER.trace("MODIFICATION DETECTED");
-                        serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
-                        //success++;
-                    } else {
-                        LOGGER.trace("No Changes to be Made = Asset is equivalent");
-                        //equal++;
-                    }
-
+                    LOGGER.trace("No Changes to be Made = Asset is equivalent");
 
                 }
 
-            } else {
-                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toString(1));
-                LOGGER.trace("");
-                //failure++;
+
             }
 
 
-            LOGGER.trace(">>>>>>>>>{" + ID + "}>>>>>END>>>>");
+            LOGGER.trace(">>>>>>>>>{" + id + "}>>>>>END>>>>");
 
             //MAIN VIDEO ARRAY TRAVERSAL LOOP
-        } catch (JSONException e) {
-            LOGGER.error("JSON EXCEPTION", e);
-            //failure++;
-        } catch (IllegalArgumentException e) {
-            LOGGER.error("IllegalArgumentException", e);
-            //failure++;
-        } catch (RepositoryException e) {
-            LOGGER.error("RepositoryException", e);
-            //failure++;
-        } catch (RuntimeException e) {
-            LOGGER.error("RuntimeException", e);
-            //failure++;
-        } catch (ParseException e) {
-            LOGGER.error("ParseException", e);
-            //failure++;
         } catch (Exception e) {
-            LOGGER.error("Exception", e);
+            LOGGER.error(e.getClass().getName(), e);
         } finally {
             if (resourceResolver != null) {
                 resourceResolver.close();

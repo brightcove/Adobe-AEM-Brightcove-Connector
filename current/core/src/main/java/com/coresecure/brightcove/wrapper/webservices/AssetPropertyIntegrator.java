@@ -78,13 +78,13 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(AssetPropertyIntegrator.class);
 
     @Reference
-    MimeTypeService mType;
+    private transient MimeTypeService mType;
 
     @Reference
-    ResourceResolverFactory resourceResolverFactory;
+    private transient ResourceResolverFactory resourceResolverFactory;
 
     @Reference
-    AssetIntegratorCronBundle assetIntegratorCronBundle;
+    private transient AssetIntegratorCronBundle assetIntegratorCronBundle;
 
     @Override
     protected void doPost(final SlingHttpServletRequest req, final SlingHttpServletResponse resp) throws ServletException, IOException {
@@ -110,50 +110,48 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                 //GET CURRENT CONFIGURATION
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
 
-                if (cs != null)
-                {
-                    //IF ACCOUNT IS VALID - INITIATE SYNC CONFIGURATION
-                    final Map<String, Object> authInfo = Collections.singletonMap(
-                            ResourceResolverFactory.SUBSERVICE,
-                            (Object) SERVICE_ACCOUNT_IDENTIFIER);
-                    ResourceResolverFactory rrf = resourceResolverFactory;
-                    final ResourceResolver resourceResolver = rrf.getServiceResourceResolver(authInfo);
-                    synchronized (resourceResolver) {
-                        Session session = resourceResolver.adaptTo(Session.class); //GET CURRENT SESSION
-                        final String confPath = cs.getAssetIntegrationPath();                     //GET PRECONFIGURED SYNC DAM TARGET PATH
-                        final String basePath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount).concat("/"); //CREATE BASE PATH
-                        //CREATE AND NAME BRIGHTCOVE ASSET FOLDERS PER ACCOUNT
-                        Node accountFolder = JcrUtil.createPath(basePath, "sling:OrderedFolder", session);
-                        accountFolder.setProperty("jcr:title", cs.getAccountAlias());
-                        session.save();
-                        final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+                if (cs == null) throw new Exception("[Invalid or missing Brightcove configuration]");
 
-                        //GET VIDEOS
-                        int startOffset = 0;
-                        JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0)); //QUERY<------
-                        final JSONArray itemsArr = jsonObject.getJSONArray("items");
+                //IF ACCOUNT IS VALID - INITIATE SYNC CONFIGURATION
+                final Map<String, Object> authInfo = Collections.singletonMap(
+                        ResourceResolverFactory.SUBSERVICE,
+                        (Object) SERVICE_ACCOUNT_IDENTIFIER);
+                ResourceResolverFactory rrf = resourceResolverFactory;
+                final ResourceResolver resourceResolver = rrf.getServiceResourceResolver(authInfo);
 
-                        int success = 0;
-                        int failure = 0;
-                        int equal = 0;
+                if (resourceResolver == null) break;
+                synchronized (resourceResolver) {
+                    Session session = resourceResolver.adaptTo(Session.class); //GET CURRENT SESSION
+                    if (session == null) break;
+                    final String confPath = cs.getAssetIntegrationPath();                     //GET PRECONFIGURED SYNC DAM TARGET PATH
 
-                        LOGGER.trace("<<< " + itemsArr.length() + " INCOMING VIDEOS");
+                    final String basePath = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedAccount).concat("/"); //CREATE BASE PATH
+                    //CREATE AND NAME BRIGHTCOVE ASSET FOLDERS PER ACCOUNT
+                    Node accountFolder = JcrUtil.createPath(basePath, "sling:OrderedFolder", session);
+                    accountFolder.setProperty("jcr:title", cs.getAccountAlias());
+                    session.save();
+                    final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
-                        //FOR EACH VIDEO IN THE ITEMS ARRAY
-                        for (int i = 0; i < itemsArr.length(); i++) {
-                            final JSONObject innerObj = itemsArr.getJSONObject(i);
+                    //GET VIDEOS
+                    int startOffset = 0;
+                    JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0)); //QUERY<------
+                    final JSONArray itemsArr = jsonObject.getJSONArray("items");
 
-                            Callable<String> callable = new VideoImportCallable(innerObj,confPath,requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
-                            Future<String> future = executor.submit(callable);
-                            //add Future to the list, we can get return value using Future
-                            list.add(future);
-                        }
 
-                        LOGGER.trace(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
-                        LOGGER.warn(">>>> SYNC DATA: nochange: " + equal + " success: " + success + " skipped or failed: " + failure + " >>>>");
+                    LOGGER.trace("<<< " + itemsArr.length() + " INCOMING VIDEOS");
+
+                    //FOR EACH VIDEO IN THE ITEMS ARRAY
+                    for (int i = 0; i < itemsArr.length(); i++) {
+                        final JSONObject innerObj = itemsArr.getJSONObject(i);
+
+                        Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
+                        Future<String> future = executor.submit(callable);
+                        //add Future to the list, we can get return value using Future
+                        list.add(future);
                     }
-                } else {
-                    throw new Exception("[Invalid or missing Brightcove configuration]");
+
+                    LOGGER.trace(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
+
                 }
             }
 

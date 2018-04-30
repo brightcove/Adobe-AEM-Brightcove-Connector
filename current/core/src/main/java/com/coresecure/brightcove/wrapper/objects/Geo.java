@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.enums.GeoFilterCodeEnum;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -43,9 +44,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class Geo {
-    public boolean exclude_countries;
-    public boolean restricted;
-    public Collection<GeoFilterCodeEnum> countries;
+    public final boolean exclude_countries;
+    public final boolean restricted;
+    public final Collection<GeoFilterCodeEnum> countries;
     private static final Logger LOGGER = LoggerFactory.getLogger(Geo.class);
 
     public Geo(boolean aExclude_countries, boolean aRestricted, Collection<GeoFilterCodeEnum> aCountries) {
@@ -55,26 +56,27 @@ public class Geo {
     }
 
     public Geo(JSONObject aGeo) throws JSONException {
-        exclude_countries = aGeo.getBoolean("exclude_countries");
-        restricted = aGeo.getBoolean("restricted");
+        exclude_countries = aGeo.getBoolean(Constants.EXCLUDE_COUNTRIES);
+        restricted = aGeo.getBoolean(Constants.RESTRICTED);
         countries = new ArrayList<GeoFilterCodeEnum>();
-        for (int i = 0; i < aGeo.getJSONArray("countries").length(); i++) {
-            countries.add(GeoFilterCodeEnum.lookupByCode(aGeo.getJSONArray("countries").getString(i)));
+        for (int i = 0; i < aGeo.getJSONArray(Constants.COUNTRIES).length(); i++) {
+            countries.add(GeoFilterCodeEnum.lookupByCode(aGeo.getJSONArray(Constants.COUNTRIES).getString(i)));
         }
     }
 
     public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"exclude_countries", "restricted", "countries"});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.EXCLUDE_COUNTRIES, Constants.RESTRICTED, Constants.COUNTRIES});
         return json;
     }
 
     public String toString() {
+        String result = new String();
         try {
-            return toJSON().toString();
+            result = toJSON().toString();
         } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
+            LOGGER.error(e.getClass().getName(),e);
         }
+        return result;
     }
 
 }

@@ -68,4 +68,6 @@ public interface ConfigurationService {
 
     String getProxy();
 
+    String getIngestProfile();
+
 }

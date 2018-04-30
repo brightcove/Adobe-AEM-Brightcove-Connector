@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:granite="http://www.adobe.com/jcr/granite/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:unstructured">
+    <tabs
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/tabs"
+        size="L">
+        <items jcr:primaryType="nt:unstructured">
+            <tab1
+                granite:rel="aem-assets-metadata-form"
+                jcr:primaryType="nt:unstructured"
+                jcr:title="Basic"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                listOrder="2">
+                <items jcr:primaryType="nt:unstructured">
+                    <default
+                        granite:rel="aem-assets-metadata-form-tab"
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/foundation/include"
+                        listOrder="0"
+                        path="/libs/dam/content/schemaeditors/forms/default/items/tabs/items/tab1"/>
+                </items>
+            </tab1>
+            <tab2
+                granite:rel="aem-assets-metadata-form"
+                jcr:primaryType="nt:unstructured"
+                jcr:title="Advanced"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                listOrder="2">
+                <items jcr:primaryType="nt:unstructured">
+                    <default
+                        granite:rel="aem-assets-metadata-form-tab"
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/foundation/include"
+                        listOrder="0"
+                        path="/libs/dam/content/schemaeditors/forms/default/items/tabs/items/tab2"/>
+                </items>
+            </tab2>
+            <tab3
+                granite:rel="aem-assets-metadata-form"
+                jcr:primaryType="nt:unstructured"
+                jcr:title="IPTC"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                listOrder="2">
+                <items jcr:primaryType="nt:unstructured">
+                    <default
+                        granite:rel="aem-assets-metadata-form-tab"
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/foundation/include"
+                        listOrder="0"
+                        path="/libs/dam/content/schemaeditors/forms/default/items/tabs/items/tab3"/>
+                </items>
+            </tab3>
+            <tab4
+                granite:rel="aem-assets-metadata-form"
+                jcr:primaryType="nt:unstructured"
+                jcr:title="IPTC Extension"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                listOrder="2">
+                <items jcr:primaryType="nt:unstructured">
+                    <default
+                        granite:rel="aem-assets-metadata-form-tab"
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/foundation/include"
+                        listOrder="0"
+                        path="/libs/dam/content/schemaeditors/forms/default/items/tabs/items/tab4"/>
+                </items>
+            </tab4>
+        </items>
+    </tabs>
+</jcr:root>

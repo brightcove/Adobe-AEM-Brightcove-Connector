@@ -53,11 +53,12 @@ function createPlayers() {
         var dataVideoId= selected_element.getAttribute("data-video-id");
         var dataWidth= selected_element.getAttribute("data-width");
         var dataHeight= selected_element.getAttribute("data-height");
+        var dataUsage = selected_element.getAttribute("data-usage");
         var s = document.createElement('script');
         s.src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
         s.onload = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
             return function() {
-                playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" class=\"video-js\" controls data-width=\"' + dataWidth + '\" data-height=\"' + dataHeight + '\"></video>';
+                playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls width=\"' + dataWidth + '\" height=\"' + dataHeight + '\"></video>';
                 selected_element.innerHTML = playerHTML;
                 bc(document.getElementById(playerID));
                 videojs(playerID).ready(function () {

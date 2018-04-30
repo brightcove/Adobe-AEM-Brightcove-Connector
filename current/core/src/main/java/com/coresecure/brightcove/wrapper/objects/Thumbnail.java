@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
@@ -42,31 +43,22 @@ import org.slf4j.LoggerFactory;
 
 public class Thumbnail {
 
-    public String url;
+    public final String url;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Thumbnail.class);
 
     public Thumbnail(String aSrc)
     {
-
         url = aSrc;
-
-        //sources = aText_track.getString("id");;
-
     }
     public Thumbnail(JSONObject aPoster) throws JSONException
     {
-
-        url = aPoster.getString("src");
-
-        //sources = aText_track.getString("id");;
-
+        this(aPoster.getString(Constants.SRC));
     }
 
     public JSONObject toJSON() throws JSONException
     {
-
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"url"});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.URL});
         return json;
     }
 
@@ -75,9 +67,8 @@ public class Thumbnail {
         try {
             return toJSON().toString();
         } catch (JSONException e) {
-            LOGGER.error("JsonException",e);
-            return null;
+            LOGGER.error(e.getClass().getName(),e);
+            return new String();
         }
     }
-
 }

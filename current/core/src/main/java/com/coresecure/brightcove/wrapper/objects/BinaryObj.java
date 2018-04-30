@@ -32,26 +32,25 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-public class Token {
-    private static String token_type;
-    private static String token;
-    private static int expire_in;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-    public Token(String aToken, String aToken_type, int aExpire_in) {
-        token = aToken;
-        token_type = aToken_type;
-        expire_in = aExpire_in;
+import java.io.InputStream;
+
+
+public class BinaryObj {
+
+    public final InputStream binary;
+    public final String mime_type;
+    private static final Logger LOGGER = LoggerFactory.getLogger(BinaryObj.class);
+
+    public BinaryObj()
+    {
+        this(null,null);
     }
-
-    public String getToken() {
-        return token;
-    }
-
-    public String getTokenType() {
-        return token_type;
-    }
-
-    public int getExpire_in() {
-        return expire_in;
+    public BinaryObj(InputStream aBinary, String aType)
+    {
+        binary = aBinary;
+        mime_type = aType;
     }
 }

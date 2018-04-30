@@ -38,17 +38,12 @@ import org.slf4j.LoggerFactory;
 
 public class Projection {
 
-    public String type;
-
+    public final String type;
     private static final Logger LOGGER = LoggerFactory.getLogger(Projection.class);
-
     public Projection(String aType)
     {
-
         type = aType;
-
     }
-
 
     public String toString()
     {

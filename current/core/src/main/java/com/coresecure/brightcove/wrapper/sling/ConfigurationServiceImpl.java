@@ -65,7 +65,8 @@ import java.util.*;
         @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
-        @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets")
+        @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
+        @Property(name = "ingest_profile", label = "Ingest Profile", description = "Configure default Ingest Profile", value = "")
 })
 
 
@@ -152,6 +153,11 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     public String getProxy() {
         return (String) getProperties().get("proxy");
     }
+
+    public String getIngestProfile() {
+        return (String) getProperties().get("ingest_profile");
+    }
+
 
     private String[] cleanStringArray(String[] input) {
         String[] result = input;

@@ -32,9 +32,11 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
 import org.apache.jackrabbit.util.Base64;
+import org.apache.jackrabbit.webdav.DavConstants;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
@@ -45,11 +47,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Account {
-    private String client_id;
-    private String client_secret;
-    private String account_id;
-    private Token authToken;
-    public Platform platform;
+    private final String client_id;
+    private final String client_secret;
+    private final String account_id;
+    private TokenObj authToken;
+    public final Platform platform;
     private static final Logger LOGGER = LoggerFactory.getLogger(Account.class);
 
     public Account(Platform aPlatform, String aClient_id, String aClient_secret, String aAccount_id) {
@@ -68,30 +70,38 @@ public class Account {
         authToken = null;
         LOGGER.debug("getAccount_ID");
         String token = Base64.encode(client_id + ":" + client_secret);
-        LOGGER.debug("token: "+token);
+        LOGGER.debug("token: {}", token);
 
         Map<String, String> headers = new HashMap<String, String>();
-        headers.put("Authorization", "Basic " + token);
+        headers.put(DavConstants.HEADER_AUTHORIZATION, "Basic " + token);
         String urlParameters = "grant_type=client_credentials";
         String targetURL = platform.getOAUTH_Url() + "/access_token";
         try {
-            JSONObject response = JsonReader.readJsonFromString(HttpServices.executePost(targetURL, urlParameters, headers));
-            LOGGER.debug("response: "+response.toString());
+            String loginResponse = HttpServices.executePost(targetURL, urlParameters, headers);
+            if (loginResponse == null) return false;
+            JSONObject response = JsonReader.readJsonFromString(loginResponse);
+            LOGGER.debug(Constants.RESPONSE ,response);
 
-            if (response.getString("access_token") != null && response.getString("token_type") != null) {
-                authToken = new Token(response.getString("access_token"), response.getString("token_type"), response.getInt("expires_in"));
+            if (response.getString(Constants.ACCESS_TOKEN) != null && response.getString("token_type") != null) {
+                authToken = new TokenObj(response.getString(Constants.ACCESS_TOKEN), response.getString("token_type"), response.getInt("expires_in"));
                 result = true;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getClass().getName(), e);
         } catch (JSONException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getClass().getName(), e);
         }
         return result;
     }
 
-    public Token getToken() {
+    public TokenObj getToken() {
         return authToken;
     }
+
+    public TokenObj getLoginToken() {
+        this.login();
+        return getToken();
+    }
+
 
 }

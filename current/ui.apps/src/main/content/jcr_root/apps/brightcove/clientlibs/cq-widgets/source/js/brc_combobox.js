@@ -138,10 +138,12 @@ Brightcove.ComboBox = CQ.Ext.extend(CQ.Ext.form.ComboBox, {
             brcAccountFieldName = combobox.initialConfig['brcAccountFieldName'],
             accountField = dialogObject.getField(brcAccountFieldName),
             value = CQ.Ext.isEmpty(v) ? '' : v;
+            brcApiCommand = combobox.initialConfig['brcApiCommand'],
 
         combobox.store.baseParams[this.queryParam] = value;
         combobox.store.baseParams['isID'] = !CQ.Ext.isEmpty(value);
         combobox.store.baseParams['account_id'] = accountField.getValue();
+        if (brcApiCommand) combobox.store.baseParams['a'] = brcApiCommand;
 
         //console.log('asyncSetDisplayValue', combobox, v);
 

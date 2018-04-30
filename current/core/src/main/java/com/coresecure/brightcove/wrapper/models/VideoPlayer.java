@@ -4,6 +4,7 @@ import com.adobe.granite.license.ProductInfo;
 import com.adobe.granite.license.ProductInfoService;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
+import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
@@ -18,6 +19,8 @@ import org.apache.sling.models.annotations.Source;
 import org.apache.sling.models.annotations.injectorspecific.OSGiService;
 import org.apache.sling.models.annotations.injectorspecific.ScriptVariable;
 import org.apache.sling.models.annotations.injectorspecific.Self;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,9 +68,6 @@ public class VideoPlayer {
 
     protected final static Logger LOGGER = LoggerFactory.getLogger(VideoPlayer.class);
 
-
-
-
     String componentID;
     String videoID;
     String playlistID;
@@ -88,6 +88,7 @@ public class VideoPlayer {
     Resource playerPageResource;
     ValueMap playerProperties;
     String inlineCSS;
+    String bundleVersion;
 
     public String getComponentID() {
         return componentID;
@@ -173,24 +174,28 @@ public class VideoPlayer {
         return DropTarget.CSS_CLASS_PREFIX;
     }
 
+    public String getBundleVersion() {
+        return bundleVersion;
+    }
     public String getInlineCSS() {
-        return properties.get("inlineCSS", String.class);
+        return inlineCSS;
     }
 
     @PostConstruct
     protected void init(){
-        LOGGER.info(this.getClass().getName() + "INITAAAA");
+        LOGGER.info(this.getClass().getName());
+        Version bundle_version = FrameworkUtil.getBundle(getClass()).getVersion();
+        bundleVersion = String.format("%s.%s.%s", bundle_version.getMajor(),  bundle_version.getMinor(), bundle_version.getMicro());
         try {
             LOGGER.info(resource.getName() + "INIT");
 
-            if (productInfo != null) {
-                ProductInfo[] productInfos = productInfo.getInfos();
-                if (productInfos.length > 0) {
-                    version = productInfos[0].getShortVersion();
-                }
-
+            ProductInfo[] productInfos = productInfo.getInfos();
+            if (productInfos.length > 0) {
+                version = productInfos[0].getShortVersion();
             }
-            LOGGER.info("version");
+
+
+            LOGGER.info("current AEM Version : " + version);
 
             //cg = ServiceUtil.getConfigurationGrabber();
             componentID = Text.md5(currentNode.getPath());
@@ -204,6 +209,7 @@ public class VideoPlayer {
             playerID = "";
             playerKey = "";
             playerDataEmbed = "";
+            inlineCSS = properties.get("inlineCSS","");
 
             containerID = properties.get("containerID", "");
             containerClass = properties.get("containerClass", "");
@@ -216,52 +222,44 @@ public class VideoPlayer {
 
 
             //fallback to default
-            if (TextUtil.notEmpty(account)) {
-                cs = cg.getConfigurationService(account);
-                if (cs != null) {
-                    playerID = cs.getDefVideoPlayerID();
-                    playerDataEmbed = cs.getDefVideoPlayerDataEmbedded();
-                    playerKey = cs.getDefVideoPlayerKey();
+            try {
+                if (TextUtil.notEmpty(account)) {
+                    cs = cg.getConfigurationService(account);
+
+                        playerID = cs.getDefVideoPlayerID();
+                        playerDataEmbed = cs.getDefVideoPlayerDataEmbedded();
+                        playerKey = cs.getDefVideoPlayerKey();
+
                 }
+            } catch (NullPointerException e) {
+                LOGGER.error(e.getClass().getName(),e);
             }
 
             playerID = properties.get("playerID", playerID).trim();
             playerKey = properties.get("playerKey", playerKey).trim();
-            ;
+
             playerDataEmbed = playerDataEmbed.isEmpty() ? "default" : playerDataEmbed;
 
 
             // Load Player Configuration
+            Page playerPage = pageManager.getPage(playerPath);
+            if (playerPage != null) {
 
-            if (!playerPath.isEmpty()) {
+                playerProperties = playerPage.getProperties();
 
-                playerPageResource = resourceResolver.resolve(playerPath);
-
-                if (playerPageResource != null) {
-
-                    Page playerPage = playerPageResource.adaptTo(Page.class);
-
-                    if (playerPage != null) {
-
-                        playerProperties = playerPage.getProperties();
-
-                        playerID = playerProperties.get("playerID", playerID);
-                        playerKey = playerProperties.get("playerKey", playerKey);
-                        playerDataEmbed = playerProperties.get("data_embedded", playerDataEmbed);
+                playerID = playerProperties.get("playerID", playerID);
+                playerKey = playerProperties.get("playerKey", playerKey);
+                playerDataEmbed = playerProperties.get("data_embedded", playerDataEmbed);
 
 
-                        align = playerProperties.get("align", align);
-                        width = playerProperties.get("width", width);
-                        height = playerProperties.get("height", height);
+                align = playerProperties.get("align", align);
+                width = playerProperties.get(Constants.WIDTH, width);
+                height = playerProperties.get(Constants.HEIGHT, height);
 
-                        //append the class to the container wrap
-                        containerClass += " " + playerProperties.get("containerClass", "");
+                //append the class to the container wrap
+                containerClass += " " + playerProperties.get("containerClass", "");
 
-                        ignoreComponentProperties = playerProperties.get("ignoreComponentProperties", ignoreComponentProperties);
-                    }
-
-                }
-
+                ignoreComponentProperties = playerProperties.get("ignoreComponentProperties", ignoreComponentProperties);
             }
 
             // Override with local component properties IF enabled
