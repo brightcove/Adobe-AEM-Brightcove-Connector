@@ -61,7 +61,7 @@ import java.util.*;
         @Property(name = "allowed_groups", label = "Allowed Groups", description = "Groups that are allowed to see this account data", value = {"", ""}),
         @Property(name = "playersstore", label = "Players Store Path", description = "Path of the players store locatione", value = "/content/brightcovetools/players"),
         @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = "default"),
-        @Property(name = "defVideoPlayerKey", label="Default Video Player Key", description="Default Video Player Key - DEPRECATED", value=""),
+        @Property(name = "defVideoPlayerKey", label = "Default Video Player Key", description = "Default Video Player Key - DEPRECATED", value = ""),
         @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
         @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
         @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
@@ -83,10 +83,19 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     @Activate
+    @Modified
     void activate(ComponentContext aComponentContext) {
+        loggerVar.info("activate");
         this.componentContext = aComponentContext;
         this.prop = componentContext.getProperties();
+        loggerVar.debug(componentContext.getProperties().toString());
     }
+
+    @Deactivate
+    void deactivate(ComponentContext aComponentContext) {
+        loggerVar.info("deactivate");
+    }
+
 
     public String getClientID() {
         return (String) getProperties().get("client_id");
@@ -151,7 +160,9 @@ public class ConfigurationServiceImpl implements ConfigurationService {
 
 
     public String getProxy() {
-        return (String) getProperties().get("proxy");
+        String proxy = (String) getProperties().get("proxy");
+        loggerVar.debug("getProxy() " + proxy);
+        return proxy;
     }
 
     public String getIngestProfile() {
@@ -173,7 +184,7 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
 
-    private boolean isValidPath(String filePathString){
+    private boolean isValidPath(String filePathString) {
         Path path = Paths.get(filePathString);
         return Files.exists(path);
     }

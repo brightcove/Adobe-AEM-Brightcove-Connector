@@ -50,12 +50,10 @@ public class Platform {
     private final String PLAYERS_API_Url;
     private final String API_Url;
     private final String DI_API_Url;
-    private Proxy PROXY = Proxy.NO_PROXY;
     private static final Logger LOGGER = LoggerFactory.getLogger(Platform.class);
 
-    public Platform()
-    {
-        this(null,null,null,null);
+    public Platform() {
+        this(null, null, null, null);
     }
 
     public Platform(String aOAUTH_Url, String aAPI_Url, String aDI_API_Url, String aPLAYERS_API_Url) {
@@ -83,6 +81,7 @@ public class Platform {
 
     public String getAPI(String targetURL, String urlParameters, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
+        LOGGER.info("getAPI: " + URL);
         String response = HttpServices.executeGet(URL, urlParameters, headers);
         return response;
     }
@@ -95,7 +94,7 @@ public class Platform {
 
     public String postAPI(String targetURL, String payload, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
-        LOGGER.trace("POST URL: "+URL);
+        LOGGER.trace("POST URL: " + URL);
 
         String response = HttpServices.executePost(URL, payload, headers);
         LOGGER.trace(response);
@@ -112,7 +111,7 @@ public class Platform {
 
     public String postDI_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
-        LOGGER.trace("postDI_API: "+URL);
+        LOGGER.trace("postDI_API: " + URL);
         String response = HttpServices.executePost(URL, payload, headers);
         LOGGER.trace(response);
         return response;
@@ -120,7 +119,7 @@ public class Platform {
 
     public String getDI_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
-        LOGGER.trace("getDI_API: "+URL);
+        LOGGER.trace("getDI_API: " + URL);
         String response = HttpServices.executeGet(URL, payload, headers);
         LOGGER.trace(response);
         return response;
@@ -128,7 +127,7 @@ public class Platform {
 
     public String postDIRequest_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
-        LOGGER.trace("postDI_API: "+URL);
+        LOGGER.trace("postDI_API: " + URL);
         String response = HttpServices.executePost(URL, payload, headers, JSONResponse.RESPONSE_CONTENT_TYPE);
         LOGGER.trace(response);
         return response;
@@ -136,7 +135,7 @@ public class Platform {
 
     public String deleteAPI(String targetURL, String videoID, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
-        LOGGER.trace("deleteAPI: "+URL);
+        LOGGER.trace("deleteAPI: " + URL);
         String response = HttpServices.executeDelete(URL, headers);
         LOGGER.trace(response);
         return response;
@@ -144,15 +143,16 @@ public class Platform {
 
 
     public void setProxy(String proxy) {
-      Proxy newProxy = Proxy.NO_PROXY;
+        LOGGER.info("setProxy: " + proxy);
+        Proxy newProxy = Proxy.NO_PROXY;
 
-      if(proxy!=null) {
-        String[] parts = proxy.split(":");
-        if (parts.length==2) {
-          PROXY = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(parts[0], Integer.parseInt(parts[1])));
+        if (proxy != null) {
+            String[] parts = proxy.split(":");
+            if (parts.length == 2) {
+                newProxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(parts[0], Integer.parseInt(parts[1])));
+            }
         }
-      }
 
-      HttpServices.setProxy(PROXY);
+        HttpServices.setProxy(newProxy);
     }
 }

@@ -47,9 +47,10 @@ public class BrightcoveAPI {
     public final CmsAPI cms;
     private static final Logger LOGGER = LoggerFactory.getLogger(BrightcoveAPI.class);
 
-    public BrightcoveAPI(String aClientId, String aClientSecret, String aAccountId) {
+    public BrightcoveAPI(String aClientId, String aClientSecret, String aAccountId, String proxy) {
         LOGGER.debug("BrightcoveAPI Init aAccount_id {}", aAccountId);
         platform = new Platform();
+        platform.setProxy(proxy);
         account = new Account(platform, aClientId, aClientSecret, aAccountId);
         cms = new CmsAPI(account);
     }
@@ -60,14 +61,10 @@ public class BrightcoveAPI {
         ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
         ConfigurationService brcService = cg.getConfigurationService(key);
 
-        if (brcService.getProxy()!=null && brcService.getProxy().length()>0) {
-            setProxy(brcService.getProxy());
-        }
+        platform.setProxy(brcService.getProxy());
+
         account = new Account(platform, brcService.getClientID(), brcService.getClientSecret(), brcService.getAccountID());
         cms = new CmsAPI(account);
     }
 
-    public void setProxy(String proxy) {
-        platform.setProxy(proxy);
-    }
 }

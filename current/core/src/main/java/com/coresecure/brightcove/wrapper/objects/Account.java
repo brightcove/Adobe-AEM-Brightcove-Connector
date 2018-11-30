@@ -54,6 +54,7 @@ public class Account {
     public final Platform platform;
     private static final Logger LOGGER = LoggerFactory.getLogger(Account.class);
 
+
     public Account(Platform aPlatform, String aClient_id, String aClient_secret, String aAccount_id) {
         client_id = aClient_id;
         client_secret = aClient_secret;
