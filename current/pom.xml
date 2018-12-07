@@ -50,7 +50,7 @@
     <groupId>com.coresecure.brightcove.cq5</groupId>
     <artifactId>brightcove_connector</artifactId>
     <packaging>pom</packaging>
-    <version>5.5.1-SNAPSHOT</version>
+    <version>5.5.2-SNAPSHOT</version>
     <description>
         Parent Maven POM for the 'Adobe CQ5 Brightcove Connector API' project.
     </description>
