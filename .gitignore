@@ -84,3 +84,5 @@ cs_commons-dev/
 *.dir
 # IntelliJ
 /out/
+
+/current/prepareRelease.sh
