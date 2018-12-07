@@ -36,6 +36,7 @@ import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.coresecure.brightcove.wrapper.utils.S3UploadUtil;
 import com.day.cq.commons.jcr.JcrConstants;
@@ -485,15 +486,22 @@ public class ServiceUtil {
                 result.put(Constants.OBJECT_KEY, videoIngested.get(Constants.OBJECT_KEY));
                 result.put(Constants.API_REQUEST_URL, videoIngested.get(Constants.API_REQUEST_URL));
                 result.put(Constants.SIGNED_URL, videoIngested.get(Constants.SIGNED_URL));
-                boolean sent = S3UploadUtil.uploadToUrl(new URL(videoIngested.getString(Constants.SIGNED_URL)), is);
+
+                ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+                ConfigurationService brcService = cg.getConfigurationService(account_id);
+                String proxy_address = brcService.getProxy();
+
+                LOGGER.trace("******CREATE ASSET s3 [ 1 ] " + proxy_address);
+
+                boolean sent = S3UploadUtil.uploadToUrl(new URL(videoIngested.getString(Constants.SIGNED_URL)), is , HttpServices.getProxy());
                 result.put(Constants.SENT, sent);
                 if (!sent) {
                     brAPI.cms.deleteVideo(newVideoId);
                 }
                 else
                 {
-                    ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-                    ConfigurationService brcService = cg.getConfigurationService(account_id);
+                    cg = ServiceUtil.getConfigurationGrabber();
+                    brcService = cg.getConfigurationService(account_id);
                     String ingest_profile = brcService.getIngestProfile();
                     result.put("job", brAPI.cms.requestIngestURL(newVideoId, ingest_profile, videoIngested.getString(Constants.API_REQUEST_URL), true));
                 }
@@ -521,7 +529,15 @@ public class ServiceUtil {
                 result.put(Constants.OBJECT_KEY, assetIngested.get(Constants.OBJECT_KEY));
                 result.put(Constants.API_REQUEST_URL, assetIngested.get(Constants.API_REQUEST_URL));
                 result.put(Constants.SIGNED_URL, assetIngested.get(Constants.SIGNED_URL));
-                boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.getString(Constants.SIGNED_URL)), is);
+
+
+                ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+                ConfigurationService brcService = cg.getConfigurationService(account_id);
+                String proxy_address = brcService.getProxy();
+
+                LOGGER.trace("******CREATE ASSET s3 [ 2 ] " + proxy_address);
+
+                boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.getString(Constants.SIGNED_URL)), is , HttpServices.getProxy());
                 result.put(Constants.SENT, sent);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);

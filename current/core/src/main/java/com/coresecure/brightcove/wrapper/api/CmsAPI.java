@@ -433,7 +433,7 @@ public class CmsAPI {
             if (!response.isEmpty()) {
                 json = JsonReader.readJsonArrayFromString(response);
                 LOGGER.debug(Constants.RESPONSE, response);
-                LOGGER.debug("json {}", json);
+//                LOGGER.trace("json {}", json);
             } else if (!q.isEmpty() && NumberUtils.isNumber(q)) {
                 json.put(getVideo(q));
             }

@@ -50,7 +50,7 @@
     <groupId>com.coresecure.brightcove.cq5</groupId>
     <artifactId>brightcove_connector</artifactId>
     <packaging>pom</packaging>
-    <version>5.5.0</version>
+    <version>5.5.1-SNAPSHOT</version>
     <description>
         Parent Maven POM for the 'Adobe CQ5 Brightcove Connector API' project.
     </description>
@@ -73,6 +73,11 @@
     </properties>
     <build>
         <plugins>
+            <plugin>
+                <groupId>com.amashchenko.maven.plugin</groupId>
+                <artifactId>gitflow-maven-plugin</artifactId>
+                <version>1.9.0</version>
+            </plugin>
             <!-- Maven Release Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -163,6 +168,11 @@
         </plugins>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>com.amashchenko.maven.plugin</groupId>
+                    <artifactId>gitflow-maven-plugin</artifactId>
+                    <version>1.9.0</version>
+                </plugin>
                 <!-- Maven Clean Plugin -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

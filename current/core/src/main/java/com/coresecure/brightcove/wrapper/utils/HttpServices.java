@@ -34,9 +34,11 @@ package com.coresecure.brightcove.wrapper.utils;
 
 import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.CertificateListService;
+import org.apache.commons.codec.Encoder;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.webdav.DavMethods;
+import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.servlets.post.JSONResponse;
@@ -56,6 +58,7 @@ import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -75,6 +78,7 @@ public class HttpServices {
 
 
     public static void setProxy(Proxy proxy) {
+        LOGGER.info("setProxy: " + proxy.toString());
         if (proxy == null) {
             PROXY = Proxy.NO_PROXY;
         } else {
@@ -82,8 +86,13 @@ public class HttpServices {
         }
     }
 
+    public static Proxy getProxy() {
+        return PROXY;
+    }
+
     public static String executeDelete(String targetURL,
-                                      Map<String, String> headers) {
+                                       Map<String, String> headers) {
+        LOGGER.debug("executeDelete: " + targetURL);
         URL url;
         HttpsURLConnection connection = null;
         String payload = "{}";
@@ -108,7 +117,8 @@ public class HttpServices {
 
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
-            wr.writeBytes(payload);
+            wr.write(payload.getBytes("UTF-8"));
+//            wr.writeBytes(payload);
 
             // Get Response
             LOGGER.debug("getResponseCode: " + connection.getResponseCode());
@@ -124,11 +134,11 @@ public class HttpServices {
                 }
                 delResponse = response.toString();
             } else {
-                delResponse= "{'error_code':"+connection.getResponseCode()+",'message':'"+connection.getResponseMessage()+"'}";
+                delResponse = "{'error_code':" + connection.getResponseCode() + ",'message':'" + connection.getResponseMessage() + "'}";
             }
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
-            delResponse= "{'error_code':-1,'message':'Exception in executeDelete'}";
+            delResponse = "{'error_code':-1,'message':'Exception in executeDelete'}";
 
         } finally {
 
@@ -157,27 +167,33 @@ public class HttpServices {
     }
 
     public static String executePost(String targetURL, String payload,
-                                    Map<String, String> headers) {
+                                     Map<String, String> headers) {
 
         return executePost(targetURL, payload,
-                 headers,  "application/x-www-form-urlencoded");
+                headers, "application/x-www-form-urlencoded");
     }
+
     public static String executePost(String targetURL, String payload,
                                      Map<String, String> headers, String contentType) {
+        LOGGER.info("executePost: " + targetURL);
         URL url;
         HttpsURLConnection connection = null;
         String exPostResponse = null;
         BufferedReader rd = null;
         DataOutputStream wr = null;
+        JSONObject responseJSON = new JSONObject();
+
         try {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
-            LOGGER.debug("URL :"+targetURL);
-            LOGGER.debug("payload :"+payload);
+            LOGGER.debug("URL :" + targetURL);
+            LOGGER.debug("payload :" + payload);
 
             connection = getSSLConnection(url, targetURL);
 
+            LOGGER.debug("is proxy valid? :" + PROXY.toString());
             connection = (HttpsURLConnection) url.openConnection(PROXY);
+
             connection.setRequestMethod(DavMethods.METHOD_POST);
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
                     contentType);
@@ -194,14 +210,23 @@ public class HttpServices {
 
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
-            wr.writeBytes(payload);
+            wr.write(payload.getBytes("UTF-8"));
+            //            wr.writeBytes(payload);
 
 
+            //Todo: Revise
 
-            // Get Response
-            if (connection.getResponseCode() < 400)
-            {
-                InputStream is = connection.getInputStream();
+            InputStream is;
+
+            if (connection.getResponseCode() != 200 && connection.getResponseCode() != 201) {
+                is = connection.getErrorStream();
+            } else {
+                is = connection.getInputStream();
+
+            }
+
+
+            if (is != null) {
                 rd = new BufferedReader(new InputStreamReader(is));
                 String line;
                 StringBuffer response = new StringBuffer();
@@ -211,21 +236,31 @@ public class HttpServices {
                 }
 
                 exPostResponse = response.toString();
-            }
-            else if (connection.getResponseCode() == 422)
-            {
-                exPostResponse = "{\"error\":422}";
-            }
-            else if (connection.getResponseCode() == 409)
-            {
-                exPostResponse = "{\"error\":409}";
-            }
-            else {
-                LOGGER.debug("getResponseCode: {}  getResponseMessage:  {}" ,connection.getResponseCode(), connection.getResponseMessage());
+                LOGGER.trace("exPostResponse >>>" + exPostResponse);
+
+                if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
+                    //CORRECT ADDITION OF THE REQUEST BODY
+                    responseJSON = new JSONObject(exPostResponse);
+                    responseJSON.put("error", connection.getResponseCode());
+                } else {
+
+                    JSONArray errorArray = new JSONArray(exPostResponse);
+                    responseJSON = new JSONObject();
+                    responseJSON.put("error", errorArray.getJSONObject(0).has("error_code") ? errorArray.getJSONObject(0).get("error_code") : "DefaultError");
+                    responseJSON.put("error_message", errorArray.getJSONObject(0).has("message") ? errorArray.getJSONObject(0).get("message") : "Default Message");
+                }
+
+                LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));
+            } else {
+                throw new Exception("**** Input Stream Coming Back is Null");
+
             }
 
+            LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));
+
+
         } catch (Exception e) {
-            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+            LOGGER.error("*** Connection Error * Check Connection / Proxy Configuration", e);
         } finally {
 
             if (connection != null) {
@@ -236,7 +271,7 @@ public class HttpServices {
                 try {
                     rd.close();
                 } catch (IOException e) {
-                    LOGGER.error(e.getClass().getName(),e);
+                    LOGGER.error(e.getClass().getName(), e);
                 }
             }
             if (null != wr) {
@@ -244,33 +279,36 @@ public class HttpServices {
                     wr.flush();
                     wr.close();
                 } catch (IOException e) {
-                    LOGGER.error(e.getClass().getName(),e);
+                    LOGGER.error(e.getClass().getName(), e);
                 }
             }
         }
-        LOGGER.debug("exPostResponse[1]: {}", exPostResponse);
-
-        return exPostResponse;
+        LOGGER.debug("finally - > exPostResponse[1]: {}", responseJSON.toString());
+        return responseJSON.toString();
     }
+
     public static String executePatch(String targetURL, String payload,
-                                    Map<String, String> headers) {
+                                      Map<String, String> headers) {
+        LOGGER.debug("executePatch - START: " + targetURL);
         URL url;
         HttpsURLConnection connection = null;
-        String exPostResponse = null;
+        String exPatchResponse = null;
         BufferedReader rd = null;
         DataOutputStream wr = null;
+        boolean isError = true;
         try {
+
 
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
-            LOGGER.debug("URL :"+targetURL);
-            LOGGER.debug("payload :"+payload);
+            LOGGER.debug("URL :" + targetURL);
+            LOGGER.debug("payload :" + payload);
 
             connection = getSSLConnection(url, targetURL);
 
             connection = (HttpsURLConnection) url.openConnection(PROXY);
             connection.setRequestProperty("X-HTTP-Method-Override", "PATCH");
-            setRequestMethod(connection,"PATCH");
+            setRequestMethod(connection, "PATCH");
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
@@ -281,26 +319,30 @@ public class HttpServices {
 
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
-            wr.writeBytes(payload);
+            wr.write(payload.getBytes("UTF-8"));
+            //            wr.writeBytes(payload);
+
 
             if (200 == connection.getResponseCode()) {
-                InputStream is = connection.getInputStream();
-                rd = new BufferedReader(new InputStreamReader(is));
-                String line;
-                StringBuffer response = new StringBuffer();
-                while ((line = rd.readLine()) != null) {
-                    response.append(line);
-                    response.append("\r\n");
-                }
-
-                exPostResponse = response.toString();
+                isError = false;
             } else {
-                LOGGER.debug("getResponseCode: {} {}",connection.getResponseCode() ,connection.getResponseMessage());
+                LOGGER.debug("getResponseCode: {} {}", connection.getResponseCode(), connection.getResponseMessage());
             }
-            LOGGER.debug("exPostResponse[2]: {}" , exPostResponse);
+            InputStream is = connection.getInputStream();
+            rd = new BufferedReader(new InputStreamReader(is));
+            String line;
+            StringBuffer response = new StringBuffer();
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+                response.append("\r\n");
+            }
+
+            exPatchResponse = response.toString();
+
+            LOGGER.debug("exPatchResponse[2]: {}", exPatchResponse);
 
         } catch (Exception e) {
-            LOGGER.error(Constants.ERROR_LOG_TMPL,e);
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
 
         } finally {
 
@@ -312,7 +354,7 @@ public class HttpServices {
                 try {
                     rd.close();
                 } catch (IOException e) {
-                    LOGGER.error(Constants.ERROR_LOG_TMPL,e);
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
                 }
             }
             if (null != wr) {
@@ -325,8 +367,11 @@ public class HttpServices {
                 }
             }
         }
-        return exPostResponse;
+
+        LOGGER.debug("executePatch - END");
+        return exPatchResponse;
     }
+
     private static void setRequestMethod(final HttpURLConnection c, final String value) {
         try {
             final Object target;
@@ -340,14 +385,15 @@ public class HttpServices {
             final Field f = HttpURLConnection.class.getDeclaredField("method");
             f.setAccessible(true);
             f.set(target, value);
-        } catch (IllegalAccessException ex){
+        } catch (IllegalAccessException ex) {
             throw new AssertionError(ex);
-        } catch ( NoSuchFieldException ex){
+        } catch (NoSuchFieldException ex) {
             throw new AssertionError(ex);
         }
     }
+
     public static String executeGet(String targetURL, String urlParameters,
-                                   Map<String, String> headers) {
+                                    Map<String, String> headers) {
         String exGetResponse = null;
         try {
             JSONObject response = executeFullGet(targetURL, urlParameters, headers);
@@ -358,8 +404,10 @@ public class HttpServices {
         }
         return exGetResponse;
     }
+
     public static JSONObject executeFullGet(String targetURL, String urlParameters,
                                             Map<String, String> headers) {
+        LOGGER.debug("executeFullGet: " + targetURL);
         URL url;
         URLConnection connection = null;
 
@@ -367,10 +415,10 @@ public class HttpServices {
         try {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20") + "?" + urlParameters);
-            LOGGER.trace("url: "+targetURL + "?" + urlParameters+" Protocol:"+url.getProtocol());
+            LOGGER.trace("url: " + targetURL + "?" + urlParameters + " Protocol:" + url.getProtocol());
             if ("http".equals(url.getProtocol())) {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
-            }else {
+            } else {
                 connection = getSSLConnection(url, targetURL, HttpsURLConnection.class);
 
             }
@@ -381,7 +429,7 @@ public class HttpServices {
             connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
-                LOGGER.trace("-H \""+key+": "+headers.get(key)+"\"");
+                LOGGER.trace("-H \"" + key + ": " + headers.get(key) + "\"");
             }
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -400,8 +448,8 @@ public class HttpServices {
             }
             LOGGER.trace("response committed!");
 
-            exGetResponse.put(Constants.RESPONSE,new String(response.toByteArray(), "UTF-8"));
-            exGetResponse.put(Constants.BINARY,response.toByteArray());
+            exGetResponse.put(Constants.RESPONSE, new String(response.toByteArray(), "UTF-8"));
+            exGetResponse.put(Constants.BINARY, response.toByteArray());
             exGetResponse.put(Constants.MIME_TYPE, connection.getContentType());
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
@@ -429,6 +477,7 @@ public class HttpServices {
 
     private static <T> T getSSLConnection(URL url, String targetURL, Class<T> classType)
             throws IOException {
+        LOGGER.debug("getSSLConnection: " + targetURL + " PROXY: " + PROXY.toString());
         T connection = (T) url.openConnection(PROXY);
 
         try {
@@ -451,8 +500,7 @@ public class HttpServices {
                 }
             }
 
-        } catch (Exception e)
-        {
+        } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
 
@@ -503,9 +551,7 @@ public class HttpServices {
                             .getService(osgiRef);
                 }
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
         return serviceRef;
@@ -549,19 +595,19 @@ public class HttpServices {
         } catch (IOException ioe) {
             LOGGER.error(ioe.getClass().getName(), ioe);
         } catch (NoSuchAlgorithmException nae) {
-            LOGGER.error(nae.getClass().getName(),nae);
+            LOGGER.error(nae.getClass().getName(), nae);
         } catch (KeyStoreException kse) {
-            LOGGER.error(kse.getClass().getName(),kse);
+            LOGGER.error(kse.getClass().getName(), kse);
         } catch (CertificateException ce) {
-            LOGGER.error(ce.getClass().getName(),ce);
+            LOGGER.error(ce.getClass().getName(), ce);
         } catch (KeyManagementException ke) {
-            LOGGER.error(ke.getClass().getName(),ke);
+            LOGGER.error(ke.getClass().getName(), ke);
         } finally {
             if (null != caInput) {
                 try {
                     caInput.close();
                 } catch (IOException ioe) {
-                    LOGGER.error(ioe.getClass().getName(),ioe);
+                    LOGGER.error(ioe.getClass().getName(), ioe);
                 }
             }
         }
@@ -569,17 +615,18 @@ public class HttpServices {
         return context;
     }
 
-    public static boolean isLocalPath(String path){
+    public static boolean isLocalPath(String path) {
         return path.startsWith("/") && !path.startsWith("//");
     }
 
     public static BinaryObj getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException {
+        LOGGER.debug("getRemoteBinary: " + path);
         BinaryObj binary = new BinaryObj();
-        JSONObject get_response = HttpServices.executeFullGet(path, urlParameters, headers!= null ? headers :new HashMap<String, String>());
+        JSONObject get_response = HttpServices.executeFullGet(path, urlParameters, headers != null ? headers : new HashMap<String, String>());
         if (get_response != null && get_response.has(Constants.BINARY)) {
             InputStream binarystream = new ByteArrayInputStream((byte[]) get_response.get(Constants.BINARY));
             String mime_type = get_response.getString(Constants.MIME_TYPE); //< SET MIME TYPE
-            binary = new BinaryObj(binarystream,mime_type);
+            binary = new BinaryObj(binarystream, mime_type);
         }
         return binary;
     }
