@@ -1,7 +1,7 @@
 /*
  Adobe AEM Brightcove Connector
 
- Copyright (C) 2017 Coresecure Inc.
+ Copyright (C) 2018 Coresecure Inc.
 
  Authors:
  Alessandro Bonfatti
@@ -31,6 +31,18 @@
 */
 
 //CONFIG
+
+//FIX FOR PROBLEM 5.5 TODO:REMOVE
+$( document ).ready(function() {
+    console.log($("#selAccount").val());
+    if(CQ.Ext!=null)
+    {
+        CQ.Ext.util.Cookies.set('brc_act', $("#selAccount").val());
+    }
+});
+
+
+
 
 var $ACTIVE_TRACKS;
 var brc_admin = brc_admin || {};

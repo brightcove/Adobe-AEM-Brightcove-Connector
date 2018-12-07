@@ -2,7 +2,7 @@
 
     Adobe AEM Brightcove Connector
 
-    Copyright (C) 2017 Coresecure Inc.
+    Copyright (C) 2018 Coresecure Inc.
 
     Authors:    Alessandro Bonfatti
                 Yan Kisen
@@ -75,7 +75,7 @@ import java.util.*;
 @Service
 @Component
 @Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"json","js"}),
+        @Property(name = "sling.servlet.extensions", value = {"json", "js"}),
         @Property(name = "sling.servlet.paths", value = "/bin/brightcove/api")
 })
 public class BrcApi extends SlingAllMethodsServlet {
@@ -86,6 +86,7 @@ public class BrcApi extends SlingAllMethodsServlet {
     private transient com.coresecure.brightcove.wrapper.BrightcoveAPI brAPI;
     private List<String> allowedGroups = new ArrayList<String>();
     private transient ConfigurationService cs;
+
     @Override
     protected void doPost(final SlingHttpServletRequest request, final SlingHttpServletResponse response) throws ServletException, IOException {
         executeRequest(request, response);
@@ -93,20 +94,18 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     @Override
     protected void doGet(final SlingHttpServletRequest request, final SlingHttpServletResponse response) throws ServletException, IOException {
-        executeRequest(request,response);
+        executeRequest(request, response);
     }
 
-    private boolean getServices( SlingHttpServletRequest request) {
+    private boolean getServices(SlingHttpServletRequest request) {
+        LOGGER.info("getServices");
         boolean result = false;
         String requestedAccount = AccountUtil.getSelectedAccount(request);
         Set<String> services = cg.getAvailableServices(request);
         if (services.contains(requestedAccount)) {
             cs = cg.getConfigurationService(requestedAccount);
-            brAPI = new com.coresecure.brightcove.wrapper.BrightcoveAPI(cs.getClientID(), cs.getClientSecret(), requestedAccount);
+            brAPI = new com.coresecure.brightcove.wrapper.BrightcoveAPI(cs.getClientID(), cs.getClientSecret(), requestedAccount, cs.getProxy());
             serviceUtil = new ServiceUtil(requestedAccount);
-            if (cs.getProxy() != null && cs.getProxy().length() > 0) {
-                brAPI.setProxy(cs.getProxy());
-            }
             result = true;
         }
         return result;
@@ -179,6 +178,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         return result;
     }
+
     private JSONObject searchVideos(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         LOGGER.debug("query: " + request.getParameter(Constants.QUERY));
@@ -206,6 +206,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         return result;
     }
+
     private JSONObject searchPlaylist(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         if ("true".equals(request.getParameter("isID"))) {
@@ -229,6 +230,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         return result;
     }
+
     private JSONObject deleteVideo(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         String[] ids = request.getParameter(Constants.QUERY).split(",");
@@ -243,9 +245,10 @@ public class BrcApi extends SlingAllMethodsServlet {
         result = new JSONObject(serviceUtil.searchVideo("", Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT)));
         return result;
     }
+
     private JSONObject createPlaylist(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
-        RequestParameter requestParameter =  request.getRequestParameter(Constants.PLST);
+        RequestParameter requestParameter = request.getRequestParameter(Constants.PLST);
         if (requestParameter == null) {
             result.put(Constants.ERROR, 500);
             return result;
@@ -272,19 +275,17 @@ public class BrcApi extends SlingAllMethodsServlet {
         playlist.setVideoIds(videoIDs);
         JSONObject videoItem = brAPI.cms.createPlaylist(playlist);
         LOGGER.info("New Playlist id: " + videoItem.toString(1));
-        if (!videoItem.has(Constants.ID))
-        {
+        if (!videoItem.has(Constants.ID)) {
             result.put(Constants.ERROR, 409);
-        }
-        else
-        {
+        } else {
             result = null;
         }
         return result;
     }
+
     private JSONObject createVideo(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
-        RequestParameter requestParameter =  request.getRequestParameter(Constants.PLST);
+        RequestParameter requestParameter = request.getRequestParameter(Constants.PLST);
         if (requestParameter == null) {
             result.put(Constants.ERROR, 500);
             return result;
@@ -292,7 +293,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         String ingestURL = requestParameter.getString();
 
         String ingestProfile = "balanced-high-definition";
-        RequestParameter requestIngestParameter =  request.getRequestParameter("profile_Ingest");
+        RequestParameter requestIngestParameter = request.getRequestParameter("profile_Ingest");
         if (requestIngestParameter != null) {
             ingestProfile = requestIngestParameter.getString();
         }
@@ -340,6 +341,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         return result;
     }
+
     private JSONObject updateVideo(SlingHttpServletRequest request) throws JSONException {
         Collection<String> tagsToAdd = new ArrayList<String>();
         if (request.getParameter("tags") != null) {
@@ -369,13 +371,14 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         return null;
     }
+
     private JSONObject removeTextTrack(SlingHttpServletRequest request) throws JSONException {
         try {
             String trackID = request.getParameter("track");
             String videoID = request.getParameter(Constants.ID);
             LOGGER.trace("TRACK DELETION ACTIVATED FOR TRACK {}", trackID);
             //PUT TOGETHER THE TEXT TRACKS JSON OBJECT IN ORDER TO SEND
-            LOGGER.trace("VideoID: {}" ,videoID);
+            LOGGER.trace("VideoID: {}", videoID);
 
             //GET VIDEO FOR THIS VIDEO ID  - REMOVE FORM THE JSON OBJECT AND RESEND UP
             //GET VIDEO AND UPDATE TEXT TRACKS JSON
@@ -389,12 +392,10 @@ public class BrcApi extends SlingAllMethodsServlet {
             JSONArray updated_tracks = new JSONArray();
 
             LOGGER.trace("OLD TRACKS LIST {}", trackslist.length());
-            for(int x = 0 ; x < trackslist.length(); x++)
-            {
+            for (int x = 0; x < trackslist.length(); x++) {
                 JSONObject track = trackslist.getJSONObject(x);
                 curID = track.getString(Constants.ID);
-                if(!trackID.equals(curID))
-                {
+                if (!trackID.equals(curID)) {
                     Text_track currentTrack = new Text_track(track);
                     updated_tracks.put(currentTrack.toJSON());
                 }
@@ -422,14 +423,13 @@ public class BrcApi extends SlingAllMethodsServlet {
             //LOGGER.debug("GOT VIDEO: "+ down_video.toString(1));
             LOGGER.debug("REBUILT VIDEO: {}", video.toJSON().toString(1));
             JSONObject videoItem = brAPI.cms.updateVideo(video);
-            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toString(1) );
-        }
-        catch (JSONException e)
-        {
+            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toString(1));
+        } catch (JSONException e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         }
         return null;
     }
+
     private JSONObject uploadTextTrack(SlingHttpServletRequest request, SlingHttpServletResponse response) throws JSONException, UnsupportedEncodingException, IOException {
         JSONObject text_track_payload = new JSONObject();
         JSONArray text_track_arr = new JSONArray();
@@ -439,9 +439,9 @@ public class BrcApi extends SlingAllMethodsServlet {
         text_track.put(Constants.KIND, request.getParameter(Constants.TRACK_KIND));
         String label = request.getParameter(Constants.TRACK_LABEL);
         String filename;
-        if (label!= null && !label.isEmpty()) {
+        if (label != null && !label.isEmpty()) {
             text_track.put(Constants.LABEL, label);
-            filename = label.replaceAll(" ","_")+".vtt";
+            filename = label.replaceAll(" ", "_") + ".vtt";
         } else {
             filename = "no_label.vtt";
         }
@@ -452,31 +452,25 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         //FILE UPLOAD CASE***
         //HERE IT GETS THE TRACK SOURCE - HANDLE CASE OF FILE UPLOAD
-        if("".equals(request.getParameter(Constants.TRACK_SOURCE)) && !"".equals(request.getParameter(Constants.TRACK_FILEPATH))  )
-        {
+        if ("".equals(request.getParameter(Constants.TRACK_SOURCE)) && !"".equals(request.getParameter(Constants.TRACK_FILEPATH))) {
             LOGGER.trace("FILEPATH: {} ", request.getParameter(Constants.TRACK_FILEPATH));
             //DO PUSH OF THE FILE GIVEN THE FILEPATH AND THEN PUSH THE NEW OBJECT TRACK TO VIDEO AS BEFORE
             //CHECK THAT IT IS A VTT FILE??? END OF NAME???
 
-            InputStream is = new ByteArrayInputStream(request.getParameter(Constants.TRACK_FILEPATH).getBytes("UTF-8" ));
+            InputStream is = new ByteArrayInputStream(request.getParameter(Constants.TRACK_FILEPATH).getBytes("UTF-8"));
 
             //REQUEST INGEST URL
-            JSONObject s3_url_resp = serviceUtil.createAssetS3(request.getParameter(Constants.ID),filename, is);
+            JSONObject s3_url_resp = serviceUtil.createAssetS3(request.getParameter(Constants.ID), filename, is);
             //IF SUCCESS
-            if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.getBoolean(Constants.SENT))
-            {
+            if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.getBoolean(Constants.SENT)) {
                 //text_track.put("url", s3_url_resp.getString("signed_url"));
                 text_track.put(Constants.URL, s3_url_resp.getString(Constants.API_REQUEST_URL));
                 LOGGER.trace("S3URLRESP: {}", s3_url_resp);
-            }
-            else
-            {
+            } else {
                 LOGGER.error("FAILED TO INITIALIZE BUCKET");
             }
 
-        }
-        else if (!"".equals(request.getParameter(Constants.TRACK_SOURCE)))
-        {
+        } else if (!"".equals(request.getParameter(Constants.TRACK_SOURCE))) {
             LOGGER.trace("SOURCEPATH: {}", request.getParameter(Constants.TRACK_SOURCE));
 
             text_track.put(Constants.URL, request.getParameter(Constants.TRACK_SOURCE));
@@ -490,10 +484,9 @@ public class BrcApi extends SlingAllMethodsServlet {
         JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
         //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toString(1));
 
-        if(videoItem.has(Constants.RESPONSE))
-        {
+        if (videoItem.has(Constants.RESPONSE)) {
             JSONObject responseOBJ = new JSONObject(videoItem.getString(Constants.RESPONSE));
-            LOGGER.trace("**has id object: {}", responseOBJ.has(Constants.ID) );
+            LOGGER.trace("**has id object: {}", responseOBJ.has(Constants.ID));
             //response.sendError(422, "Incompatible Payload for Audio Track");
             LOGGER.trace("Text Track Upload Complete");
 
@@ -502,6 +495,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         return null;
     }
+
     private JSONObject uploadImage(SlingHttpServletRequest request) throws JSONException {
         LOGGER.trace("upload_thumbnail");
 
@@ -554,7 +548,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = createVideo(request);
         } else if ("update_video".equals(requestedAPI)) {
             result = updateVideo(request);
-        } else if("remove_text_track".equals(requestedAPI)) {
+        } else if ("remove_text_track".equals(requestedAPI)) {
             result = removeTextTrack(request);
         } else if ("upload_text_track".equals(requestedAPI)) {
             result = uploadTextTrack(request, response);
@@ -575,9 +569,10 @@ public class BrcApi extends SlingAllMethodsServlet {
         boolean js = "js".equals(extension);
         boolean hasError = false;
         JSONObject result = new JSONObject();
-        String resultstr="{\""+Constants.ITEMS+"\":[],\""+Constants.TOTALS+"\":0,\""+Constants.ERROR+"\":"+error_code+"}";
+        String resultstr = "{\"" + Constants.ITEMS + "\":[],\"" + Constants.TOTALS + "\":0,\"" + Constants.ERROR + "\":" + error_code + "}";
 
-        try_loop: try {
+        try_loop:
+        try {
             result.put("items", new JSONArray());
             result.put(Constants.TOTALS, 0);
             result.put("error", JSONObject.NULL);
@@ -590,7 +585,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             }
 
             result = apiLogic(request, response, result);
-            if (result== null) {
+            if (result == null) {
                 //NOTE : This had to be added to fix a limitation of etx.js where a json response was non acceptable on file submission
                 response.setContentType("text/html;charset=UTF-8");
                 response.getWriter().write("true");
@@ -620,8 +615,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             error_code = 500;
         }
 
-        if (error_code >= 400)
-        {
+        if (error_code >= 400) {
             response.setStatus(error_code);
         }
 

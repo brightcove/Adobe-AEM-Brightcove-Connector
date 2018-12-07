@@ -2,7 +2,7 @@
 <!--
  Adobe AEM Brightcove Connector
  
- Copyright (C) 2017 Coresecure Inc.
+ Copyright (C) 2018 Coresecure Inc.
  
  Authors:
  Alessandro Bonfatti
@@ -54,7 +54,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>brightcove_connector</artifactId>
-        <version>5.5.0</version>
+        <version>5.5.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -232,7 +232,7 @@
         <dependency>
             <groupId>com.coresecure.brightcove.cq5</groupId>
             <artifactId>brightcove-services</artifactId>
-            <version>5.5.0</version>
+            <version>5.5.1</version>
         </dependency>
 
         <dependency>

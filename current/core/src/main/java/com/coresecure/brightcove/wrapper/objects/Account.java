@@ -2,7 +2,7 @@
 
     Adobe AEM Brightcove Connector
 
-    Copyright (C) 2017 Coresecure Inc.
+    Copyright (C) 2018 Coresecure Inc.
 
     Authors:    Alessandro Bonfatti
                 Yan Kisen
@@ -53,6 +53,7 @@ public class Account {
     private TokenObj authToken;
     public final Platform platform;
     private static final Logger LOGGER = LoggerFactory.getLogger(Account.class);
+
 
     public Account(Platform aPlatform, String aClient_id, String aClient_secret, String aAccount_id) {
         client_id = aClient_id;

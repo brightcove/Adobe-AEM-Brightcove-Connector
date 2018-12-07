@@ -2,7 +2,7 @@
 
     Adobe AEM Brightcove Connector
 
-    Copyright (C) 2017 Coresecure Inc.
+    Copyright (C) 2018 Coresecure Inc.
 
     Authors:    Alessandro Bonfatti
                 Yan Kisen
@@ -91,21 +91,18 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
         executeRequest(req, resp);
     }
 
-    private void executeRequest(final SlingHttpServletRequest req, final SlingHttpServletResponse resp)
-    {
+    private void executeRequest(final SlingHttpServletRequest req, final SlingHttpServletResponse resp) {
         //INITIALIZING THE RESOURCE RESOLVER
         ExecutorService executor = Executors.newFixedThreadPool(assetIntegratorCronBundle.getMaxThreadNum());
         List<Future<String>> list = new ArrayList<Future<String>>();
         LOGGER.trace("BRIGHTCOVE ASSET INTEGRATION - SYNCHRONIZING DATABASE");
-        try
-        {
+        try {
 
 
             //MAIN TRY - CONFIGURATION GRAB SERVICE
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();    //GETCONFIG SERVICE
             Set<String> services = cg.getAvailableServices();                            //BUILD SERVICES
-            for(String requestedAccount: services)
-            {
+            for (String requestedAccount : services) {
                 final String requestedServiceAccount = requestedAccount;
                 //GET CURRENT CONFIGURATION
                 ConfigurationService cs = cg.getConfigurationService(requestedAccount);
@@ -156,24 +153,22 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
             }
 
 
+        } catch (Exception e) {
+            LOGGER.error("ERROR", e);
         }
-        catch (Exception e)
-        {
-            LOGGER.error("ERROR" , e);
-        }
-        for(Future<String> fut : list){
+        for (Future<String> fut : list) {
             try {
-                LOGGER.trace(new Date()+ "::"+fut.get());
+                LOGGER.trace(new Date() + "::" + fut.get());
             } catch (Exception e) {
-                LOGGER.error("ERROR" , e);
+                LOGGER.error("ERROR", e);
             }
         }
         //shut down the executor service now
         executor.shutdown();
     }
+
     @Override
-    protected void doGet(final SlingHttpServletRequest req, final SlingHttpServletResponse resp) throws ServletException, IOException
-    {
+    protected void doGet(final SlingHttpServletRequest req, final SlingHttpServletResponse resp) throws ServletException, IOException {
         executeRequest(req, resp);
     }
 
