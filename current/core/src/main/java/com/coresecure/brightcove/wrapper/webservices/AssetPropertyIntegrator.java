@@ -2,7 +2,7 @@
 
     Adobe AEM Brightcove Connector
 
-    Copyright (C) 2017 Coresecure Inc.
+    Copyright (C) 2018 Coresecure Inc.
 
     Authors:    Alessandro Bonfatti
                 Yan Kisen
