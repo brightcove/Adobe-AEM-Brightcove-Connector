@@ -45,8 +45,8 @@ The project comes with the auto-public repository configured. To setup the repos
 
 ##License
 
-	Copyright (C) 2017 **[Coresecure Inc.](https://www.coresecure.com)**
-
+	Copyright (C) 2018 **[Coresecure Inc.](https://www.coresecure.com)**
+	
 #####Authors:    
    - Alessandro Bonfatti
    - Yan Kisen
@@ -72,4 +72,3 @@ squeakysand-commons and squeakysand-osgi (or a modified version of those
 libraries), containing parts covered by the terms of APACHE LICENSE 2.0 
 or MIT License, the licensors of this Program grant you additional 
 permission to convey the resulting work.
-
