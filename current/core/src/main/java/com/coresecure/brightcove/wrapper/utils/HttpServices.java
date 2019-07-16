@@ -410,7 +410,9 @@ public class HttpServices {
         LOGGER.debug("executeFullGet: " + targetURL);
         URL url;
         URLConnection connection = null;
-
+        InputStream is = null;
+        ByteArrayOutputStream response = null;
+ 
         JSONObject exGetResponse = new JSONObject();
         try {
             // Create connection
@@ -420,7 +422,7 @@ public class HttpServices {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
             } else {
                 connection = getSSLConnection(url, targetURL, HttpsURLConnection.class);
-
+ 
             }
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
                     com.adobe.granite.rest.Constants.CT_WWW_FORM_URLENCODED);
@@ -436,27 +438,39 @@ public class HttpServices {
             connection.setDoOutput(true);
             connection.connect();
             // Get Response
-            InputStream is = connection.getInputStream();
-
-            ByteArrayOutputStream response = new ByteArrayOutputStream();
-
+            is = connection.getInputStream();
+ 
+            response = new ByteArrayOutputStream();
+ 
             byte[] buffer = new byte[4096];
             int n;
-
+ 
             while ((n = is.read(buffer)) != -1) {
                 response.write(buffer, 0, n);
             }
             LOGGER.trace("response committed!");
-
+ 
             exGetResponse.put(Constants.RESPONSE, new String(response.toByteArray(), "UTF-8"));
             exGetResponse.put(Constants.BINARY, response.toByteArray());
             exGetResponse.put(Constants.MIME_TYPE, connection.getContentType());
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         } finally {
-
-            if (connection != null) {
-                connection = null;
+            if (null != is) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    LOGGER.error(Constants.ERROR_LOG_TMPL,e);
+               }
+            }
+            if (null != response) {
+                try {
+                    response.flush();
+                    response.close();
+                } catch (IOException e) {
+ 
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+                }
             }
         }
         return exGetResponse;
