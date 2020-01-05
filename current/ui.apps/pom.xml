@@ -2,12 +2,7 @@
 <!--
  Adobe AEM Brightcove Connector
  
- Copyright (C) 2018 Coresecure Inc.
- 
- Authors:
- Alessandro Bonfatti
- Yan Kisen
- Pablo Kropilnicki
+ Copyright (C) 2019 3|SHARE Inc.
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -54,7 +49,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>brightcove_connector</artifactId>
-        <version>5.5.2-SNAPSHOT</version>
+        <version>5.5.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -232,7 +227,7 @@
         <dependency>
             <groupId>com.coresecure.brightcove.cq5</groupId>
             <artifactId>brightcove-services</artifactId>
-            <version>5.5.2-SNAPSHOT</version>
+            <version>5.5.3-SNAPSHOT</version>
         </dependency>
 
         <dependency>

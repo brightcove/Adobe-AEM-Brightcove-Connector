@@ -87,3 +87,4 @@ cs_commons-dev/
 /out/
 
 /current/prepareRelease.sh
+/.metadata/
