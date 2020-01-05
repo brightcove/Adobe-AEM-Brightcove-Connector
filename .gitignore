@@ -21,6 +21,7 @@
 .classpath
 .project
 .settings/
+.metadata*
 
 
 ### VLT ###
