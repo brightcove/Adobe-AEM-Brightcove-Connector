@@ -46,7 +46,7 @@
     <parent>
         <groupId>com.coresecure.brightcove.cq5</groupId>
         <artifactId>brightcove_connector</artifactId>
-        <version>5.5.3-SNAPSHOT</version>
+        <version>5.5.4-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>brightcove-services</artifactId>
