@@ -850,6 +850,12 @@ public class ServiceUtil {
         Date orig_lastmod_time = original_map.get(JcrConstants.JCR_LASTMODIFIED,new Date(0));
         LOGGER.trace("ORGINAL RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,orig_lastmod_time, brc_lastsync_time);
         //LOGGER.trace("{}",original_map);
+        ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+        ConfigurationService brcService = cg.getConfigurationService(account_id);
+        String ingest_profile = brcService.getIngestProfile();
+        if (ingest_profile == null || ingest_profile.length() == 0) {
+            ingest_profile = "";
+        }
 
         if(orig_lastmod_time.compareTo(brc_lastsync_time)  > 0)
         {
@@ -861,7 +867,7 @@ public class ServiceUtil {
             LOGGER.trace("S3RESP : " + s3_url_resp_original);
             LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
             if (s3_url_resp_original != null && s3_url_resp_original.getBoolean(Constants.SENT)) {
-                master = new JSONObject("{'master': {'url': '" + s3_url_resp_original.getString(Constants.API_REQUEST_URL) + "'},'profile': 'high-resolution','capture-images': false}");
+                master = new JSONObject("{'master': {'url': '" + s3_url_resp_original.getString(Constants.API_REQUEST_URL) + "'},'profile': '" + ingest_profile + "','capture-images': false}");
             }
 
         }
