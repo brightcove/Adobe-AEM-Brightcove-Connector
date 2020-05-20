@@ -128,6 +128,7 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
                 String componentPath = fullRequestPath.substring(0, fullRequestPath.lastIndexOf("/"));
                 String dialogPath = getInheritDialog(slingRequest);
                 if (dialogPath != null) {
+                    LOGGER.debug("dialog path => " + dialogPath);
                     Resource dialogNodeRes = slingRequest.getResourceResolver().getResource(dialogPath);
                     if (dialogNodeRes != null) {
                         Node dialogNode = dialogNodeRes.adaptTo(Node.class);
@@ -196,7 +197,15 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
     private String getInheritDialog(SlingHttpServletRequest slingRequest) throws RepositoryException {
         String fullRequestPath = slingRequest.getRequestURI();
         String componentPath = fullRequestPath.substring(0, fullRequestPath.lastIndexOf("/"));
+
+        if (slingRequest.getContextPath().length() > 0) {
+            componentPath = componentPath.replace(slingRequest.getContextPath(), "/");
+        }
+
         String result = null;
+
+        LOGGER.trace("contextPath --> " + slingRequest.getContextPath());
+        LOGGER.trace("componentPath to start --> " + componentPath);
 
         Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
         int avoidLoop = 0;
