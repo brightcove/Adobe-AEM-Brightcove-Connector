@@ -2,9 +2,9 @@ Adobe AEM Brightcove Connector
 
 This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.com/en/video-cloud/ )** platform into Adobe Experience Manager (CQ5)
 
-<http://www.coresecure.com/brightcove-aem-integration>
+<https://integrations.support.brightcove.com/adobe/getting-started-brightcove-video-connect-adobe-experience-manager.html>
 #### Supports
- - AEM 6.2, 6.3
+ - AEM 6.2, 6.3, 6.4, 6.5
 
 ## Features
 - Components for Authoring Videos and Playlists
@@ -45,12 +45,14 @@ The project comes with the auto-public repository configured. To setup the repos
 
 ##License
 
-	Copyright (C) 2018 **[Coresecure Inc.](https://www.coresecure.com)**
+	Copyright (C) 2020 **[Brightcove Inc.](https://www.brightcove.com)**
 	
 #####Authors:    
    - Alessandro Bonfatti
    - Yan Kisen
    - Pablo Kropilnicki
+   - Paul Legan
+   - Zoheb Haider
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
