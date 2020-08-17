@@ -37,6 +37,7 @@ body {
 }
 
 #CQ {
+  display: none;
   background: url("/libs/cq/ui/resources/titlebar.png") repeat scroll 0 0 transparent;
   height: 36px;
   left: 0;
@@ -318,7 +319,7 @@ div.delConfPop {
   position: fixed;
   right: 5px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  top: 0;
+  top: 60px;
 }
 
 #loading {
@@ -330,7 +331,7 @@ div.delConfPop {
   position: fixed;
   right: 5px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  top: 0;
+  top: 60px;
     z-index:9999999;
 }
 
@@ -407,7 +408,11 @@ div.hLine {
   padding: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   background: #fff;
-  top: 36px;
+  top: 10px;
+}
+
+.foundation-layout-panel-content {
+	overflow: hidden;
 }
 
 #bmetaEdit {

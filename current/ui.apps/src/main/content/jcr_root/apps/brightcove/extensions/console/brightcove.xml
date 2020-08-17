@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:rep="internal"
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0" xmlns:rep="internal"
     jcr:description="Manage Brightcove Videos And Playlists."
     jcr:mixinTypes="[cq:Console,rep:AccessControllable]"
     jcr:primaryType="cq:Widget"
     jcr:title="Brightcove Admin"
     sling:redirect="{Boolean}false"
-    sling:resourceType="brightcove/components/tools/brightcoveadmin"
+    sling:resourceSuperType="granite/ui/components/shell/page"
+    sling:resourceType="brightcove/extensions/console/brightcove"
     sling:vanityOrder="{Long}400"
     sling:vanityPath="/brightcove/admin"
     consoleDescription="Manage Brightcove Videos And Playlists."
     consoleTitle="Brightcove"
     iconClass="brightcoveadmin"
-    id="cq-brightcove"/>
+    id="cq-brightcove">
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+            <content
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="brightcove/components/tools/brightcoveadmin"/>
+        </items>
+    </content>
+    <title
+        jcr:primaryType="nt:unstructured"
+        jcr:title="Brightcove Admin"
+        sling:resourceType="granite/ui/components/shell/title"/>
+</jcr:root>
