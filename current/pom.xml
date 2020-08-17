@@ -59,7 +59,7 @@ Copyright (C) 2019 3|SHARE Inc.
         <aem.port>4502</aem.port>
         <aem.publish.host>localhost</aem.publish.host>
         <aem.publish.port>4503</aem.publish.port>
-        <aem.uber_version>6.2.0</aem.uber_version>
+        <aem.uber_version>6.5.0</aem.uber_version>
         <sling.user>admin</sling.user>
         <sling.password>admin</sling.password>
         <vault.user>admin</vault.user>
@@ -520,7 +520,7 @@ Copyright (C) 2019 3|SHARE Inc.
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>uber-jar</artifactId>
                 <version>${aem.uber_version}</version>
-                <classifier>obfuscated-apis</classifier>
+                <classifier>apis</classifier>
                 <scope>provided</scope>
             </dependency>
             <dependency>
