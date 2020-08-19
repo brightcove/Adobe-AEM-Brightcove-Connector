@@ -3,6 +3,6 @@
     jcr:mixinTypes="[sling:Resource]"
     jcr:primaryType="cq:Component"
     jcr:title="Brightcove Admin"
-    sling:resourceSuperType="wcm/foundation/components/page"
+    sling:resourceSuperType="granite/ui/components/shell/page"
     sling:resourceType="brightcove/components/tools/brightcoveadmin"
     componentGroup=".hidden"/>

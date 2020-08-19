@@ -118,7 +118,7 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     protected void bindConfigurationService(ServiceReference ref) {
         synchronized (this.myConfigurationServices) {
             String customKey = (String) ref.getProperty(KEY);
-            ConfigurationService operation = (ConfigurationService) this.componentContext.locateService("ConfigurationService", ref);
+            ConfigurationService operation = (ConfigurationService) this.componentContext.locateService("ConfigurationService");
             //Or you can use
             //MyCustomServices operation = ref.getProperty("service.pid");
             if (operation != null) {
