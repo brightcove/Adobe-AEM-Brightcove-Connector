@@ -17,9 +17,7 @@
             itemResourceType = 'cq/gui/components/authoring/assetfinder/asset';
     
         self.loadAssets = function (query, lowerLimit, upperLimit) {
-            query = query.concat("\"jcr:content/metadata/dam:status\": \"approved\" ");
-            query = query.concat("order:\"-jcr:content/jcr:lastModified\" ");
-    
+            
             var param = {
                 '_dc': new Date().getTime(),
                 'query': query.concat("order:\"-jcr:content/jcr:lastModified\" "),
