@@ -415,6 +415,10 @@ div.hLine {
 	overflow: hidden;
 }
 
+.foundation-layout-util-maximized-alt {
+  height: auto;
+}
+
 #bmetaEdit {
   display: inline-block;
   *display: inline;
