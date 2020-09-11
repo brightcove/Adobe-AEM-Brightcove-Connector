@@ -340,6 +340,59 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONObject moveVideoToFolder(String folderId, String videoId) {
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.moveVideoToFolder(videoId, folderId);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public JSONObject removeVideoFromFolder(String folderId, String videoId) {
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.removeVideoFromFolder(videoId, folderId);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public String getVideosInFolder(String folder, int offset) {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONArray videos = brAPI.cms.getVideosInFolder(folder, offset);
+
+            if (videos.length() > 0 ) {
+                items.put("items", videos);
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public String getFolders() {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONArray folders = brAPI.cms.getFolders(100, 0);
+
+            if (folders.length() > 0 ) {
+                items.put("items", folders);
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
 
     public JSONObject getPlaylistByID(String id) {
         JSONObject result = new JSONObject();
@@ -349,7 +402,6 @@ public class ServiceUtil {
             LOGGER.error(e.getClass().getName(), e);
         }
         return result;
-
     }
 
     public String getPlaylists(int offset, int limit, boolean exportCSV, boolean full_scroll) {

@@ -179,6 +179,30 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
+    private JSONObject moveVideoToFolder(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = serviceUtil.moveVideoToFolder(request.getParameter("folder"), request.getParameter("video"));
+        return result;
+    }
+
+    private JSONObject removeVideoFromFolder(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = serviceUtil.removeVideoFromFolder(request.getParameter("folder"), request.getParameter("video"));
+        return result;
+    }
+    
+    private JSONObject getVideosInFolder(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
+        return result;
+    }
+
+    private JSONObject getFolders(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getFolders());
+        return result;
+    }
+
     private JSONObject searchVideos(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         LOGGER.debug("query: " + request.getParameter(Constants.QUERY));
@@ -554,6 +578,14 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = uploadTextTrack(request, response);
         } else if ("upload_image".equals(requestedAPI)) {
             result = uploadImage(request);
+        } else if ("list_folders".equals(requestedAPI)) {
+            result = getFolders(request);
+        } else if ("get_videos_in_folder".equals(requestedAPI)) {
+            result = getVideosInFolder(request);
+        } else if ("move_video_to_folder".equals(requestedAPI)) {
+            result = moveVideoToFolder(request);
+        } else if ("remove_video_from_folder".equals(requestedAPI)) {
+            result = removeVideoFromFolder(request);
         } else {
             result.put(Constants.ERROR, 404);
         }

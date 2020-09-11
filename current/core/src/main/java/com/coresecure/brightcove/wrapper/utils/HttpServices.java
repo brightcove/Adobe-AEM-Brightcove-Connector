@@ -90,6 +90,82 @@ public class HttpServices {
         return PROXY;
     }
 
+    public static String executePut(String targetURL,
+                                       Map<String, String> headers) {
+        LOGGER.debug("executePut: " + targetURL);
+        URL url;
+        HttpsURLConnection connection = null;
+        String payload = "{}";
+        String putResponse = null;
+        BufferedReader rd = null;
+        DataOutputStream wr = null;
+        try {
+            // Create connection
+            url = new URL(targetURL.replaceAll(" ", "%20"));
+            connection = getSSLConnection(url, targetURL);
+            connection.setRequestMethod(DavMethods.METHOD_PUT);
+            connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
+            connection.setRequestProperty(Constants.CONTENT_LENGTH_HEADER,
+                    "" + Integer.toString(payload.getBytes().length));
+            connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
+            for (String key : headers.keySet()) {
+                connection.setRequestProperty(key, headers.get(key));
+            }
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+
+            // Send request
+            wr = new DataOutputStream(connection.getOutputStream());
+            wr.write(payload.getBytes("UTF-8"));
+//            wr.writeBytes(payload);
+
+            // Get Response
+            LOGGER.debug("getResponseCode: " + connection.getResponseCode());
+            LOGGER.debug("getResponseCode: " + connection.getResponseMessage());
+            if (connection.getResponseCode() < 400) {
+                InputStream is = connection.getInputStream();
+                rd = new BufferedReader(new InputStreamReader(is));
+                String line;
+                StringBuffer response = new StringBuffer();
+                while ((line = rd.readLine()) != null) {
+                    response.append(line);
+                    response.append('\r');
+                }
+                putResponse = response.toString();
+            } else {
+                putResponse = "{'error_code':" + connection.getResponseCode() + ",'message':'" + connection.getResponseMessage() + "'}";
+            }
+        } catch (Exception e) {
+            LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+            putResponse = "{'error_code':-1,'message':'Exception in executeDelete'}";
+
+        } finally {
+
+            if (connection != null) {
+                connection.disconnect();
+            }
+            if (null != rd) {
+                try {
+                    rd.close();
+                } catch (IOException e) {
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+                }
+            }
+            if (null != wr) {
+                try {
+                    wr.flush();
+                    wr.close();
+                } catch (IOException e) {
+                    LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+                }
+            }
+
+        }
+        LOGGER.debug("putResponse: " + putResponse);
+        return putResponse;
+    }
+
     public static String executeDelete(String targetURL,
                                        Map<String, String> headers) {
         LOGGER.debug("executeDelete: " + targetURL);

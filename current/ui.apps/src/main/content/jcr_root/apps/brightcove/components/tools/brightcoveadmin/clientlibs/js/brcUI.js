@@ -73,12 +73,15 @@ $(function () {
         curPlaylist: 0,
         textSearch: 0,
         tagSearch: 0,
+        selectedVideos: [],
+        curFolder: 0,
         generic: 0,     //used as a placeholder
         currentFunction: null,  //called when a page is changed
         size: 30     //Default Page Size [30], can be no larger than 100.
     };
 
     Load(getAllVideosURL());
+    loadFolders();
     var app = new CQ.Switcher({});
     app.render(document.body);
     //app = new CQ.HomeLink({});
@@ -90,7 +93,134 @@ $(function () {
         window.location.reload();
     });
 
+    $('.butDiv').hide();
+
+    $('body').on('click', function(event) {
+        if (!$(event.target).hasClass('menuToggle')) {
+            $('.menu').removeClass('open');
+        }
+    })
+
+    $('.folder-selector .menu-options').on('click', 'li', function(event) {
+        var folderId = $(event.target).data('folder-id');
+        $.each(paging.selectedVideos, function (i, n) {
+            console.log(folderId);
+            if (folderId == 'none') {
+                // we need to delete the videos from this folder
+                // grab the folder ID from the checkbox
+                var existingFolderId = $(n).data('folder-id');
+                // now call the API
+                var data = {
+                    a: 'remove_video_from_folder',
+                    folder: existingFolderId,
+                    video: $(n).val()
+                };
+                $.ajax({
+                    type: 'GET',
+                    url: '/bin/brightcove/api.js',
+                    data: data,
+                    async: true,
+                    success: function (data)
+                    {
+                        // do something here?
+                    }
+                });
+            } else {
+                // we are moving the videos to an actual folder
+                var data = {
+                    a: 'move_video_to_folder',
+                    folder: folderId,
+                    video: $(n).val()
+                };
+                $.ajax({
+                    type: 'GET',
+                    url: '/bin/brightcove/api.js',
+                    data: data,
+                    async: true,
+                    success: function (data)
+                    {
+                        // do something here?
+                    }
+                });
+            }
+        });
+    })
+
+    $('body').on('brc:checked', function(event) {
+        var inputTags = document.getElementById('listTable').getElementsByTagName('input');
+        paging.selectedVideos = [];
+        var l = inputTags.length
+        for (var i = 2; i < l; i++) {
+            if (true == inputTags[i].checked) {
+                paging.selectedVideos.push(inputTags[i]);
+            }
+        }
+        $('.butDiv').toggle(paging.selectedVideos.length > 0);
+    });
+
 });
+
+function moveVideoToFolder() {
+    $('.folder-selector').toggleClass('open');
+}
+
+function getMoveVideoToFolderUrl(video_id, folder_id) {
+    loadStart();
+    return apiLocation +
+                    '.js?account_id='+$("#selAccount").val()+'&a=move_video_to_folder&callback=showAllVideosCallBack&folder=' + folder_id + '&video=' + video_id;
+}
+
+function getFolderListingUrl(id) {
+    loadStart();
+    var sort_by = $("#trHeader th.sortable").not("NONE").attr("data-sortby");
+    var sort_type = $("#trHeader th.sortable").not("NONE").attr("data-sorttype");
+    return apiLocation +
+                    '.js?account_id='+$("#selAccount").val()+'&a=get_videos_in_folder&callback=showAllVideosCallBack&folder=' + id + '&sort=' + sort_type + sort_by
+                    + '&limit=' + paging.size + '&start=' + paging.generic;
+}
+
+function loadFolders() {
+    // first set up the select change event
+    $('#fldr_list').on('change', function() {
+        $('.butDiv').hide();
+        var selected = $(this).val();
+        if (selected == 'all') {
+            Load(getAllVideosURL());
+        } else {
+            console.log('search videos by folder=' + selected);
+            Load(getFolderListingUrl(selected));
+        }
+    });
+
+    // now make the API call to load the folder options
+    var data = {
+        a: 'list_folders',
+        callback: 'loadFolderCallback'
+    };
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: data,
+        async: true,
+        success: function (data)
+        {
+            // do something here?
+        }
+    });
+}
+
+function loadFolderCallback(data) {
+    var $folder_select = $('#fldr_list');
+    var $move_folder_list = $('.folder-selector .menu-options');
+    $.each(data.items, function (i, n) {
+        $folder_select
+            .append($('<option>', { value : n.id }).text(n.name));
+        $move_folder_list
+            .append($('<li>', { class: 'menu-option', 'data-folder-id' : n.id })
+                        .text(n.name)
+                    );
+    });
+}
 
 //function to move the progress bar on the video upload progress window
 function uploadProgressBar() {
@@ -165,7 +295,7 @@ function buildMainVideoList(title) {
         $("#tbData").append(
             "<tr style=\"cursor:pointer;\" id=\"" + (i) + "\"> \
             <td>\
-                <input type=\"checkbox\" value=\"" + (n.id) + "\" id=\"" + (i) + "\" onclick=\"checkCheck()\">\
+                <input type=\"checkbox\" value=\"" + (n.id) + "\" id=\"" + (i) + "\" data-folder-id=\"" + ((n.folder_id) ? n.folder_id : '') + "\" onclick=\"checkCheck()\">\
             </td><td>"
             + n.name +
             "</td><td>"
@@ -176,9 +306,10 @@ function buildMainVideoList(title) {
             + n.id +
             "</td></tr>"
         );
-        $("tr#"+i,"#tbData").bind('click', function () {
+        $("tr#"+i,"#tbData").on('click', function () {
             showMetaData(this.id);
             $("#tdMeta").show();
+            $('body').trigger('brc:checked');
         });
     });
 
@@ -233,6 +364,7 @@ function buildPlaylistList() {
             + ((n.reference_id) ? n.reference_id : '') +
             "</td><td>"
             + n.id +
+            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist-id=\"" + n.id + "\"><img src=\"/etc/designs/cs/brightcove/shared/img/delete.svg\" /></span>" +
             "</td></tr>"
         );
     });
@@ -310,8 +442,9 @@ function showPlaylist() {
             "</td><td>"
             + n.id +
             "</td></tr>"
-        ).children("tr").bind('click', function () {
+        ).children("tr").on('click', function () {
                 showMetaData(this.id);
+                $('body').trigger('brc:checked');
             });
     });
 
@@ -590,604 +723,437 @@ function syncDB()
 
 function uploadPoster()
 {
-    //var url = window.location.origin + "/bin/brightcove/dataload";
+    // first cleanup any existing dialogs
+    var elem = document.querySelector('#upload_poster_dialog');
+    if (elem) {
+        elem.parentNode.removeChild(elem);
+    }
 
-    var form = new CQ.Ext.form.FormPanel({
-        baseCls: 'x-plain',
-        labelWidth: 130,
-        url: apiLocation+
-        '.js',
-        method: "POST",
-        standardSubmit: false,
-        defaults: {
-            xtype: 'textfield'
+    var dialog = new Coral.Dialog().set({
+        id: 'upload_poster_dialog',
+        header: {
+          innerHTML: 'Update Poster Image'
         },
-
-        items: [{
-            xtype: 'hidden',
-            id: 'limit',
-            name: 'limit',
-            value: paging.size
-        },{
-            xtype: 'hidden',
-            id: 'start',
-            name: 'start',
-            value:paging.generic
-        },{
-            xtype: 'hidden',
-            id: 'id',
-            name: 'id',
-            value: document.getElementById('divMeta.id').innerHTML,
-            width: "100%"
-        },{
-            xtype: 'hidden',
-            id: 'a',
-            name: 'a',
-            value: 'upload_image',
-            width: "100%"
-        }, {
-            xtype: 'hidden',
-            fieldLabel: 'Account ID:',
-            value: $("#selAccount").val(),
-            name:"account_id",
-            width: "100%"
-        },{
-            xtype: 'hidden',
-            fieldLabel: 'Video ID:',
-            value: document.getElementById('divMeta.id').innerHTML,
-            disabled: true,
-            width: "100%"
-        },{
-            xtype: 'textfield',
-            fieldLabel: 'URL Source:',
-            allowBlank: false,
-            width: "100%",
-            name:"poster_source"
-        }]}),
-
-        u = new CQ.Ext.Window({
-            title: 'Upload Poster',
-            collapsible: true,
-            maximizable: true,
-            width: 750,
-            height: 500,
-            minWidth: 300,
-            minHeight: 200,
-            bodyStyle: 'padding:5px;',
-            buttonAlign: 'center',
-            items: form,
-            buttons: [{
-                text: 'Send',
-                handler: function (btn, evt)
+        content: {
+          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' + 
+          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
+          'value="' + document.getElementById('divMeta.videoStillURL').src + '"' +
+          '></div></form>'
+        },
+        footer: {
+          innerHTML: '<button is="coral-button" id="upload_poster_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
+        }
+    });
+    dialog.on('click', '#upload_poster_dialog_click', function() {
+        if ($('#upload_poster_dialog_field_source').val() != '') {
+            var fields = {
+                limit: paging.size,
+                start: paging.generic,
+                id: document.getElementById('divMeta.id').innerHTML,
+                a: 'upload_image',
+                account_id: $("#selAccount").val(),
+                poster_source: $('#upload_poster_dialog_field_source').val()
+            }
+            console.log(fields);
+            $.ajax({
+                url: apiLocation + '.js',
+                type: 'POST',
+                data: fields,
+                success: function ( data ){
+                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                    Load(getAllVideosURL());
+                    dialog.hide();
+                    location.reload();
+                },
+                error: function ( data )
                 {
-                    var formobj = form.getForm();
-                    if (formobj.isValid())
-                    {
-                        loadStart();
-                        formobj.submit({
-                            success: function (form, action) {
-                                u.destroy();
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                Load(getAllVideosURL());
-                            },
-                            failure: function (form, action) {
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                Load(getAllVideosURL());
-                            }
-                        });
-                    }
-                    else alert('Invalid form');
+                    console.log(data);
+                    alert('Oops! There was an error with your submission. Please try again.');
                 }
-            }, {
-                text: 'Cancel',
-                handler: function (btn, evt) {
-                    u.destroy()
-                }
-            }]
-        });
-
-    u.setPosition(10, 10);
-    u.show();
-
-
-
-
+            });
+        } else {
+            alert('Please provide a valid poster image source URL.');
+        }
+        
+    });
+    document.body.appendChild(dialog);
+    dialog.show();
 
 }
 
-
-
-
 function uploadThumbnail()
 {
-    //var url = window.location.origin + "/bin/brightcove/dataload";
+    // first cleanup any existing dialogs
+    var elem = document.querySelector('#upload_thumbnail_dialog');
+    if (elem) {
+        elem.parentNode.removeChild(elem);
+    }
 
-    var form = new CQ.Ext.form.FormPanel({
-        baseCls: 'x-plain',
-        labelWidth: 130,
-        url: apiLocation+
-        '.js',
-        method: "POST",
-        standardSubmit: false,
-        defaults: {
-            xtype: 'textfield'
+    var dialog = new Coral.Dialog().set({
+        id: 'upload_thumbnail_dialog',
+        header: {
+          innerHTML: 'Update Thumbnail'
         },
-
-        items: [{
-            xtype: 'hidden',
-            id: 'limit',
-            name: 'limit',
-            value: paging.size
-        },{
-            xtype: 'hidden',
-            id: 'start',
-            name: 'start',
-            value:paging.generic
-        },{
-            xtype: 'hidden',
-            id: 'id',
-            name: 'id',
-            value: document.getElementById('divMeta.id').innerHTML,
-            width: "100%"
-        },{
-            xtype: 'hidden',
-            id: 'a',
-            name: 'a',
-            value: 'upload_image',
-            width: "100%"
-        }, {
-            xtype: 'hidden',
-            fieldLabel: 'Account ID:',
-            value: $("#selAccount").val(),
-            name:"account_id",
-            width: "100%"
-        },{
-            xtype: 'hidden',
-            fieldLabel: 'Video ID:',
-            value: document.getElementById('divMeta.id').innerHTML,
-            disabled: true,
-            width: "100%"
-        },{
-            xtype: 'textfield',
-            fieldLabel: 'URL Source:',
-            allowBlank: false,
-            width: "100%",
-            name:"thumbnail_source"
+        content: {
+          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' + 
+          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
+          'value="' + document.getElementById('divMeta.thumbnailURL').src + '"' +
+          '></div></form>'
+        },
+        footer: {
+          innerHTML: '<button is="coral-button" id="upload_thumbnail_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
         }
-        ]}),
-        o = new CQ.Ext.Window({
-            title: 'Upload Thumbnail',
-            collapsible: true,
-            maximizable: true,
-            width: 750,
-            height: 500,
-            minWidth: 300,
-            minHeight: 200,
-            bodyStyle: 'padding:5px;',
-            buttonAlign: 'center',
-            items: form,
-            buttons: [{
-                text: 'Send',
-                handler: function (btn, evt)
+    });
+    dialog.on('click', '#upload_thumbnail_dialog_click', function() {
+        if ($('#upload_thumbnail_dialog_field_source').val() != '') {
+            var fields = {
+                limit: paging.size,
+                start: paging.generic,
+                id: document.getElementById('divMeta.id').innerHTML,
+                a: 'upload_image',
+                account_id: $("#selAccount").val(),
+                thumbnail_source: $('#upload_thumbnail_dialog_field_source').val()
+            }
+            console.log(fields);
+            $.ajax({
+                url: apiLocation + '.js',
+                type: 'POST',
+                data: fields,
+                success: function ( data ){
+                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                    Load(getAllVideosURL());
+                    dialog.hide();
+                    location.reload();
+                },
+                error: function ( data )
                 {
-                    var formobj = form.getForm();
-                    if (formobj.isValid())
-                    {
-                        loadStart();
-                        formobj.submit({
-                            success: function (form, action) {
-                                o.destroy();
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                Load(getAllVideosURL());
-                            },
-                            failure: function (form, action) {
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                Load(getAllVideosURL());
-                            }
-                        });
-                    }
-                    else alert('Invalid form');
+                    console.log(data);
+                    alert('Oops! There was an error with your submission. Please try again.');
                 }
-            }, {
-                text: 'Cancel',
-                handler: function (btn, evt) {
-                    o.destroy()
-                }
-            }]
-        });
-
-    o.setPosition(10, 10);
-    o.show();
-
-
-
-
+            });
+        } else {
+            alert('Please provide a valid thumbnail source URL.');
+        }
+        
+    });
+    document.body.appendChild(dialog);
+    dialog.show();
 
 }
 
 function uploadtrack()
-{var default_tracks = $("#divMeta\\.text_tracks_table tr.default_track");
+{
+    var default_tracks = $("#divMeta\\.text_tracks_table tr.default_track");
 
 
-    var form = new CQ.Ext.form.FormPanel({
-            baseCls: 'x-plain',
-            labelWidth: 130,
-            url: apiLocation+
-            '.js',
-            method: "POST",
-            standardSubmit: false,
-            defaults: {
-                xtype: 'textfield'
-            },
+    var elem = document.querySelector('#upload_text_track_dialog');
+    if (elem) {
+        elem.parentNode.removeChild(elem);
+    }
 
-            items: [{
-                xtype: 'hidden',
-                id: 'limit',
-                name: 'limit',
-                value: paging.size
-            },{
-                xtype: 'hidden',
-                id: 'start',
-                name: 'start',
-                value:paging.generic
-            },{
-                xtype: 'hidden',
-                id: 'id',
-                name: 'id',
-                value: document.getElementById('divMeta.id').innerHTML,
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                id: 'a',
-                name: 'a',
-                value: 'upload_text_track',
-                width: "100%"
-            }, {
-                xtype: 'hidden',
-                fieldLabel: 'Account ID:',
-                value: $("#selAccount").val(),
-                name:"account_id",
-                width: "100%"
-            },{
-                xtype: 'hidden',
-                fieldLabel: 'Video ID:',
-                value: document.getElementById('divMeta.id').innerHTML,
-                disabled: true,
-                width: "100%"
-            },{
-                xtype: "selection",
-                fieldLabel: "Language:",
-                name: "track_lang",
-                type: "select",
-                allowBlank: false,
-                options: [
-                    {"value":"ar","text":"ar"},
-                    {"value":"ar-AE","text":"ar-AE"},
-                    {"value":"ar-BH","text":"ar-BH"},
-                    {"value":"ar-DZ","text":"ar-DZ"},
-                    {"value":"ar-EG","text":"ar-EG"},
-                    {"value":"ar-IQ","text":"ar-IQ"},
-                    {"value":"ar-JO","text":"ar-JO"},
-                    {"value":"ar-KW","text":"ar-KW"},
-                    {"value":"ar-LB","text":"ar-LB"},
-                    {"value":"ar-LY","text":"ar-LY"},
-                    {"value":"ar-MA","text":"ar-MA"},
-                    {"value":"ar-OM","text":"ar-OM"},
-                    {"value":"ar-QA","text":"ar-QA"},
-                    {"value":"ar-SA","text":"ar-SA"},
-                    {"value":"ar-SD","text":"ar-SD"},
-                    {"value":"ar-SY","text":"ar-SY"},
-                    {"value":"ar-TN","text":"ar-TN"},
-                    {"value":"ar-YE","text":"ar-YE"},
-                    {"value":"be","text":"be"},
-                    {"value":"be-BY","text":"be-BY"},
-                    {"value":"bg","text":"bg"},
-                    {"value":"bg-BG","text":"bg-BG"},
-                    {"value":"ca","text":"ca"},
-                    {"value":"ca-ES","text":"ca-ES"},
-                    {"value":"cs","text":"cs"},
-                    {"value":"cs-CZ","text":"cs-CZ"},
-                    {"value":"da","text":"da"},
-                    {"value":"da-DK","text":"da-DK"},
-                    {"value":"de","text":"de"},
-                    {"value":"de-AT","text":"de-AT"},
-                    {"value":"de-CH","text":"de-CH"},
-                    {"value":"de-DE","text":"de-DE"},
-                    {"value":"de-LU","text":"de-LU"},
-                    {"value":"el","text":"el"},
-                    {"value":"el-CY","text":"el-CY"},
-                    {"value":"el-GR","text":"el-GR"},
-                    {"value":"en","text":"en"},
-                    {"value":"en-AU","text":"en-AU"},
-                    {"value":"en-CA","text":"en-CA"},
-                    {"value":"en-GB","text":"en-GB"},
-                    {"value":"en-IE","text":"en-IE"},
-                    {"value":"en-IN","text":"en-IN"},
-                    {"value":"en-MT","text":"en-MT"},
-                    {"value":"en-NZ","text":"en-NZ"},
-                    {"value":"en-PH","text":"en-PH"},
-                    {"value":"en-SG","text":"en-SG"},
-                    {"value":"en-US","text":"en-US"},
-                    {"value":"en-ZA","text":"en-ZA"},
-                    {"value":"es","text":"es"},
-                    {"value":"es-AR","text":"es-AR"},
-                    {"value":"es-BO","text":"es-BO"},
-                    {"value":"es-CL","text":"es-CL"},
-                    {"value":"es-CO","text":"es-CO"},
-                    {"value":"es-CR","text":"es-CR"},
-                    {"value":"es-DO","text":"es-DO"},
-                    {"value":"es-EC","text":"es-EC"},
-                    {"value":"es-ES","text":"es-ES"},
-                    {"value":"es-GT","text":"es-GT"},
-                    {"value":"es-HN","text":"es-HN"},
-                    {"value":"es-MX","text":"es-MX"},
-                    {"value":"es-NI","text":"es-NI"},
-                    {"value":"es-PA","text":"es-PA"},
-                    {"value":"es-PE","text":"es-PE"},
-                    {"value":"es-PR","text":"es-PR"},
-                    {"value":"es-PY","text":"es-PY"},
-                    {"value":"es-SV","text":"es-SV"},
-                    {"value":"es-US","text":"es-US"},
-                    {"value":"es-UY","text":"es-UY"},
-                    {"value":"es-VE","text":"es-VE"},
-                    {"value":"et","text":"et"},
-                    {"value":"et-EE","text":"et-EE"},
-                    {"value":"fi","text":"fi"},
-                    {"value":"fi-FI","text":"fi-FI"},
-                    {"value":"fr","text":"fr"},
-                    {"value":"fr-BE","text":"fr-BE"},
-                    {"value":"fr-CA","text":"fr-CA"},
-                    {"value":"fr-CH","text":"fr-CH"},
-                    {"value":"fr-FR","text":"fr-FR"},
-                    {"value":"fr-LU","text":"fr-LU"},
-                    {"value":"ga","text":"ga"},
-                    {"value":"ga-IE","text":"ga-IE"},
-                    {"value":"he","text":"he"},
-                    {"value":"he-IL","text":"he-IL"},
-                    {"value":"hi-IN","text":"hi-IN"},
-                    {"value":"hr","text":"hr"},
-                    {"value":"hr-HR","text":"hr-HR"},
-                    {"value":"hu","text":"hu"},
-                    {"value":"hu-HU","text":"hu-HU"},
-                    {"value":"id","text":"id"},
-                    {"value":"id-ID","text":"id-ID"},
-                    {"value":"is","text":"is"},
-                    {"value":"is-IS","text":"is-IS"},
-                    {"value":"it","text":"it"},
-                    {"value":"it-CH","text":"it-CH"},
-                    {"value":"it-IT","text":"it-IT"},
-                    {"value":"ja","text":"ja"},
-                    {"value":"ja-JP","text":"ja-JP"},
-                    {"value":"ja-JP-u-ca-japanese-x-lvariant-JP","text":"ja-JP-u-ca-japanese-x-lvariant-JP"},
-                    {"value":"ko","text":"ko"},
-                    {"value":"ko-KR","text":"ko-KR"},
-                    {"value":"lt","text":"lt"},
-                    {"value":"lt-LT","text":"lt-LT"},
-                    {"value":"lv","text":"lv"},
-                    {"value":"lv-LV","text":"lv-LV"},
-                    {"value":"mk","text":"mk"},
-                    {"value":"mk-MK","text":"mk-MK"},
-                    {"value":"ms","text":"ms"},
-                    {"value":"ms-MY","text":"ms-MY"},
-                    {"value":"mt","text":"mt"},
-                    {"value":"mt-MT","text":"mt-MT"},
-                    {"value":"nl","text":"nl"},
-                    {"value":"nl-BE","text":"nl-BE"},
-                    {"value":"nl-NL","text":"nl-NL"},
-                    {"value":"nn-NO","text":"nn-NO"},
-                    {"value":"no","text":"no"},
-                    {"value":"no-NO","text":"no-NO"},
-                    {"value":"pl","text":"pl"},
-                    {"value":"pl-PL","text":"pl-PL"},
-                    {"value":"pt","text":"pt"},
-                    {"value":"pt-BR","text":"pt-BR"},
-                    {"value":"pt-PT","text":"pt-PT"},
-                    {"value":"ro","text":"ro"},
-                    {"value":"ro-RO","text":"ro-RO"},
-                    {"value":"ru","text":"ru"},
-                    {"value":"ru-RU","text":"ru-RU"},
-                    {"value":"sk","text":"sk"},
-                    {"value":"sk-SK","text":"sk-SK"},
-                    {"value":"sl","text":"sl"},
-                    {"value":"sl-SI","text":"sl-SI"},
-                    {"value":"sq","text":"sq"},
-                    {"value":"sq-AL","text":"sq-AL"},
-                    {"value":"sr","text":"sr"},
-                    {"value":"sr-BA","text":"sr-BA"},
-                    {"value":"sr-CS","text":"sr-CS"},
-                    {"value":"sr-La","text":"sr-La"},
-                    {"value":"tn","text":"tn"},
-                    {"value":"sr-La","text":"sr-La"},
-                    {"value":"tn-BA","text":"tn-BA"},
-                    {"value":"sr-La","text":"sr-La"},
-                    {"value":"tn-ME","text":"tn-ME"},
-                    {"value":"sr-La","text":"sr-La"},
-                    {"value":"tn-RS","text":"tn-RS"},
-                    {"value":"sr-ME","text":"sr-ME"},
-                    {"value":"sr-RS","text":"sr-RS"},
-                    {"value":"sv","text":"sv"},
-                    {"value":"sv-SE","text":"sv-SE"},
-                    {"value":"th","text":"th"},
-                    {"value":"th-TH","text":"th-TH"},
-                    {"value":"th-TH-u-nu-thai-x-lvariant-TH","text":"th-TH-u-nu-thai-x-lvariant-TH"},
-                    {"value":"ar","text":"ar"},
-                    {"value":"ia","text":"ia"},
-                    {"value":"nt-TH","text":"nt-TH"},
-                    {"value":"tr","text":"tr"},
-                    {"value":"tr-TR","text":"tr-TR"},
-                    {"value":"uk","text":"uk"},
-                    {"value":"uk-UA","text":"uk-UA"},
-                    {"value":"vi","text":"vi"},
-                    {"value":"vi-VN","text":"vi-VN"},
-                    {"value":"zh","text":"zh"},
-                    {"value":"zh-CN","text":"zh-CN"},
-                    {"value":"zh-HK","text":"zh-HK"},
-                    {"value":"zh-SG","text":"zh-SG"},
-                    {"value":"zh-TW","text":"zh-TW"}
-                ]
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'Label:',
-                allowBlank: true,
-                name:"track_label",
-                width: "100%"
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'MIME type:',
-                allowBlank: true,
-                name:"track_mime_type",
-                value:"text/webvtt",
-                disabled: true,
-                width: "100%"
-            },{
-                    xtype: "selection",
-                    fieldLabel: "Kind:",
-                    name: "track_kind",
-                    type: "select",
-                    value:"captions",
-                    options: [
-                        {
-                            "value": "subtitles",
-                            "text": "Subtitles"
-                        },
-                        {
-                            "value": "descriptions",
-                            "text": "Description"
-                        },
-                        {
-                            "value": "chapters",
-                            "text": "Chapters"
-                        },
-                        {
-                            "value": "metadata",
-                            "text": "Metadata"
-                        },{
-                            "value": "captions",
-                            "text": "Captions"
-                        }]
+    var language_options = [
+        {value: "ar", content : {textContent: 'ar'}},
+        {value: "ar-AE", content : {textContent: 'ar-AE'}},
+        {value: "ar-BH", content : {textContent: 'ar-BH'}},
+        {value: "ar-DZ", content : {textContent: 'ar-DZ'}},
+        {value: "ar-EG", content : {textContent: 'ar-EG'}},
+        {value: "ar-IQ", content : {textContent: 'ar-IQ'}},
+        {value: "ar-JO", content : {textContent: 'ar-JO'}},
+        {value: "ar-KW", content : {textContent: 'ar-KW'}},
+        {value: "ar-LB", content : {textContent: 'ar-LB'}},
+        {value: "ar-LY", content : {textContent: 'ar-LY'}},
+        {value: "ar-MA", content : {textContent: 'ar-MA'}},
+        {value: "ar-OM", content : {textContent: 'ar-OM'}},
+        {value: "ar-QA", content : {textContent: 'ar-QA'}},
+        {value: "ar-SA", content : {textContent: 'ar-SA'}},
+        {value: "ar-SD", content : {textContent: 'ar-SD'}},
+        {value: "ar-SY", content : {textContent: 'ar-SY'}},
+        {value: "ar-TN", content : {textContent: 'ar-TN'}},
+        {value: "ar-YE", content : {textContent: 'ar-YE'}},
+        {value: "be", content : {textContent: 'be'}},
+        {value: "be-BY", content : {textContent: 'be-BY'}},
+        {value: "bg", content : {textContent: 'bg'}},
+        {value: "bg-BG", content : {textContent: 'bg-BG'}},
+        {value: "ca", content : {textContent: 'ca'}},
+        {value: "ca-ES", content : {textContent: 'ca-ES'}},
+        {value: "cs", content : {textContent: 'cs'}},
+        {value: "cs-CZ", content : {textContent: 'cs-CZ'}},
+        {value: "da", content : {textContent: 'da'}},
+        {value: "da-DK", content : {textContent: 'da-DK'}},
+        {value: "de", content : {textContent: 'de'}},
+        {value: "de-AT", content : {textContent: 'de-AT'}},
+        {value: "de-CH", content : {textContent: 'de-CH'}},
+        {value: "de-DE", content : {textContent: 'de-DE'}},
+        {value: "de-LU", content : {textContent: 'de-LU'}},
+        {value: "el", content : {textContent: 'el'}},
+        {value: "el-CY", content : {textContent: 'el-CY'}},
+        {value: "el-GR", content : {textContent: 'el-GR'}},
+        {value: "en", content : {textContent: 'en'}},
+        {value: "en-AU", content : {textContent: 'en-AU'}},
+        {value: "en-CA", content : {textContent: 'en-CA'}},
+        {value: "en-GB", content : {textContent: 'en-GB'}},
+        {value: "en-IE", content : {textContent: 'en-IE'}},
+        {value: "en-IN", content : {textContent: 'en-IN'}},
+        {value: "en-MT", content : {textContent: 'en-MT'}},
+        {value: "en-NZ", content : {textContent: 'en-NZ'}},
+        {value: "en-PH", content : {textContent: 'en-PH'}},
+        {value: "en-SG", content : {textContent: 'en-SG'}},
+        {value: "en-US", content : {textContent: 'en-US'}},
+        {value: "en-ZA", content : {textContent: 'en-ZA'}},
+        {value: "es", content : {textContent: 'es'}},
+        {value: "es-AR", content : {textContent: 'es-AR'}},
+        {value: "es-BO", content : {textContent: 'es-BO'}},
+        {value: "es-CL", content : {textContent: 'es-CL'}},
+        {value: "es-CO", content : {textContent: 'es-CO'}},
+        {value: "es-CR", content : {textContent: 'es-CR'}},
+        {value: "es-DO", content : {textContent: 'es-DO'}},
+        {value: "es-EC", content : {textContent: 'es-EC'}},
+        {value: "es-ES", content : {textContent: 'es-ES'}},
+        {value: "es-GT", content : {textContent: 'es-GT'}},
+        {value: "es-HN", content : {textContent: 'es-HN'}},
+        {value: "es-MX", content : {textContent: 'es-MX'}},
+        {value: "es-NI", content : {textContent: 'es-NI'}},
+        {value: "es-PA", content : {textContent: 'es-PA'}},
+        {value: "es-PE", content : {textContent: 'es-PE'}},
+        {value: "es-PR", content : {textContent: 'es-PR'}},
+        {value: "es-PY", content : {textContent: 'es-PY'}},
+        {value: "es-SV", content : {textContent: 'es-SV'}},
+        {value: "es-US", content : {textContent: 'es-US'}},
+        {value: "es-UY", content : {textContent: 'es-UY'}},
+        {value: "es-VE", content : {textContent: 'es-VE'}},
+        {value: "et", content : {textContent: 'et'}},
+        {value: "et-EE", content : {textContent: 'et-EE'}},
+        {value: "fi", content : {textContent: 'fi'}},
+        {value: "fi-FI", content : {textContent: 'fi-FI'}},
+        {value: "fr", content : {textContent: 'fr'}},
+        {value: "fr-BE", content : {textContent: 'fr-BE'}},
+        {value: "fr-CA", content : {textContent: 'fr-CA'}},
+        {value: "fr-CH", content : {textContent: 'fr-CH'}},
+        {value: "fr-FR", content : {textContent: 'fr-FR'}},
+        {value: "fr-LU", content : {textContent: 'fr-LU'}},
+        {value: "ga", content : {textContent: 'ga'}},
+        {value: "ga-IE", content : {textContent: 'ga-IE'}},
+        {value: "he", content : {textContent: 'he'}},
+        {value: "he-IL", content : {textContent: 'he-IL'}},
+        {value: "hi-IN", content : {textContent: 'hi-IN'}},
+        {value: "hr", content : {textContent: 'hr'}},
+        {value: "hr-HR", content : {textContent: 'hr-HR'}},
+        {value: "hu", content : {textContent: 'hu'}},
+        {value: "hu-HU", content : {textContent: 'hu-HU'}},
+        {value: "id", content : {textContent: 'id'}},
+        {value: "id-ID", content : {textContent: 'id-ID'}},
+        {value: "is", content : {textContent: 'is'}},
+        {value: "is-IS", content : {textContent: 'is-IS'}},
+        {value: "it", content : {textContent: 'it'}},
+        {value: "it-CH", content : {textContent: 'it-CH'}},
+        {value: "it-IT", content : {textContent: 'it-IT'}},
+        {value: "ja", content : {textContent: 'ja'}},
+        {value: "ja-JP", content : {textContent: 'ja-JP'}},
+        {value: "ja-JP-u-ca-japanese-x-lvariant-JP", content : {textContent: 'ja-JP-u-ca-japanese-x-lvariant-JP'}},
+        {value: "ko", content : {textContent: 'ko'}},
+        {value: "ko-KR", content : {textContent: 'ko-KR'}},
+        {value: "lt", content : {textContent: 'lt'}},
+        {value: "lt-LT", content : {textContent: 'lt-LT'}},
+        {value: "lv", content : {textContent: 'lv'}},
+        {value: "lv-LV", content : {textContent: 'lv-LV'}},
+        {value: "mk", content : {textContent: 'mk'}},
+        {value: "mk-MK", content : {textContent: 'mk-MK'}},
+        {value: "ms", content : {textContent: 'ms'}},
+        {value: "ms-MY", content : {textContent: 'ms-MY'}},
+        {value: "mt", content : {textContent: 'mt'}},
+        {value: "mt-MT", content : {textContent: 'mt-MT'}},
+        {value: "nl", content : {textContent: 'nl'}},
+        {value: "nl-BE", content : {textContent: 'nl-BE'}},
+        {value: "nl-NL", content : {textContent: 'nl-NL'}},
+        {value: "nn-NO", content : {textContent: 'nn-NO'}},
+        {value: "no", content : {textContent: 'no'}},
+        {value: "no-NO", content : {textContent: 'no-NO'}},
+        {value: "pl", content : {textContent: 'pl'}},
+        {value: "pl-PL", content : {textContent: 'pl-PL'}},
+        {value: "pt", content : {textContent: 'pt'}},
+        {value: "pt-BR", content : {textContent: 'pt-BR'}},
+        {value: "pt-PT", content : {textContent: 'pt-PT'}},
+        {value: "ro", content : {textContent: 'ro'}},
+        {value: "ro-RO", content : {textContent: 'ro-RO'}},
+        {value: "ru", content : {textContent: 'ru'}},
+        {value: "ru-RU", content : {textContent: 'ru-RU'}},
+        {value: "sk", content : {textContent: 'sk'}},
+        {value: "sk-SK", content : {textContent: 'sk-SK'}},
+        {value: "sl", content : {textContent: 'sl'}},
+        {value: "sl-SI", content : {textContent: 'sl-SI'}},
+        {value: "sq", content : {textContent: 'sq'}},
+        {value: "sq-AL", content : {textContent: 'sq-AL'}},
+        {value: "sr", content : {textContent: 'sr'}},
+        {value: "sr-BA", content : {textContent: 'sr-BA'}},
+        {value: "sr-CS", content : {textContent: 'sr-CS'}},
+        {value: "sr-La", content : {textContent: 'sr-La'}},
+        {value: "tn", content : {textContent: 'tn'}},
+        {value: "sr-La", content : {textContent: 'sr-La'}},
+        {value: "tn-BA", content : {textContent: 'tn-BA'}},
+        {value: "sr-La", content : {textContent: 'sr-La'}},
+        {value: "tn-ME", content : {textContent: 'tn-ME'}},
+        {value: "sr-La", content : {textContent: 'sr-La'}},
+        {value: "tn-RS", content : {textContent: 'tn-RS'}},
+        {value: "sr-ME", content : {textContent: 'sr-ME'}},
+        {value: "sr-RS", content : {textContent: 'sr-RS'}},
+        {value: "sv", content : {textContent: 'sv'}},
+        {value: "sv-SE", content : {textContent: 'sv-SE'}},
+        {value: "th", content : {textContent: 'th'}},
+        {value: "th-TH", content : {textContent: 'th-TH'}},
+        {value: "th-TH-u-nu-thai-x-lvariant-TH", content : {textContent: 'th-TH-u-nu-thai-x-lvariant-TH'}},
+        {value: "ar", content : {textContent: 'ar'}},
+        {value: "ia", content : {textContent: 'ia'}},
+        {value: "nt-TH", content : {textContent: 'nt-TH'}},
+        {value: "tr", content : {textContent: 'tr'}},
+        {value: "tr-TR", content : {textContent: 'tr-TR'}},
+        {value: "uk", content : {textContent: 'uk'}},
+        {value: "uk-UA", content : {textContent: 'uk-UA'}},
+        {value: "vi", content : {textContent: 'vi'}},
+        {value: "vi-VN", content : {textContent: 'vi-VN'}},
+        {value: "zh", content : {textContent: 'zh'}},
+        {value: "zh-CN", content : {textContent: 'zh-CN'}},
+        {value: "zh-HK", content : {textContent: 'zh-HK'}},
+        {value: "zh-SG", content : {textContent: 'zh-SG'}},
+        {value: "zh-TW", content : {textContent: 'zh-TW'}}
+    ];
+
+    var kind_options = [
+        {
+            value: "subtitles",
+            content : {
+                textContent: 'Subtitles'
             }
-            //     {
-            //     xtype: 'textfield',
-            //     fieldLabel: 'URL Source:',
-            //     fieldDescription: 'Note: Non text/vtt sources will result in a submission error',
-            //     allowBlank: false,
-            //     width: "100%",
-            //     name:"track_source"
-            // },
-                ,{
-                xtype: 'selection',
-                fieldLabel: 'Default Track:',
-                fieldDescription: (default_tracks.length > 0) ? '<b style="color:red;">NOTE: Only a single text track should be set as the default</b>' :'Set new uploaded track as the default text track?',
-                inputValue: true,
-                name: 'track_default',
-                type:'checkbox'
-            },{
-                xtype: "dialogfieldset",
-                collapsible: false,
-                collapsed: false,
-                fieldLabel: 'Source',
-                fieldDescription: 'Note: Please choose only ONE text track source path',
-                items: [
-                    {
-                        xtype: "dialogfieldset",
-                        collapsible: false,
-                        collapsed: false,
-                        items: [
-                            {
-                                xtype: 'fileuploadfield',
-                                id: 'filePath',
-                                fieldDescription: 'Upload a text track from the file system (.vtt)',
-                                fieldLabel: 'Upload File',
-                                name: 'track_filepath',
-                                buttonText: 'Browse',
-                                width: "100%",
-                                allowBlank: true
-                            }
-                        ]
-                    },
-                    {
-                        xtype: 'label',
-                        text: 'OR',
-                        margins: '0 0 0 10'
-                    },
-                    {
-                        xtype: "dialogfieldset",
-                        collapsible: false,
-                        collapsed: false,
-                        items: [
-                            {
-                                xtype: 'textfield',
-                                fieldLabel: 'From Source URL',
-                                fieldDescription: 'Upload from website (warning: Non text/vtt sources will result in a submission error.)',
-                                allowBlank: true,
-                                width: "100%",
-                                name:"track_source"
-                            }
-                        ]
-                    }
-                ]
+        },
+        {
+            value: "descriptions",
+            content : {
+                textContent: 'Description'
             }
-            ]}),
+        },
+        {
+            value: "chapters",
+            content : {
+                textContent: 'Chapters'
+            }
+        },
+        {
+            value: "metadata",
+            content : {
+                textContent: 'Metadata'
+            }
+        },
+        {
+            value: "captions",
+            content : {
+                textContent: 'Captions'
+            }
+        }
+    ];
 
-        z = new CQ.Ext.Window({
-            title: 'Upload new text track',
-            collapsible: true,
-            maximizable: true,
-            width: 750,
-            height: 500,
-            minWidth: 300,
-            minHeight: 200,
-            bodyStyle: 'padding:5px;',
-            buttonAlign: 'center',
-            items: form,
-            buttons: [{
-                text: 'Send',
-                handler: function (btn, evt)
-                {
-                    var formobj = form.getForm();
+    var dialog = new Coral.Dialog().set({
+        id: 'upload_text_track_dialog',
+        header: {
+          innerHTML: 'Upload Text Track'
+        },
+        content: {
+          innerHTML: '<div class="coral-Form coral-Form--vertical" id="upload_text_track_form">' +
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' + 
+          '<coral-select name="text_track_language_field" placeholder="Language" id="text_track_language_field"></coral-select>' +
+          '</div>' + 
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' + 
+          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_label_field" labelledby="label-vertical-textfield-1" value="">' +
+          '</div>' +
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' + 
+          '<coral-select name="text_track_type_field" placeholder="Text Type" id="text_track_type_field"></coral-select>' +
+          '</div>' + 
+          '<div class="coral-Form-fieldwrapper">' +
+          '<coral-checkbox value="true" id="text_track_default_field">Make Default Track</coral-checkbox>' +
+          '</div>' + 
+          '<div class="or_field_split">' + 
+          '<div class="coral-Form-fieldwrapper">' +
+          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' + 
+          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_source_url_field" labelledby="label-vertical-3" value="">' +
+          '</div>' +
+          '<div class="coral-Form-fieldwrapper">' +
+          '<coral-fileupload accept="text/*" name="file" action="#">' +
+          '<button class="coral3-Button coral3-Button--secondary" is="coral-button" coral-fileupload-select>Select Track File</button>' +
+          '</coral-fileupload>' +
+          '</div>' +
+          '</div>' +
+          '<p>Please note you can only provide a Source URL or a Source File.</p>' +
+          '</div>'
+        },
+        footer: {
+          innerHTML: '<button is="coral-button" id="upload_text_track_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
+        }
+    });
 
-                    if (formobj.isValid())
-                    {
-
-
-                        //TODO: Find animation midground to make modal only loading thing
-                        loadStart();
-                        formobj.submit({
-                            success: function (form, action)
-                            {
-                                //FIELDS WERE VALID
-                                z.destroy();
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                Load(getAllVideosURL());
-                            },
-                            failure: function (form, action) {
-                                CQ.Ext.Msg.alert('Track Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please verify your connection and the text track source type.');
-                                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                                Load(getAllVideosURL());
-                            }
-                        });
-                    }
-                    else
-                    {
-                        alert('Invalid form');
-                    }
-                }
-            }, {
-                text: 'Cancel',
-                handler: function (btn, evt) {
-                    z.destroy();
-                }
-            }]
+    dialog.on('coral-overlay:open', function() {
+        console.log('dialog is ready');
+        var select_field_track_type = $('#text_track_type_field').get(0);
+        select_field_track_type.addEventListener('coral-select:showitems', function(event) {
+            kind_options.forEach(function(value, index) {
+                select_field_track_type.items.add(value);
+            });
         });
+        var select_field_track_language = $('#text_track_language_field').get(0);
+        select_field_track_language.addEventListener('coral-select:showitems', function(event) {
+            language_options.forEach(function(value, index) {
+                select_field_track_language.items.add(value);
+            });
+        });
+    });
 
-    z.setPosition(10, 10);
-    z.show();
+    dialog.on('click', '#upload_text_track_dialog_click', function() {
+        // add validation in below
+        if (true) {
+            var fields = {
+                limit: paging.size,
+                start: paging.generic,
+                id: document.getElementById('divMeta.id').innerHTML,
+                track_lang: $('#text_track_language_field').get(0).value,
+                track_label: $('#text_track_label_field').get(0).value,
+                //track_mime_type: 'text/webvtt',
+                //track_mime_type: null,
+                track_kind: $('#text_track_type_field').get(0).value,
+                track_default: $('#text_track_default_field').get(0).value,
+                track_filepath: $('.coral3-FileUpload-input').get(0).value,
+                track_source: $('#text_track_source_url_field').get(0).value,
+                a: 'upload_text_track',
+                account_id: $("#selAccount").val(),
+            }
+            console.log(fields);
+            $.ajax({
+                url: apiLocation + '.js',
+                type: 'POST',
+                data: fields,
+                success: function ( data ){
+                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                    Load(getAllVideosURL());
+                    dialog.hide();
+                    location.reload();
+                },
+                error: function ( data )
+                {
+                    console.log(data);
+                    alert('Oops! There was an error with your text track submission. Please try again.');
+                }
+            });
+        } else {
+            alert('Please provide values for all fields.');
+        }
+        
+    });
 
-
-
-
+    document.body.appendChild(dialog);
+    dialog.show();
 
 }
 
@@ -1582,10 +1548,12 @@ function changePage(num) {
 function checkCheck() {
     var count = 1;
     var inputTags = document.getElementById('listTable').getElementsByTagName('input');
+    var checkedTags = [];
     var selChek = document.getElementById('checkToggle');
     var l = inputTags.length
     for (var i = 2; i < l; i++) {
         if (true == inputTags[i].checked) {
+            checkedTags.push(inputTags[i]);
             count++;
         } else if ((i - count) > 1) {//If one checkbox was skipped, then the total has to be < l, so uncheck selChek  and return.
             selChek.checked = false;

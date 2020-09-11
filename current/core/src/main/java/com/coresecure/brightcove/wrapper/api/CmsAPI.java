@@ -152,6 +152,52 @@ public class CmsAPI {
         return json;
     }
 
+    //putAPI
+    public JSONObject moveVideoToFolder(String videoId, String folderId) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = 
+                Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
+                folderId + "/videos/" + videoId;
+            try {
+                String response = account.platform.putAPI(targetURL, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createVideo: {} Response: {}", json);
+        return json;
+    }
+
+    //deleteAPI
+    public JSONObject removeVideoFromFolder(String videoId, String folderId) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = 
+                Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
+                folderId + "/videos/" + videoId;
+            try {
+                String response = account.platform.deleteAPI(targetURL, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createVideo: {} Response: {}", json);
+        return json;
+    }
+
     //postAPI
     public JSONObject createVideo(Video aVideo) {
         JSONObject json = new JSONObject();
@@ -502,6 +548,40 @@ public class CmsAPI {
                 String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&limit=" + limit + "&offset=" + offset + "&sort=" + sort;
                 json = getJSONArrayResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    public JSONArray getVideosInFolder(String folder, int offset) {
+        JSONArray json = new JSONArray();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" + folder + "/videos";
+            try {
+                String urlParameters = "offset=" + offset;
+                json = getJSONArrayResponse(targetURL, urlParameters, headers);
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    public JSONArray getFolders(int limit, int offset) {
+        JSONArray json = new JSONArray();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders";
+            try {
+                String urlParameters = "offset=" + offset;
+                json = getJSONArrayResponse(targetURL, urlParameters, headers);
+            } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }

@@ -17,7 +17,6 @@
                 <sly data-sly-call="${clientLib.css @ categories='cq.wcm.edit'}" data-sly-unwrap/>
                 <sly data-sly-call="${clientLib.js @ categories='cq.wcm.edit'}" data-sly-unwrap/>
 
-
                 <sly data-sly-call="${clientLib.css @ categories='brc.brightcove-api'}" data-sly-unwrap/>
                 <sly data-sly-call="${clientLib.js @ categories='brc.brightcove-api'}" data-sly-unwrap/>
             </sly>
@@ -73,6 +72,10 @@
 
                                             <div id="searchDiv" style="float:right;padding:5px">
 
+                                                <select id='fldr_list' name="fldr_list" style="position: relative;top: 5px;">
+                                                    <option value="all">All Folders</option>
+                                                </select>
+
                                                 <input id="search" type="text" value="Search Video" onClick="this.value=''">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField' name="selField" style="position: relative;top: 5px;">
@@ -90,7 +93,7 @@
                                             <div id="searchDiv_pl" style="float:right;padding:5px;display:none;">
 
                                                 <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''"
-                                                       style="position: relative;top: 5px;">
+                                                       style="position: relative;top: 5px; height: 28px">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;">
                                                     <option value="find_playlist_by_id">In Playlist ID</option>
@@ -107,10 +110,14 @@
                                     <tr>
                                         <td id="tdTwo">
                                             <div name="butDiv" class="butDiv">
-                                                    <span name="buttonRow">
+                                                    <!--  <span name="buttonRow">
                                                         <button id="newplstButton" onClick="createPlaylistBox()">Create Playlist
                                                         </button>
                                                     </span>
+                                                    <span name="buttonRow">
+                                                        <button id="newplstButton" onClick="moveToFolder()">Move to Folder
+                                                        </button>
+                                                    </span>  -->
                                                 <button class="btn" name="delFromPlstButton" onClick="openBox('modPlstPop')">Remove
                                                     From Playlist
                                                 </button>
@@ -144,6 +151,15 @@
                                                     <span name="buttonRow">
                                                         <button id="newplstButton" onClick="createPlaylistBox()">Create Playlist
                                                         </button>
+                                                    </span>
+                                                    <span name="buttonRow">
+                                                        <button id="btn_MoveVideoToFolder" class="menuToggle" onClick="moveVideoToFolder()">Move to Folder
+                                                        </button>
+                                                        <div class="folder-selector menu">
+                                                            <ul class="menu-options">
+                                                                <li class="menu-option remove" data-folder-id="none">[No Folder]</li>
+                                                            </ul>
+                                                        </div>
                                                     </span>
                                                 <button class="btn" name="delFromPlstButton" onClick="openBox('modPlstPop')">Remove
                                                     From Playlist

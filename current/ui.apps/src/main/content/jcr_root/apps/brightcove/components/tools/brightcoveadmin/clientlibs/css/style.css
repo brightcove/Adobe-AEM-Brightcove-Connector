@@ -32,8 +32,11 @@
  */
 body {
   background-color: #c3ddf6;
-  font-family: arial;
-  font-size: 12px;
+  font-family: adobe-clean,Helvetica,Arial,sans-serif;
+}
+
+#brightcove input, #brightcove button, #brightcove select, #brightcove textarea {
+  font-family: adobe-clean,Helvetica,Arial,sans-serif;
 }
 
 #CQ {
@@ -565,6 +568,7 @@ div.hLine {
 #delButton,
 #uplButton,
 #newplstButton,
+#btn_MoveVideoToFolder,
 #syncdbutton,
 #uploadtrackbutton,
 #text_track,
@@ -705,6 +709,7 @@ table.tblConsole {
 
 table.tblConsole #tbData td {
   border-bottom: 1px solid #eee;
+  line-height: 1.8;
 }
 
 #playerDiv.overlay.ui-draggable {
@@ -1246,6 +1251,102 @@ body {
     -webkit-transform: scale(1);
     transform: scale(1);
   }
+}
+
+#upload_text_track_form .coral3-Overlay {
+  top: 0 !important;
+  left: 0 !important;
+}
+
+.coral-Form--vertical .coral-Form-fieldwrapper {
+  margin: 0.75rem 0;
+}
+
+.coral-Form--vertical .coral-Form-fieldwrapper .coral3-Checkbox-description {
+  display: inline;
+  color: #6d6d6d;
+}
+
+.coral-Form--vertical .or_field_split {
+  display: flex;
+  padding-bottom: 1rem;
+}
+
+.coral-Form--vertical .or_field_split .coral3-FileUpload {
+  margin-top: 1.25rem;
+}
+
+.coral-Form--vertical .or_field_split > div {
+  flex: 1;
+  width: 50%;
+}
+.coral-Form--vertical .or_field_split > div:last-child {
+  padding-left: 3rem;
+  margin-left: 3rem;
+  border-left: 1px solid #ccc;
+}
+
+.coral-Form--vertical .or_field_split > div:last-child::before {
+  content: 'OR';
+  position: absolute;
+  top: calc(50% - 10px);
+  display: block;
+  left: -12px;
+  background: white;
+  padding: 0.25rem;
+}
+
+#upload_text_track_dialog .coral3-Dialog-wrapper {
+  min-width: 35rem !important;
+}
+
+.butDiv > span {
+  display: inline-block;
+  position: relative;
+}
+
+.butDiv > span > div.menu {
+  display: none;
+  position: absolute;
+  left: 0;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
+  min-width: 200px;
+}
+
+.butDiv > span > div.menu.open {
+  display: block;
+}
+
+.butDiv > span > div.menu .menu-options {
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+.butDiv > span > div.menu .menu-options .menu-option {
+  padding: 0.5rem 1rem 0.5rem 2.25rem;
+  background: transparent url(/etc/designs/cs/brightcove/shared/img/folder.svg) 0.5rem no-repeat;
+}
+
+.butDiv > span > div.menu .menu-options .menu-option.remove {
+  padding: 0.5rem 1rem 0.5rem 2.25rem;
+  background: transparent url(/etc/designs/cs/brightcove/shared/img/folder-delete.svg) 0.5rem no-repeat;
+}
+
+.butDiv > span > div.menu .menu-options .menu-option:hover {
+  background: rgba(0, 0, 0, 0.1) url(/etc/designs/cs/brightcove/shared/img/folder-open.svg) 0.5rem no-repeat;
+  cursor: pointer;
+}
+
+.butDiv > span > div.menu .menu-options .menu-option.remove:hover {
+  background: rgba(0, 0, 0, 0.1) url(/etc/designs/cs/brightcove/shared/img/folder-delete.svg) 0.5rem no-repeat;
+  cursor: pointer;
+}
+
+#tbData span.playlist-actions {
+  position: relative;
+  top: -2px;
+  float: right;
 }
 
 /* ---------- END NEW CSS --------------- */

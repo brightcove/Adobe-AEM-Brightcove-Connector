@@ -101,6 +101,15 @@ public class Platform {
         return response;
     }
 
+    public String putAPI(String targetURL, Map<String, String> headers) {
+        String URL = getAPI_Url() + targetURL;
+        LOGGER.trace("POST URL: " + URL);
+
+        String response = HttpServices.executePut(URL, headers);
+        LOGGER.trace(response);
+        return response;
+    }
+
     public String patchAPI(String targetURL, String payload, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
         LOGGER.trace("patchAPI URL: " + URL);
@@ -134,6 +143,14 @@ public class Platform {
     }
 
     public String deleteAPI(String targetURL, String videoID, Map<String, String> headers) {
+        String URL = getAPI_Url() + targetURL;
+        LOGGER.trace("deleteAPI: " + URL);
+        String response = HttpServices.executeDelete(URL, headers);
+        LOGGER.trace(response);
+        return response;
+    }
+
+    public String deleteAPI(String targetURL, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
         LOGGER.trace("deleteAPI: " + URL);
         String response = HttpServices.executeDelete(URL, headers);
