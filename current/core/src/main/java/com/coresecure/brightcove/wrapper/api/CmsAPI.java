@@ -198,6 +198,29 @@ public class CmsAPI {
         return json;
     }
 
+    //deleteAPI
+    public JSONObject deletePlaylist(String playlistId) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = 
+                Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists/" +
+                playlistId;
+            try {
+                String response = account.platform.deleteAPI(targetURL, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createVideo: {} Response: {}", json);
+        return json;
+    }
+
     //postAPI
     public JSONObject createVideo(Video aVideo) {
         JSONObject json = new JSONObject();

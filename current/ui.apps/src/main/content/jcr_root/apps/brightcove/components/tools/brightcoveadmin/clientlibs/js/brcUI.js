@@ -99,7 +99,40 @@ $(function () {
         if (!$(event.target).hasClass('menuToggle')) {
             $('.menu').removeClass('open');
         }
-    })
+    });
+
+    $('#tbData').on('click', '.playlist-actions a', function(event) {
+        event.preventDefault();
+        var playlist = {
+            name: $(event.target).parent().attr('data-playlist-name'),
+            id: $(event.target).parent().attr('data-playlist')
+        }
+        console.log(playlist);
+        showPopup('Delete Playlist', 
+                    'Are you sure you want to delete the playlist "' + playlist.name + '"?',
+                    'Delete', 
+                    'Cancel', 
+                    function(dialog) {
+                        var data = {
+                            a: 'delete_playlist',
+                            playlist: playlist.id
+                        };
+                        $.ajax({
+                            type: 'GET',
+                            url: '/bin/brightcove/api.js',
+                            data: data,
+                            async: true,
+                            success: function (data)
+                            {
+                                // do something here?
+                            }
+                        });
+                        Load(getAllPlaylistsURL());
+                    },
+                    function(dialog) {
+                        // do nothing here
+                    });
+    });
 
     $('.folder-selector .menu-options').on('click', 'li', function(event) {
         var folderId = $(event.target).data('folder-id');
@@ -159,6 +192,31 @@ $(function () {
     });
 
 });
+
+function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, onCancel) {
+    var $popup = $('.pml-dialog');
+    $popup.find('.pml-dialog_header').text(title || 'Confirmation');
+    $popup.find('.pml-dialog_content').html(message);
+    $popup.find('.pml-dialog_footer .btn-primary')
+        .text(btnPrimaryText)
+        .off('click')
+        .on('click', function(event) {
+            event.preventDefault();
+            if (onSuccess)
+                onSuccess($popup);
+            $popup.hide();
+        });
+    $popup.find('.pml-dialog_footer .btn-secondary')
+        .text(btnSecondaryText)
+        .off('click')
+        .on('click', function(event) {
+            event.preventDefault();
+            if (onCancel)
+                onCancel($popup);
+            $popup.hide();
+        });
+    $popup.show();
+}
 
 function moveVideoToFolder() {
     $('.folder-selector').toggleClass('open');
@@ -364,7 +422,7 @@ function buildPlaylistList() {
             + ((n.reference_id) ? n.reference_id : '') +
             "</td><td>"
             + n.id +
-            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist-id=\"" + n.id + "\"><img src=\"/etc/designs/cs/brightcove/shared/img/delete.svg\" /></span>" +
+            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/etc/designs/cs/brightcove/shared/img/delete.svg\" /></span>" +
             "</td></tr>"
         );
     });

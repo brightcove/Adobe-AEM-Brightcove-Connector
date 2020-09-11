@@ -360,6 +360,16 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONObject deletePlaylist(String playlistId) {
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.deletePlaylist(playlistId);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
     public String getVideosInFolder(String folder, int offset) {
         JSONObject items = new JSONObject();
         String result = "";

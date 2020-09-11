@@ -1349,5 +1349,61 @@ body {
   float: right;
 }
 
+.pml-dialog {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  overflow: hidden;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.pml-dialog_container {
+  position: absolute;
+  width: 30vw;
+  height: 20vh;
+  top: calc(50% - 10vh);
+  left: calc(50% - 15vw);
+  background: #fff;
+  font-size: 1rem;
+  flex-direction: column;
+  display: flex;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
+}
+
+.pml-dialog .pml-dialog_header {
+  background: #f1f1f1;
+  padding: 1rem;
+  font-weight: bold;
+  height: auto;
+}
+
+.pml-dialog .pml-dialog_content {
+  padding: 1rem;
+  flex: 1;
+}
+
+.pml-dialog .pml-dialog_footer {
+  padding: 0.5rem 1rem;
+  text-align: right;
+  height: auto;
+  background: #f1f1f1;
+}
+
+.pml-dialog .pml-dialog_footer .btn:hover {
+  background: -webkit-linear-gradient(top, #ffffff, #e5e5e5);
+}
+
+.pml-dialog .pml-dialog_footer .btn-secondary,
+.pml-dialog .pml-dialog_footer .btn-secondary:hover {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
 /* ---------- END NEW CSS --------------- */
 
