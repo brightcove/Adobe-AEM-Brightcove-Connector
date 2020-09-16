@@ -67,7 +67,7 @@ import java.util.List;
 @Component
 @Properties(value = {
         @Property(name = "sling.servlet.extensions", value = {"json"}),
-        @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/accounts"})
+        @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/accounts", "/bin/brightcove/accounts/ds"})
 })
 public class BrcAccounts extends SlingAllMethodsServlet {
 
@@ -88,10 +88,21 @@ public class BrcAccounts extends SlingAllMethodsServlet {
     protected void doGet(final SlingHttpServletRequest request,
                          final SlingHttpServletResponse response) throws ServletException,
             IOException {
-        api(request, response);
+        if (request.getRequestURI().indexOf("ds") >= 0) {
+            apiDatasource(request, response);
+        } else {
+            api(request, response);
+        }
 
     }
 
+    //
+
+    public void apiDatasource(final SlingHttpServletRequest request,
+            final SlingHttpServletResponse response) throws ServletException, IOException {
+        PrintWriter outWriter = response.getWriter();
+        outWriter.write("{\"text\": \"White\",\"value\": \"white\"}");
+    }
 
     public void api(final SlingHttpServletRequest request,
                     final SlingHttpServletResponse response) throws ServletException,

@@ -177,6 +177,7 @@ $(function () {
                 });
             }
         });
+        $('#fldr_list').change();
     })
 
     $('body').on('brc:checked', function(event) {
