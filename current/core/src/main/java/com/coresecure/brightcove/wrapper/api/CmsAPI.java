@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -271,6 +272,35 @@ public class CmsAPI {
         return json;
     }
 
+    //PatchAPI
+    public JSONObject updatePlaylist(String playlistId, String[] videos) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists"
+                + "/" + playlistId;
+            try {
+                LOGGER.debug("targetURL: {}", targetURL);
+                JSONObject request = new JSONObject();
+                ArrayList<String> videoArray = new ArrayList<String>();
+                for (String item : videos) {
+                    videoArray.add(item);
+                }
+                request.put("video_ids", new JSONArray(videoArray));
+                LOGGER.info("updatePlaylistParams: {}", request.toString(1));
+                String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
     //deleteAPI
     public JSONObject deleteVideo(String videoID) {
         JSONObject json = new JSONObject();
@@ -368,7 +398,9 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/counts/videos";
             try {
-                String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
+                //String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
+                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : 
+                "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
                 json = getJSONObjectResponse(targetURL, urlParameters, headers);
             }
             catch (UnsupportedEncodingException e)
@@ -495,7 +527,8 @@ public class CmsAPI {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-            String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+            // String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "")
+            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -553,6 +586,20 @@ public class CmsAPI {
         }
         return json;
     }
+
+    //getAPI
+    public JSONArray getVideosInPlaylist(String ID) {
+        JSONArray json = new JSONArray();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists/" + ID + "/videos";
+            json = getJSONArrayResponse(targetURL, Constants.EMPTY_URLPARAMS, headers);
+        }
+        return json;
+    }
+
     public JSONArray  getPlaylists() {
         return getPlaylists(DEFAULT_LIMIT,  DEFAULT_OFFSET,  Constants.NAME);
     }
@@ -569,6 +616,24 @@ public class CmsAPI {
             try {
                 q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
                 String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&limit=" + limit + "&offset=" + offset + "&sort=" + sort;
+                json = getJSONArrayResponse(targetURL, urlParameters, headers);
+            } catch (UnsupportedEncodingException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    public JSONArray  getExperiences(String q, String sort) {
+        JSONArray json = new JSONArray();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/experiences";
+            try {
+                q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
+                String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&sort=" + sort;
                 json = getJSONArrayResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
                 LOGGER.error(e.getClass().getName(), e);

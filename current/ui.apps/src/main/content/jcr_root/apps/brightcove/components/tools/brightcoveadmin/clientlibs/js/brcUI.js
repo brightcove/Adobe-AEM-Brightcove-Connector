@@ -45,6 +45,7 @@ $( document ).ready(function() {
 
 
 var $ACTIVE_TRACKS;
+var $sortable;
 var brc_admin = brc_admin || {};
 
 
@@ -99,7 +100,20 @@ $(function () {
         if (!$(event.target).hasClass('menuToggle')) {
             $('.menu').removeClass('open');
         }
+        if ( !$(event.target).hasClass('autocomplete-item') ||
+            !$(event.target).parent().hasClass('autocomplete-item') ) {
+            $('.pml-dialog .autocomplete').empty();
+        }
     });
+
+    $('#tbData').on('click', '.edit-playlist', function(event) {
+        editPlaylistHandler(event);
+    })
+
+    $('.pml-dialog_content').on('click', '.playlist-listing li a', function(event) {
+        console.log(event.target);
+        $(event.target).parents('li').remove();
+    })
 
     $('#tbData').on('click', '.playlist-actions a', function(event) {
         event.preventDefault();
@@ -132,6 +146,31 @@ $(function () {
                     function(dialog) {
                         // do nothing here
                     });
+    });
+
+    $('.pml-dialog').on('keyup', '.playlist-add-input input', function(event) {
+        var query = $(event.target).val();
+        var $parent = $(event.target).parents('.playlist-add-input');
+        if (query) {
+            // perform an AJAX video search
+            var data = {
+                a: 'search_videos',
+                query: query,
+                start: 0,
+                limit: 3,
+                callback: 'suggestVideosForPlaylist'
+            };
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: data,
+                async: true,
+                success: function (data)
+                {
+                    // do something here?
+                }
+            });
+        };
     });
 
     $('.folder-selector .menu-options').on('click', 'li', function(event) {
@@ -207,8 +246,10 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
                 onSuccess($popup);
             $popup.hide();
         });
-    $popup.find('.pml-dialog_footer .btn-secondary')
+    if (btnSecondaryText) {
+        $popup.find('.pml-dialog_footer .btn-secondary')
         .text(btnSecondaryText)
+        .show()
         .off('click')
         .on('click', function(event) {
             event.preventDefault();
@@ -216,7 +257,41 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
                 onCancel($popup);
             $popup.hide();
         });
+    } else {
+        $popup.find('.pml-dialog_footer .btn-secondary').hide();
+    }
+    
     $popup.show();
+}
+
+function suggestVideosForPlaylist(data) {
+    $('.pml-dialog .autocomplete').empty();
+    if (data.items.length > 0) {
+        $.each(data.items, function(i, n) {
+            $('.pml-dialog .autocomplete')
+            .append(
+                $('<li class="autocomplete-item" data-name="'+n.name+'" data-id="'+n.id+'">'+n.name+'<img src="/etc/designs/cs/brightcove/shared/img/add.svg" /></li>')
+                .click(function(event) {
+                    // assign a click handler to add that to the playlist
+                    var $item = $(event.target);
+
+                    // make sure we have the autocomplete item and not the SVG icon
+                    if ($item.localName == 'img') {
+                        $item = $item.parent();
+                    }
+                    var videoId = $item.attr('data-id');
+                    var videoName = $item.attr('data-name');
+                    
+                    // add the item to the list
+                    $('.pml-dialog .playlist-listing')
+                        .append($('<li data-id="'+videoId+'"><span><span class="handle"></span>'+videoName+'</span><a href="#" data-video-id="'+videoId+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+
+                    // clear the search
+                    $('.pml-dialog .playlist-add-input input').val();
+                })
+            )
+        })
+    }
 }
 
 function moveVideoToFolder() {
@@ -279,6 +354,56 @@ function loadFolderCallback(data) {
                         .text(n.name)
                     );
     });
+}
+
+function editPlaylistHandler(event) {
+    event.preventDefault();
+    var data = {
+        a: 'list_videos_in_playlist',
+        callback: 'editPlaylistListingCallback',
+        query: $(event.target).attr('data-playlist-id')
+    };
+
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: data,
+        async: true,
+        success: function (data)
+        {
+            // do something here?
+        }
+    });
+    
+}
+
+function editPlaylistListingCallback(data) {
+    var $search = $('<form autocomplete="off" class="playlist-add-input"><input type="text" placeholder="Search for a video to add" /><ul class="autocomplete"></ul></form>').prop('outerHTML');
+    var $message = $('<ul class="playlist-listing" data-playlist-id="'+data.playlist+'" id="edit-playlist-sortable">');
+    data.items.forEach(function(item, index) {
+        $message
+            .append($('<li data-id="'+item.id+'"><span><span class="handle"></span>'+item.name+'</span><a href="#" data-video-id="'+item.id+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+    });
+    showPopup('Edit Playlist', $search + $message.prop('outerHTML'), 'Update', 'Cancel', function(event) {
+        var playlistData = {
+            a: 'update_playlist',
+            videos: $sortable.toArray(),
+            playlistId: data.playlist
+        };
+    
+        $.ajax({
+            type: 'GET',
+            url: '/bin/brightcove/api.js',
+            data: $.param(playlistData, true),
+            async: true,
+            success: function (data)
+            {
+                // do we need to do something here?
+            }
+        });
+    }, null);
+    var el = document.getElementById("edit-playlist-sortable");
+    $sortable = Sortable.create(el);
 }
 
 //function to move the progress bar on the video upload progress window
@@ -352,7 +477,7 @@ function buildMainVideoList(title) {
     $.each(oCurrentVideoList, function (i, n) {
         modDate = new Date(n.updated_at);
         $("#tbData").append(
-            "<tr style=\"cursor:pointer;\" id=\"" + (i) + "\"> \
+            "<tr style=\"cursor:pointer;\" class=\"state-" + n.state.toLowerCase() + "\" id=\"" + (i) + "\"> \
             <td>\
                 <input type=\"checkbox\" value=\"" + (n.id) + "\" id=\"" + (i) + "\" data-folder-id=\"" + ((n.folder_id) ? n.folder_id : '') + "\" onclick=\"checkCheck()\">\
             </td><td>"
@@ -415,9 +540,9 @@ function buildPlaylistList() {
         $("#tbData").append(
             "<tr style=\"cursor:pointer;\" id=\"" + i + "\">\
             <td>\
-            </td><td>"
+            </td><td><a href\"#\" data-playlist-id=\"" + n.id + "\" class=\"edit-playlist\">"
             + n.name +
-            "</td><td>\
+            "</a></td><td>\
                 <center>---</center>\
             </td><td>"
             + ((n.reference_id) ? n.reference_id : '') +
@@ -1146,7 +1271,7 @@ function uploadtrack()
           '</coral-fileupload>' +
           '</div>' +
           '</div>' +
-          '<p>Please note you can only provide a Source URL or a Source File.</p>' +
+          '<p>Please note you can only provide a Source URL <strong>OR</strong> a Source File.<br />File should be in a valid *.vtt format.</p>' +
           '</div>'
         },
         footer: {

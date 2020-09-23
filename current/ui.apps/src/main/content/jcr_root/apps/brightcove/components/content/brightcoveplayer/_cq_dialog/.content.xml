@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
     jcr:primaryType="nt:unstructured"
     jcr:title="Brightcove Video Player"
     sling:resourceType="cq/gui/components/authoring/dialog">
@@ -48,6 +49,58 @@
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="granite/ui/components/foundation/container">
                         <items jcr:primaryType="nt:unstructured">
+                            <fieldset-container-embed-type
+                                jcr:primaryType="nt:unstructured"
+                                jcr:title="Embed Type"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <embedType
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                        emptyOption="false"
+                                        granite:class="cq-dialog-dropdown-showhide"
+                                        fieldDescription="Type of Embed Mode"
+                                        fieldLabel="Embed Type:"
+                                        name="./embedType">
+                                        <items jcr:primaryType="nt:unstructured">
+                                            <advanced
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Advanced (Javascript)"
+                                                value="advanced"/>
+                                            <iframe
+                                                jcr:primaryType="nt:unstructured"
+                                                text="IFRAME"
+                                                value="iframe"/>
+                                        </items>
+                                        <granite:data
+                                            jcr:primaryType="nt:unstructured"
+                                            cq-dialog-dropdown-showhide-target=".iframeOptions-showhide-target"/>
+                                    </embedType>
+                                </items>
+                            </fieldset-container-embed-type>
+                            <fieldset-iframe-parameters
+                                jcr:primaryType="nt:unstructured"
+                                granite:class="iframeOptions-showhide-target"
+                                jcr:title="IFRAME Parameters"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <autoplay
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                        fieldDescription="Plays the video immediately upon load"
+                                        text="Autoplay Video"
+                                        name="./iframeAutoplay"/>
+                                    <loop
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                        fieldDescription="Loops the video immediately"
+                                        text="Loop Video"
+                                        name="./iframeLoop"/>
+                                </items>
+                                <granite:data
+                                    jcr:primaryType="nt:unstructured"
+                                    showhidetargetvalue="iframe"/>
+                            </fieldset-iframe-parameters>
                             <fieldset-container-attributes
                                 jcr:primaryType="nt:unstructured"
                                 jcr:title="Component Container Attributes"

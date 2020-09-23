@@ -405,6 +405,7 @@ public class ServiceUtil {
     }
 
     public JSONObject getPlaylistByID(String id) {
+        JSONObject items = new JSONObject();
         JSONObject result = new JSONObject();
         try {
             result = brAPI.cms.getPlaylist(id);
@@ -414,8 +415,38 @@ public class ServiceUtil {
         return result;
     }
 
+    public String getVideosInPlaylistByID(String id) {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONArray videos = brAPI.cms.getVideosInPlaylist(id);
+
+            if (videos.length() > 0 ) {
+                items.put("items", videos);
+            }
+            items.put("playlist", id);
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
     public String getPlaylists(int offset, int limit, boolean exportCSV, boolean full_scroll) {
         return getPlaylists(null, offset, limit, exportCSV, full_scroll);
+    }
+
+    public String getExperiences(String q) {
+        String result = "";
+        try {
+            JSONArray experiences = brAPI.cms.getExperiences(q, Constants.NAME);
+            result = experiences.toString(1);
+            LOGGER.info(result);
+        } catch (JSONException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
     }
 
     public String getPlaylists(String q, int offset, int limit, boolean exportCSV, boolean full_scroll) {
@@ -474,6 +505,12 @@ public class ServiceUtil {
             LOGGER.error(e.getClass().getName(), e);
         }
         return jsa;
+    }
+
+    public JSONObject updatePlaylist(String playlistId, String[] videos) {
+        JSONObject result = new JSONObject();
+        result = brAPI.cms.updatePlaylist(playlistId, videos);
+        return result;
     }
 
 

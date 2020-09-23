@@ -237,6 +237,17 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
+    private JSONObject searchExperiences(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result.put("items", serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
+        return result;
+    }
+
+    private JSONObject getVideosInPlayList(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject(serviceUtil.getVideosInPlaylistByID(request.getParameter(Constants.QUERY)));
+        return result;
+    }
+
     private JSONObject searchPlaylist(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         if ("true".equals(request.getParameter("isID"))) {
@@ -400,6 +411,17 @@ public class BrcApi extends SlingAllMethodsServlet {
         //LOGGER.debug("videoItem", videoItem);
 
         return null;
+    }
+
+    private JSONObject updatePlaylist(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        if ( (request.getParameter("videos") != null) && (request.getParameter("playlistId") != null) ) {
+            String[] videos = request.getParameterValues("videos");
+            String playlistId = request.getParameter("playlistId");
+            result = brAPI.cms.updatePlaylist(playlistId, videos);
+        }
+
+        return result;
     }
 
     private JSONObject removeTextTrack(SlingHttpServletRequest request) throws JSONException {
@@ -594,6 +616,12 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = removeVideoFromFolder(request);
         } else if ("delete_playlist".equals(requestedAPI)) {
             result = deletePlaylist(request);
+        } else if ("search_experiences".equals(requestedAPI)) {
+            result = searchExperiences(request);
+        } else if ("list_videos_in_playlist".equals(requestedAPI)) {
+            result = getVideosInPlayList(request);
+        } else if ("update_playlist".equals(requestedAPI)) {
+            result = updatePlaylist(request);
         } else {
             result.put(Constants.ERROR, 404);
         }

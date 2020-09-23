@@ -30,41 +30,6 @@
 -->
 
 <sly  data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.VideoPlayer'}">
-    <sly data-sly-include="inline-styles.html"/>
-
-    <sly data-sly-test="${!player.ignoreComponentProperties && player.inlineCSS}">
-        <style type="text/css">
-            ${player.inlineCSS @context='html'}
-        </style>
-    </sly>
-
-
-    <div id="${player.containerID}" class="${player.containerClass}">
-        <div id="component-wrap-${player.componentID}" class="brc-align-${player.align}">
-                <sly data-sly-test.showSection="${player.account || player.playerID}">
-                    <div data-sly-test="${showSection}" class="${dropTargetPrefix}brightcove_player md-dropzone-video drop-target-player"
-                         data-emptytext="Add Player Here">
-
-                        <sly data-sly-test="${player.videoID || player.playlistID}">
-                            <div class="player-embed-wrap">
-                                <sly data-sly-include="player-embed.html"/>
-                            </div>
-
-                        </sly>
-                        <sly data-sly-test="${wcmmode.edit}">
-                            <div class="${dropTargetPrefix}brightcove_video cq-video-placeholder cq-block-sm-placeholder md-dropzone-video drop-target-video"
-                                 data-emptytext="Add Media Here"></div>
-                        </sly>
-                    </div>
-                    <sly data-sly-test="${!showSection}">
-                        <sly data-sly-test="${wcmmode.edit}">
-                            <div class="${dropTargetPrefix}brightcove_player cq-video-placeholder cq-block-sm-placeholder md-dropzone-video drop-target-player-empty"
-                                 data-emptytext="Add Player Here"></div>
-                        </sly>
-                    </sly>
-                </sly>
-        </div>
-    </div>
     <div data-sly-use.wcmInit="/libs/wcm/foundation/components/page/initwcm.js" data-sly-test="${wcmInit.isTouchAuthoring}" title="Configure component here" class="cq-Overlay cq-Overlay--component cq-droptarget cq-Overlay--placeholder" style="color: rgba(0,0,0,.3);
         border-color: rgba(0,0,0,.3);
         background-color: rgba(255,255,255,.25);
