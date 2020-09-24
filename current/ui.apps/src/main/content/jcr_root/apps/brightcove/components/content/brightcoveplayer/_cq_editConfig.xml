@@ -9,7 +9,7 @@
             jcr:primaryType="cq:DropTargetConfig"
             accept="[video/.*]"
             groups="[media]"
-            propertyName="./videoPlayer"/>
+            propertyName="./videoPlayerDropPath"/>
     </cq:dropTargets>
     <cq:listeners
         jcr:primaryType="cq:EditListenersConfig"

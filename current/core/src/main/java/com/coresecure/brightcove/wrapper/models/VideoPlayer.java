@@ -7,6 +7,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.wcm.api.Page;
+import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.PageManager;
 import com.day.cq.wcm.api.components.ComponentContext;
 import com.day.cq.wcm.api.components.DropTarget;
@@ -200,6 +201,22 @@ public class VideoPlayer {
             //cg = ServiceUtil.getConfigurationGrabber();
             componentID = Text.md5(currentNode.getPath());
             LOGGER.info("componentID:"+ componentID);
+
+            // if a fileList parameter exists, use it to overwrite the videoID
+            String videoPlayerDropPath = properties.get("videoPlayerDropPath", "");
+            if (videoPlayerDropPath.length() > 0) {
+                // a file was dropped here - get the resource and prop
+                LOGGER.info("found dropped video path : " + videoPlayerDropPath);
+                Resource videoResource = resourceResolver.resolve(videoPlayerDropPath);
+                Resource metadataRes = videoResource.getChild(Constants.ASSET_METADATA_PATH);
+                ValueMap map = metadataRes.adaptTo(ValueMap.class);
+                String droppedVideoId = map.get(Constants.BRC_ID, String.class);
+                //videoID = droppedVideoId;
+                LOGGER.info("found asset video id : " + droppedVideoId);
+                LOGGER.info("current video id : " + currentNode.getProperty("videoPlayer").getString());
+                currentNode.setProperty("videoPlayer", droppedVideoId);
+                currentNode.getSession().save();
+            }
 
             videoID = properties.get("videoPlayer", "").trim();
             playlistID = properties.get("videoPlayerPL", "").trim();
