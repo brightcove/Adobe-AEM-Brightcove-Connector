@@ -74,6 +74,7 @@ public class VideoPlayer {
     String playlistID;
     String account;
     String playerPath;
+    String embedType;
     String playerID;
     String playerKey;
     String playerDataEmbed;
@@ -113,6 +114,10 @@ public class VideoPlayer {
 
     public String getPlayerPath() {
         return playerPath;
+    }
+
+    public String getEmbedType() {
+        return embedType;
     }
 
     public String getPlayerID() {
@@ -223,6 +228,7 @@ public class VideoPlayer {
 
             account = properties.get("account", "").trim();
             playerPath = properties.get("playerPath", "").trim();
+            embedType = properties.get("embedType", "").trim();
             playerID = "";
             playerKey = "";
             playerDataEmbed = "";

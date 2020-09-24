@@ -80,7 +80,7 @@
                             </fieldset-container-embed-type>
                             <fieldset-iframe-parameters
                                 jcr:primaryType="nt:unstructured"
-                                granite:class="iframeOptions-showhide-target"
+                                granite:classOLD="iframeOptions-showhide-target"
                                 jcr:title="IFRAME Parameters"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
                                 <items jcr:primaryType="nt:unstructured">

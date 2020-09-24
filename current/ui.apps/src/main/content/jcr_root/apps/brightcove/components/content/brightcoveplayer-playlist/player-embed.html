@@ -31,37 +31,41 @@
 -->
 <sly data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.VideoPlayer'}">
 
-
-    <div id="container-${player.componentID}" class="brightcove-container clearfix">
-
-
-        <sly data-sly-test="${player.align == 'right'}">
-            <div class="playlist-wrapper">
-                <ol class="vjs-playlist vjs-csspointerevents vjs-mouse"></ol>
-            </div>
-        </sly>
-        <video
-                id="video-${player.componentID}"
-                data-account="${player.account}"
-                data-player="${player.playerID}"
-                data-embed="${player.playerDataEmbed}"
-                data-playlist-id="${player.playlistID}"
-                data-usage="cms:aem:${player.version}:${player.bundleVersion}:javascript"
-                width="${player.width}"
-                height="${player.height}"
-                class="video-js"
-                controls>
-        </video>
+    <sly data-sly-test="${!player.embedType || (player.embedType && player.embedType == 'advanced')}">
 
 
-        <sly data-sly-test="${player.align  != 'right'}">
-            <div class="playlist-wrapper">
-                <ol class="vjs-playlist vjs-csspointerevents vjs-mouse"></ol>
-            </div>
-        </sly>
-
-
-        <script src="//players.brightcove.net/${player.account}/${player.playerID}_${player.playerDataEmbed}/index.min.js"></script>
-
-    </div>
+        <div id="container-${player.componentID}" class="brightcove-container clearfix">
+            <sly data-sly-test="${player.align == 'right'}">
+                <div class="playlist-wrapper">
+                    <ol class="vjs-playlist vjs-csspointerevents vjs-mouse"></ol>
+                </div>
+            </sly>
+            <video
+                    id="video-${player.componentID}"
+                    data-account="${player.account}"
+                    data-player="${player.playerID}"
+                    data-embed="${player.playerDataEmbed}"
+                    data-playlist-id="${player.playlistID}"
+                    data-usage="cms:aem:${player.version}:${player.bundleVersion}:javascript"
+                    width="${player.width}"
+                    height="${player.height}"
+                    class="video-js"
+                    controls>
+            </video>
+            <sly data-sly-test="${player.align  != 'right'}">
+                <div class="playlist-wrapper">
+                    <ol class="vjs-playlist vjs-csspointerevents vjs-mouse"></ol>
+                </div>
+            </sly>
+            <script src="//players.brightcove.net/${player.account}/${player.playerID}_${player.playerDataEmbed}/index.min.js"></script>
+        </div>
+    </sly>
+    <sly data-sly-test="${player.embedType && player.embedType == 'iframe'}">
+        <iframe id="container-${player.componentID}" src="https://players.brightcove.net/${player.account}/${player.playerID}_default/index.html?playlistId=${player.playlistID}"
+            allowfullscreen
+            class="brightcove-container"
+            webkitallowfullscreen
+            mozallowfullscreen>
+        </iframe>
+    </sly>
 </sly>

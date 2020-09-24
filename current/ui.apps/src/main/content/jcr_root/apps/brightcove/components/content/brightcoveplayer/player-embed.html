@@ -29,14 +29,23 @@
  permission to convey the resulting work.
 -->
 <sly data-sly-use.clientLib="${'/libs/granite/sightly/templates/clientlib.html'}" data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.VideoPlayer'}">
-
-    <div id="container-${player.componentID}" class="brightcove-container" data-playerid="${player.componentID}" data-account="${player.account}"
-         data-player="${player.playerID}"
-         data-embed="${player.playerDataEmbed}"
-         data-usage="cms:aem:${player.version}:${player.bundleVersion}:javascript"
-         data-video-id="${player.videoID}"
-         data-width="${player.width}"
-         data-height="${player.height}">
-    </div>
-    <sly data-sly-call="${clientLib.js @ categories='brc.html5-player'}"></sly>
+    <sly data-sly-test="${!player.embedType || (player.embedType && player.embedType == 'advanced')}">
+        <div id="container-${player.componentID}" class="brightcove-container" data-playerid="${player.componentID}" data-account="${player.account}"
+            data-player="${player.playerID}"
+            data-embed="${player.playerDataEmbed}"
+            data-usage="cms:aem:${player.version}:${player.bundleVersion}:javascript"
+            data-video-id="${player.videoID}"
+            data-width="${player.width}"
+            data-height="${player.height}">
+        </div>
+        <sly data-sly-call="${clientLib.js @ categories='brc.html5-player'}"></sly>
+    </sly>
+    <sly data-sly-test="${player.embedType && player.embedType == 'iframe'}">
+        <iframe id="container-${player.componentID}" src="https://players.brightcove.net/${player.account}/${player.playerID}_default/index.html?videoId=${player.videoID}"
+            allowfullscreen
+            class="brightcove-container"
+            webkitallowfullscreen
+            mozallowfullscreen>
+        </iframe>
+    </sly>
 </sly>
