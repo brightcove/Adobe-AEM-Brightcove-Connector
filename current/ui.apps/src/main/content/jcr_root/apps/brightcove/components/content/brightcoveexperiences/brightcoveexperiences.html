@@ -41,7 +41,12 @@
   <div id="component-wrap-${player.componentID}" class="brc-align-${player.align}">
     <div class="player-embed-wrap">
       <div id="container-${player.componentID}">
-        [SHOW EXPERIENCE HERE]
+        <iframe 
+          src="https://players.brightcove.net/${player.account}/experience_${properties.experience}/index.html?&usage=cms:cms:aem:${player.version}:${player.bundleVersion}:experienceiframe" 
+          allowfullscreen="" 
+          webkitallowfullscreen="" 
+          mozallowfullscreen=""">
+        </iframe>
       </div>
     </div>
   </div>

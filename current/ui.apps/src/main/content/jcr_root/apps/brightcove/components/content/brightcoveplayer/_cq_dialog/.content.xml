@@ -78,29 +78,6 @@
                                     </embedType>
                                 </items>
                             </fieldset-container-embed-type>
-                            <fieldset-iframe-parameters
-                                jcr:primaryType="nt:unstructured"
-                                granite:classOLD="iframeOptions-showhide-target"
-                                jcr:title="IFRAME Parameters"
-                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
-                                <items jcr:primaryType="nt:unstructured">
-                                    <autoplay
-                                        jcr:primaryType="nt:unstructured"
-                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
-                                        fieldDescription="Plays the video immediately upon load"
-                                        text="Autoplay Video"
-                                        name="./iframeAutoplay"/>
-                                    <loop
-                                        jcr:primaryType="nt:unstructured"
-                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
-                                        fieldDescription="Loops the video immediately"
-                                        text="Loop Video"
-                                        name="./iframeLoop"/>
-                                </items>
-                                <granite:data
-                                    jcr:primaryType="nt:unstructured"
-                                    showhidetargetvalue="iframe"/>
-                            </fieldset-iframe-parameters>
                             <fieldset-container-attributes
                                 jcr:primaryType="nt:unstructured"
                                 jcr:title="Component Container Attributes"
