@@ -28,8 +28,25 @@
  or MIT License, the licensors of this Program grant you additional
  permission to convey the resulting work.
 -->
-
-<sly  data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.VideoPlayer'}">
+<!-- <div class="experience-player" data-sly-test="${properties.experience}">
+  <iframe 
+    src="https://players.brightcove.net/%ACCOUNTID%/experience_${properties.experience}/index.html?&usage=cms:%CMS%:%CMSVERSION%:%CONNECTORVERSION%:experienceiframe" 
+    allowfullscreen="" 
+    webkitallowfullscreen="" 
+    mozallowfullscreen=""">
+  </iframe>
+</div> -->
+<div class="experience-player ${player.containerClass}" id="${player.containerID}" data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.ExperiencePlayer'}" data-sly-test="${player.experienceID}">
+  <sly data-sly-include="inline-styles.html"/>
+  <div id="component-wrap-${player.componentID}" class="brc-align-${player.align}">
+    <div class="player-embed-wrap">
+      <div id="container-${player.componentID}">
+        [SHOW EXPERIENCE HERE]
+      </div>
+    </div>
+  </div>
+</div>
+<sly data-sly-use.player="${'com.coresecure.brightcove.wrapper.models.ExperiencePlayer'}">
     <div data-sly-use.wcmInit="/libs/wcm/foundation/components/page/initwcm.js" data-sly-test="${wcmInit.isTouchAuthoring}" title="Configure component here" class="cq-Overlay cq-Overlay--component cq-droptarget cq-Overlay--placeholder" style="color: rgba(0,0,0,.3);
         border-color: rgba(0,0,0,.3);
         background-color: rgba(255,255,255,.25);

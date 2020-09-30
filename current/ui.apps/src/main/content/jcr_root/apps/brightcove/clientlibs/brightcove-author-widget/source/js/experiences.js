@@ -18,10 +18,14 @@
 
         // only act on the dialogs that matter
         if ( dialogRes.val() == RES_EXPERIENCE_COMPONENT ) {
-            adjustLayoutHeight();
+            //adjustLayoutHeight();
+
+            $('.js-coral-Autocomplete-selectList').on('click', function(event) {
+                console.log($(event.target));
+            });
 
             var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
-            var contentSelector =  $("[name='" + EXPERIENCES +"']").get(0)
+            var contentSelector =  $("[name='" + EXPERIENCES +"']").get(0);
     
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;

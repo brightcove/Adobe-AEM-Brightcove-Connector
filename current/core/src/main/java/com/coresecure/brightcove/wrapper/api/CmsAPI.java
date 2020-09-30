@@ -624,8 +624,8 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONArray  getExperiences(String q, String sort) {
-        JSONArray json = new JSONArray();
+    public JSONObject getExperiences(String q, String sort) {
+        JSONObject json = new JSONObject();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -634,7 +634,7 @@ public class CmsAPI {
             try {
                 q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
                 String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&sort=" + sort;
-                json = getJSONArrayResponse(targetURL, urlParameters, headers);
+                json = getExperiencesJSONObjectResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
@@ -676,24 +676,42 @@ public class CmsAPI {
         return json;
     }
 
+    public JSONObject getExperiencesJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        JSONObject json = new JSONObject();
+        try
+        {
+            String response = account.platform.getExperiencesAPI(targetURL, urlParameters, headers);
+            if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+        }
+        catch (IOException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        catch (JSONException e)
+        {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return json;
+
+    }
+
     //GET API
     public JSONObject getJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
-    JSONObject json = new JSONObject();
-    try
-    {
-        String response = account.platform.getAPI(targetURL, urlParameters, headers);
-        if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+        JSONObject json = new JSONObject();
+        try
+        {
+            String response = account.platform.getAPI(targetURL, urlParameters, headers);
+            if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+        }
+        catch (IOException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        catch (JSONException e)
+        {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return json;
     }
-    catch (IOException e) {
-        LOGGER.error(e.getClass().getName(), e);
-    }
-    catch (JSONException e)
-    {
-        LOGGER.error(e.getClass().getName(), e);
-    }
-    return json;
 
-}
     public JSONArray getJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
         JSONArray json = new JSONArray();
         try
@@ -712,6 +730,22 @@ public class CmsAPI {
 
     }
 
+    public JSONArray getExperiencesJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        JSONArray json = new JSONArray();
+        try
+        {
+            String response = account.platform.getExperiencesAPI(targetURL, urlParameters, headers);
+            if (response != null && !response.isEmpty()) json = JsonReader.readJsonArrayFromString(response);
+        }
+        catch (IOException e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        catch (JSONException e)
+        {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return json;
 
+    }
 
 }

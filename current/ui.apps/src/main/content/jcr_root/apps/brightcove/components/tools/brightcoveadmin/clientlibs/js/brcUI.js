@@ -1283,12 +1283,14 @@ function uploadtrack()
         console.log('dialog is ready');
         var select_field_track_type = $('#text_track_type_field').get(0);
         select_field_track_type.addEventListener('coral-select:showitems', function(event) {
+            select_field_track_type.items.clear();
             kind_options.forEach(function(value, index) {
                 select_field_track_type.items.add(value);
             });
         });
         var select_field_track_language = $('#text_track_language_field').get(0);
         select_field_track_language.addEventListener('coral-select:showitems', function(event) {
+            select_field_track_language.items.clear();
             language_options.forEach(function(value, index) {
                 select_field_track_language.items.add(value);
             });

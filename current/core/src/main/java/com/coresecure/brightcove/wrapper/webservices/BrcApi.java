@@ -119,6 +119,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         Resource res = resourceResolver.resolve(playersPath);
         Iterator<Resource> playersItr = res.listChildren();
         String selectedAccount = request.getParameter("account_id");
+        LOGGER.info("getLocalPlayers(): " + playersPath);
         if (TextUtil.notEmpty(selectedAccount)) {
             while (playersItr.hasNext()) {
                 Page playerRes = playersItr.next().adaptTo(Page.class);
@@ -238,8 +239,7 @@ public class BrcApi extends SlingAllMethodsServlet {
     }
 
     private JSONObject searchExperiences(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result.put("items", serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
+        JSONObject result = new JSONObject(serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
         return result;
     }
 
@@ -635,6 +635,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         LOGGER.debug("executeRequest");
         int error_code = 0;
         boolean js = "js".equals(extension);
+        boolean dropdown = "jsx".equals(extension);
         boolean hasError = false;
         JSONObject result = new JSONObject();
         String resultstr = "{\"" + Constants.ITEMS + "\":[],\"" + Constants.TOTALS + "\":0,\"" + Constants.ERROR + "\":" + error_code + "}";
@@ -669,6 +670,18 @@ public class BrcApi extends SlingAllMethodsServlet {
             if (js) {
                 response.setContentType("text/javascript;charset=UTF-8");
                 response.getWriter().write(callback + "(" + resultstr + ");");
+                break try_loop;
+            }
+
+            if (dropdown) {
+                response.setContentType("text/html;charset=UTF-8");
+                JSONArray itemsArray = result.getJSONArray("items");
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < itemsArray.length(); i++) {
+                    JSONObject item = new JSONObject();
+                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("id") + "\">" + itemsArray.getJSONObject(i).getString("name") + "</li>");
+                }
+                response.getWriter().write(builder.toString());
                 break try_loop;
             }
 

@@ -438,11 +438,12 @@ public class ServiceUtil {
     }
 
     public String getExperiences(String q) {
+        JSONObject items = new JSONObject();
         String result = "";
         try {
-            JSONArray experiences = brAPI.cms.getExperiences(q, Constants.NAME);
-            result = experiences.toString(1);
-            LOGGER.info(result);
+            items = brAPI.cms.getExperiences(q, Constants.NAME);
+            LOGGER.info("getExperiences count(): " + items.length());
+            result = items.toString(1);
         } catch (JSONException e) {
             LOGGER.error(e.getClass().getName(), e);
         }

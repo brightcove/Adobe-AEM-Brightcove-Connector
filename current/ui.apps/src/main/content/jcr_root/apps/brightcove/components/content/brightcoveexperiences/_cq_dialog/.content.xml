@@ -16,26 +16,92 @@
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="granite/ui/components/foundation/container">
                         <items jcr:primaryType="nt:unstructured">
-                            <account
+                            <fieldset-account-details
                                 jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/coral/foundation/form/select"
-                                fieldDescription=""
-                                fieldLabel="Account:"
-                                name="./account">
-                            </account>
-                            <experience
+                                jcr:title="Account &amp; Experience Configuration"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <account
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                        fieldDescription=""
+                                        fieldLabel="Account:"
+                                        name="./account">
+                                    </account>
+                                    <experience
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/foundation/form/autocomplete"
+                                        emptyText="Select"
+                                        fieldLabel="Experience:"
+                                        forceSelection="true"
+                                        multiple="false"
+                                        name="./experience">
+                                        <options
+                                            jcr:primaryType="nt:unstructured"
+                                            sling:resourceType="granite/ui/components/foundation/form/autocomplete/list"
+                                            src="/bin/brightcove/api.jsx?a=search_experiences&amp;query={query}" />
+                                    </experience>
+                                </items>
+                            </fieldset-account-details>
+                            <fieldset-container-attributes
                                 jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/foundation/form/autocomplete"
-                                emptyText="Select"
-                                fieldLabel="Experience:"
-                                forceSelection="true"
-                                multiple="false"
-                                name="./experience">
-                                <options
-                                    jcr:primaryType="nt:unstructured"
-                                    sling:resourceType="granite/ui/components/foundation/form/autocomplete/list"
-                                    src="/bin/brightcove/api?a=search_playlists&amp;account_id=6066350955001&amp;limit=30&amp;start=0" />
-                            </experience>
+                                jcr:title="Component Container Attributes"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <containerID
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldDescription="This does &lt;strong>not&lt;/strong> replace the randomly generated ID, but will added to the Component's Container instead."
+                                        fieldLabel="Container ID"
+                                        name="./containerID"/>
+                                    <containerClass
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldLabel="Container Class"
+                                        name="./containerClass"/>
+                                </items>
+                            </fieldset-container-attributes>
+                            <fieldset-player-styles
+                                jcr:primaryType="nt:unstructured"
+                                jcr:title="Experience Styles"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <align
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                        fieldDescription="When configuring an &lt;b>HTML5 Playlist&lt;/b> the following rules apply: &lt;br/>&lt;br/>&lt;b>Left: &lt;/b> Playlist appears &lt;em>after&lt;/em> the Video element. &lt;br/>&lt;b>Center: &lt;/b> Playlist appears &lt;em>after&lt;/em> the Video element. &lt;br/>&lt;b>Right: &lt;/b> Playlist appears &lt;em>before&lt;/em> the Video element. &lt;br/>&lt;br/>&lt;i>Update your CSS accordingly.&lt;/i>&lt;br/>"
+                                        fieldLabel="Player Alignment:"
+                                        name="./align">
+                                        <items jcr:primaryType="nt:unstructured">
+                                            <left
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Left"
+                                                value="left"/>
+                                            <center
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Center"
+                                                value="center"/>
+                                            <right
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Right"
+                                                value="right"/>
+                                        </items>
+                                    </align>
+                                    <size
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="cq/gui/components/authoring/dialog/sizefield"
+                                        fieldLabel="Size">
+                                        <width
+                                            jcr:primaryType="nt:unstructured"
+                                            sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"
+                                            name="./width"/>
+                                        <height
+                                            jcr:primaryType="nt:unstructured"
+                                            sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"
+                                            name="./height"/>
+                                    </size>
+                                </items>
+                            </fieldset-player-styles>
                         </items>
                     </column>
                 </items>

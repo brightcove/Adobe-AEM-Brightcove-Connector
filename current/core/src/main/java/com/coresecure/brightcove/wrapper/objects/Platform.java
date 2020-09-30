@@ -45,9 +45,11 @@ public class Platform {
     private final static String DEFAULT_OAUTH_URL = "https://oauth.brightcove.com/v4";
     private final static String DEFAULT_PLAYERS_API_URL = "https://players.api.brightcove.com/v2";
     private final static String DEFAULT_API_URL = "https://cms.api.brightcove.com/v1";
+    private final static String DEFAULT_EXPERIENCES_API_URL = "https://experiences.api.brightcove.com/v1";
     private final static String DEFAULT_DI_API_URL = "https://ingest.api.brightcove.com/v1";
     private final String OAUTH_Url;
     private final String PLAYERS_API_Url;
+    private final String EXPERIENCES_API_Url;
     private final String API_Url;
     private final String DI_API_Url;
     private static final Logger LOGGER = LoggerFactory.getLogger(Platform.class);
@@ -61,6 +63,15 @@ public class Platform {
         API_Url = aAPI_Url;
         DI_API_Url = aDI_API_Url;
         PLAYERS_API_Url = aPLAYERS_API_Url;
+        EXPERIENCES_API_Url = DEFAULT_EXPERIENCES_API_URL;
+    }
+
+    public Platform(String aOAUTH_Url, String aAPI_Url, String aDI_API_Url, String aPLAYERS_API_Url, String aEXPERIENCES_API_Url) {
+        OAUTH_Url = aOAUTH_Url;
+        API_Url = aAPI_Url;
+        DI_API_Url = aDI_API_Url;
+        PLAYERS_API_Url = aPLAYERS_API_Url;
+        EXPERIENCES_API_Url = aEXPERIENCES_API_Url;
     }
 
     public String getOAUTH_Url() {
@@ -75,6 +86,10 @@ public class Platform {
         return (PLAYERS_API_Url != null && !PLAYERS_API_Url.isEmpty()) ? PLAYERS_API_Url : DEFAULT_PLAYERS_API_URL;
     }
 
+    public String getEXPERIENCES_API_URL() {
+        return (EXPERIENCES_API_Url != null && !EXPERIENCES_API_Url.isEmpty()) ? EXPERIENCES_API_Url : DEFAULT_EXPERIENCES_API_URL;
+    }
+
     public String getDI_API_Url() {
         return (DI_API_Url != null && !DI_API_Url.isEmpty()) ? DI_API_Url : DEFAULT_DI_API_URL;
     }
@@ -82,6 +97,13 @@ public class Platform {
     public String getAPI(String targetURL, String urlParameters, Map<String, String> headers) {
         String URL = getAPI_Url() + targetURL;
         LOGGER.info("getAPI: " + URL);
+        String response = HttpServices.executeGet(URL, urlParameters, headers);
+        return response;
+    }
+
+    public String getExperiencesAPI(String targetURL, String urlParameters, Map<String, String> headers) {
+        String URL = getEXPERIENCES_API_URL() + targetURL;
+        LOGGER.info("getExperiencesAPI: " + URL);
         String response = HttpServices.executeGet(URL, urlParameters, headers);
         return response;
     }
