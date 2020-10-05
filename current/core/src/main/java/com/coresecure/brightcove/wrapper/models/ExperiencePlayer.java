@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.jcr.Node;
-import java.util.UUID;
 import org.apache.jackrabbit.util.Text;
 
 @Model(
@@ -67,7 +66,7 @@ public class ExperiencePlayer {
     @ScriptVariable
     private ValueMap properties;
 
-    protected final static Logger LOGGER = LoggerFactory.getLogger(VideoPlayer.class);
+    protected final static Logger LOGGER = LoggerFactory.getLogger(ExperiencePlayer.class);
 
     String componentID;
     String experienceID;
