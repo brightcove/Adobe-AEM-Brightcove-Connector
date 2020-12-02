@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:mix="http://www.jcp.org/jcr/mix/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        cq:lastModified="{Date}2017-07-17T16:40:34.803Z"
+        cq:lastModifiedBy="admin"
+        cq:lastReplicated="{Date}2017-07-19T13:49:26.150Z"
+        cq:lastReplicatedBy="admin"
+        cq:lastReplicationAction="Activate"
+        cq:template="/libs/cq/replication/templates/agent"
+        jcr:isCheckedOut="{Boolean}true"
+        jcr:lastModified="{Date}2017-07-17T16:40:34.800Z"
+        jcr:lastModifiedBy="admin"
+        jcr:mixinTypes="[cq:ReplicationStatus,mix:versionable]"
+        jcr:primaryType="nt:unstructured"
+        jcr:title="Brightcove Replication Agent"
+        jcr:uuid="0ed32b72-a4d7-4458-af99-bc4d3e180685"
+        sling:resourceType="cq/replication/components/agent"
+        enabled="true"
+        transportUri="brightcove://localhost:4503/bin/receive"/>
+</jcr:root>
