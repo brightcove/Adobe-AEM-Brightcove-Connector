@@ -852,9 +852,11 @@ public class ServiceUtil {
     private void setObject(Object obj, String key, String x, ModifiableValueMap map, Asset newAsset, ModifiableValueMap assetmap) {
         if (obj != null && !obj.toString().toString().equals(Constants.NULLSTRING)) {
             if (key.equals(Constants.BRC_DURATION)) {
-                int input = Integer.parseInt(obj.toString());
-                input = input / 1000;
-                obj = String.format("%02d:%02d:%02d", input / 3600, (input % 3600) / 60, (input % 3600) % 60);
+                double input = Double.parseDouble(obj.toString());
+                // now we need to convert to a double to account for partial seconds
+                double inputD = input / 1000;
+                LOGGER.debug("brc_duration: " + inputD);
+                obj = String.format("%02d:%02d:%02d", (int)(inputD / 3600), (int)((inputD % 3600) / 60), Math.round((inputD % 3600) % 60));
             }
             map.put(key, obj); //MAIN SET OF THE KEYS->VALUES FOR THIS VIDEO OBJECT
         } else {
