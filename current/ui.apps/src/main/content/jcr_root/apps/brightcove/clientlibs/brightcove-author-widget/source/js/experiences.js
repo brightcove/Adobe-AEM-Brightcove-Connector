@@ -25,10 +25,14 @@
             });
 
             var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
-            var contentSelector =  $("[name='" + EXPERIENCES +"']").get(0);
+            var contentSelector =  $("[name='" + EXPERIENCES +"']").parent().parent().find('[data-granite-autocomplete-src]');
+
+            console.log(contentSelector);
+            console.log(contentSelector.attr('data-granite-autocomplete-src'));
     
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
+                console.log(existingValues);
                 accountSelector.trigger('coral-select:showitems');
             });
     
@@ -36,6 +40,7 @@
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
                         var accounts = data.accounts;
+                        var selected;
                         event.preventDefault();
                         accounts.forEach(function(value, index) {
                             var item = {
@@ -49,8 +54,16 @@
                             } else if (item.value == existingValues.account) {
                                 item.selected = true;
                             }
+                            if (item.selected) {
+                                selected = item.value;
+                            }
                             accountSelector.items.add(item);
                         });
+
+                        // add the account ID to the suggestion API URL
+                        contentSelector.attr('data-granite-autocomplete-src', contentSelector.attr('data-granite-autocomplete-src') + '&account_id=' + selected);
+
+                        //contentSelector.trigger('coral-select:showitems');
     
                         // now trigger the other fields
                         //contentSelector.trigger('coral-autocomplete:showsuggestions');
@@ -61,27 +74,7 @@
             // /bin/brightcove/api?a=search_playlists&account_id=6066350955001&limit=30&start=0
     
             // contentSelector.addEventListener('coral-select:showitems', function(event) {
-            //     if (contentSelector.items.length == 0) {
-            //         console.log(existingValues);
-            //         var ACTION = 'search_videos';
-            //         var CONDITION = existingValues.experience
-            //         $.getJSON(API_URL + "?a=" + ACTION + "&limit=30&start=0&account_id=" + accountSelector.value).done(function(data) {
-            //             var playlists = data.items;
-            //             event.preventDefault();
-            //             playlists.forEach(function(value, index) {
-            //                 var item = {
-            //                     value: value.id,
-            //                     content: {
-            //                         textContent: value.name
-            //                     }
-            //                 }
-            //                 if ( (CONDITION != null) && (item.value == CONDITION) ) {
-            //                     item.selected = true;
-            //                 }
-            //                 contentSelector.items.add(item);
-            //             });
-            //         });
-            //     }
+            //     console.log('will this show?');
             // });
     
         }        

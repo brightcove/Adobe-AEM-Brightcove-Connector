@@ -24,6 +24,18 @@
                                 fieldLabel="Account:"
                                 name="./account">
                             </account>
+                            <!-- <playlistList
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/foundation/form/autocomplete"
+                                emptyText="Select"
+                                fieldLabel="Video:"
+                                forceSelection="true"
+                                multiple="false"
+                                name="./videoPlayer">
+                                <options
+                                    jcr:primaryType="nt:unstructured"
+                                    sling:resourceType="granite/ui/components/foundation/form/autocomplete/list"
+                                    src="/bin/brightcove/api.jsx?a=search_playlists&amp;query={query}" /> -->
                             <playlistList
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
@@ -34,7 +46,7 @@
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
                                 emptyText="Select"
-                                fieldLabel="Player"
+                                fieldLabel="Player:"
                                 name="./playerPath"/>
                         </items>
                     </column>
