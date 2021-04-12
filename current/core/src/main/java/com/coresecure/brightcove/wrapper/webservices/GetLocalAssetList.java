@@ -1,5 +1,6 @@
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.api.CmsAPI;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -7,6 +8,7 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.dam.api.Asset;
+import com.day.cq.wcm.api.Page;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
@@ -202,9 +204,43 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
         try {
             String brcAccountId = getBrightcoveId(request);
             LOGGER.debug("brcAccountId:", brcAccountId);
+
+            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+            ConfigurationService brcService = cg.getConfigurationService(brcAccountId);
             
-            serviceUtil = new ServiceUtil(brcAccountId);
-            outWriter.write(serviceUtil.getPlayers().toString());
+            //serviceUtil = new ServiceUtil(brcAccountId);
+            //outWriter.write(serviceUtil.getPlayers().toString());
+            
+            String playersPath = brcService.getPlayersLoc();
+            ResourceResolver resourceResolver = request.getResourceResolver();
+            Resource res = resourceResolver.resolve(playersPath);
+            Iterator<Resource> playersItr = res.listChildren();
+            
+            JsonObjectBuilder bo = Json.createObjectBuilder();
+
+            if (TextUtil.notEmpty(brcAccountId)) {
+                JsonArrayBuilder items = Json.createArrayBuilder();
+                while (playersItr.hasNext()) {
+                    Page playerRes = playersItr.next().adaptTo(Page.class);
+                    if (playerRes != null && "brightcove/components/page/brightcoveplayer".equals(playerRes.getContentResource().getResourceType())) {
+                        String path = playerRes.getPath();
+                        String title = playerRes.getTitle();
+                        String account = playerRes.getProperties().get("account", "");
+                        if (TextUtil.notEmpty(account) && account.equals(brcAccountId)) {
+                            items.add(
+                                Json.createObjectBuilder()
+                                    .add("id", path)
+                                    .add("name", title)
+                                    .add("title", title)
+                                    .build()
+                            );
+                        }
+                    }
+                }
+
+                bo.add("items", items);
+                outWriter.write(bo.build().toString());
+            }
 
         } catch (Exception e) {
             LOGGER.error("JSONException", e);
