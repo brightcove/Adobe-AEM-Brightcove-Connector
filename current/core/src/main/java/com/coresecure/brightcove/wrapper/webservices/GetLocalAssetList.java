@@ -143,21 +143,22 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
 
                         ValueMap metadataValues = assetResource.getChild("jcr:content/metadata").adaptTo(ValueMap.class);
 
-                        String title = videoAsset.getMetadataValue("dc:title");
+                        if ( metadataValues.containsKey("brc_id") ) {
+                            String title = videoAsset.getMetadataValue("dc:title");
 
-                        if (title == null || title.length() == 0) {
-                            title = assetResource.getName();
+                            if (title == null || title.length() == 0) {
+                                title = assetResource.getName();
+                            }
+    
+                            items.add(
+                                Json.createObjectBuilder()
+                                    .add("path", assetResource.getPath())
+                                    .add("title", title)
+                                    .add("id", metadataValues.get("brc_id").toString())
+                                    .build()
+                            );
                         }
-
-                        items.add(
-                            Json.createObjectBuilder()
-                                .add("path", assetResource.getPath())
-                                .add("title", title)
-                                .add("id", metadataValues.get("brc_id").toString())
-                                .build()
-                        );
                     }
-                    
 
                 }
 
