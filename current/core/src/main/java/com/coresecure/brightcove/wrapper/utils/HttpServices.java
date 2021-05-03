@@ -47,7 +47,6 @@ import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.net.www.protocol.https.HttpsURLConnectionImpl;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -79,7 +78,7 @@ public class HttpServices {
 
     public static void setProxy(Proxy proxy) {
         LOGGER.info("setProxy: " + proxy.toString());
-        if (proxy == null) {
+        if (proxy == null || proxy.toString().length() == 0) {
             PROXY = Proxy.NO_PROXY;
         } else {
             PROXY = proxy;
@@ -278,11 +277,11 @@ public class HttpServices {
             connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
+                LOGGER.debug("setting header... " + key + ": " + headers.get(key));
             }
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
-
 
             // Send request
             wr = new DataOutputStream(connection.getOutputStream());
@@ -312,7 +311,7 @@ public class HttpServices {
                 }
 
                 exPostResponse = response.toString();
-                LOGGER.trace("exPostResponse >>>" + exPostResponse);
+                LOGGER.debug("exPostResponse >>>" + exPostResponse);
 
                 if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
                     //CORRECT ADDITION OF THE REQUEST BODY
@@ -451,8 +450,8 @@ public class HttpServices {
     private static void setRequestMethod(final HttpURLConnection c, final String value) {
         try {
             final Object target;
-            if (c instanceof HttpsURLConnectionImpl) {
-                final Field delegate = HttpsURLConnectionImpl.class.getDeclaredField("delegate");
+            if (c instanceof HttpsURLConnection) {
+                final Field delegate = HttpsURLConnection.class.getDeclaredField("delegate");
                 delegate.setAccessible(true);
                 target = delegate.get(c);
             } else {

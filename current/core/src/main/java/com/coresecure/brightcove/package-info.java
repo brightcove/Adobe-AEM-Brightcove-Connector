@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 @Version("1.0")
-@Export(optional = "provide:=true")
+@Export
 package com.coresecure.brightcove;
 
-import aQute.bnd.annotation.Export;
-import aQute.bnd.annotation.Version;
+import org.osgi.annotation.versioning.Version;
+import org.osgi.annotation.bundle.Export;

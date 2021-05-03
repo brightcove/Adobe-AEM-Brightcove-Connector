@@ -33,9 +33,13 @@
 
 package com.coresecure.brightcove.wrapper.sling;
 
-import org.apache.felix.scr.annotations.*;
-import org.apache.felix.scr.annotations.Properties;
-import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,85 +48,96 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-@Component(immediate = true,
-        label = "Brightcove Service",
-        description = "Brightcove Service Configuration",
-        name = "com.coresecure.brightcove.wrapper.sling.BrcServiceImpl",
-        metatype = true,
-        configurationFactory = true,
-        policy = ConfigurationPolicy.REQUIRE
-)
-@Service(value = ConfigurationService.class)
-@Properties({
-        @Property(name = "accountAlias", label = "Account Alias", description = "Text alias for Account ID", value = ""),
-        @Property(name = "key", label = "Account ID", description = "CMS API Account ID", value = ""),
-        @Property(name = "client_id", label = "Client ID", description = "CMS API Client ID", value = ""),
-        @Property(name = "client_secret", label = "Client Secret", description = "CMS API Client Secret", value = ""),
-        @Property(name = "allowed_groups", label = "Allowed Groups", description = "Groups that are allowed to see this account data", value = {"", ""}),
-        @Property(name = "playersstore", label = "Players Store Path", description = "Path of the players store locatione", value = "/content/brightcovetools/players"),
-        @Property(name = "defVideoPlayerID", label = "Default Video Player ID", description = "Default Video Player ID", value = "default"),
-        @Property(name = "defVideoPlayerKey", label = "Default Video Player Key", description = "Default Video Player Key - DEPRECATED", value = ""),
-        @Property(name = "defPlaylistPlayerID", label = "Default Playlist Player ID", description = "Default Playlist Player ID", value = "default"),
-        @Property(name = "defPlaylistPlayerKey", label = "Default Playlist Player Key", description = "Default Playlist Player Key - DEPRECATED", value = ""),
-        @Property(name = "proxy", label = "Proxy server", description = "Proxy server in the form proxy.foo.com:3128", value = {""}),
-        @Property(name = "asset_integration_path", label = "Dam Integration Path", description = "Remote Asset Metadata Storage Path", value = "/content/dam/brightcove_assets"),
-        @Property(name = "ingest_profile", label = "Ingest Profile", description = "Configure default Ingest Profile", value = "")
-})
-
-
+@Component(service = ConfigurationService.class, immediate = true)
+@Designate(ocd = ConfigurationServiceImpl.Config.class, factory = true)
 public class ConfigurationServiceImpl implements ConfigurationService {
-    private ComponentContext componentContext;
+
+    @ObjectClassDefinition(name = "Brightcove Service", description = "Brightcove Service Configuration")
+	public static @interface Config {
+
+        @AttributeDefinition(name = "Account Alias", description = "Text alias for the account ID.")
+		String accountAlias() default "";
+
+        @AttributeDefinition(name = "Account ID", description = "CMS API account ID.")
+		String accountId() default "";
+
+        @AttributeDefinition(name = "Client ID", description = "CMS API client ID.")
+		String clientId() default "";
+
+        @AttributeDefinition(name = "Client Secret", description = "CMS API client secret.")
+		String clientSecret() default "";
+
+		@AttributeDefinition(name = "Allowed Groups", description = "Groups that are allowed to see this account data.")
+		String[] allowedGroups() default {""};
+
+		@AttributeDefinition(name = "Player Store Path", description = "Path of the players store location.")
+		String playerStorePath() default "/content/brightcovetools/players";
+
+		@AttributeDefinition(name = "Default Video Player ID", description = "Default Video Player ID")
+		String defaultVideoPlayerId() default "default";
+
+		@AttributeDefinition(name = "Default Video Player Key", description = "Default Video Player Key")
+		String defaultVideoPlayerKey() default "";
+
+        @AttributeDefinition(name = "Default Playlist Player ID", description = "Default Playlist Player ID")
+		String defaultPlaylistPlayerId() default "default";
+
+		@AttributeDefinition(name = "Default Playlist Player Key", description = "Default Playlist Player Key")
+		String defaultPlaylistPlayerKey() default "";
+
+		@AttributeDefinition(name = "Proxy Server", description = "Proxy server in the form proxy.foo.com:3128")
+		String proxyServer() default "";
+
+		@AttributeDefinition(name = "DAM Integration Path", description = "Remote Asset Metadata Storage Path")
+		String damIntegrationPath() default "/content/dam/brightcove_assets";
+
+		@AttributeDefinition(name = "Default Ingest Profile", description = "Default ingestion profile to use for videos.")
+		String defaultIngestProfile() default "";
+	}
+
     private static Logger loggerVar = LoggerFactory.getLogger(ConfigurationService.class);
     private static final String ALGO = "AES";
-    private Dictionary<String, Object> prop;
-
-    private Dictionary<String, Object> getProperties() {
-        if (prop == null)
-            return new Hashtable<String, Object>();
-        return prop;
-    }
+    private Config config;
 
     @Activate
     @Modified
-    void activate(ComponentContext aComponentContext) {
+    void activate(final Config config) {
         loggerVar.info("activate");
-        this.componentContext = aComponentContext;
-        this.prop = componentContext.getProperties();
-        loggerVar.debug(componentContext.getProperties().toString());
+        this.config = config;
     }
 
     @Deactivate
-    void deactivate(ComponentContext aComponentContext) {
+    void deactivate(final Config config) {
         loggerVar.info("deactivate");
     }
 
 
     public String getClientID() {
-        return (String) getProperties().get("client_id");
+        return this.config.clientId();
     }
 
     public String getAssetIntegrationPath() {
-        return (String) getProperties().get("asset_integration_path");
+        return this.config.damIntegrationPath();
     }
 
     public String getClientSecret() {
-        return (String) getProperties().get("client_secret");
+        return this.config.clientSecret();
     }
 
     public String getAccountID() {
-        return (String) getProperties().get("key");
+        return this.config.accountId();
     }
 
     public String getPlayersLoc() {
-        return (String) getProperties().get("playersstore");
+        return this.config.playerStorePath();
     }
 
     public String getDefVideoPlayerID() {
-        return (String) getProperties().get("defVideoPlayerID");
+        return this.config.defaultVideoPlayerId();
     }
 
     public String getDefVideoPlayerKey() {
-        return (String) getProperties().get("defVideoPlayerKey");
+        return this.config.defaultVideoPlayerKey();
     }
 
     public String getDefVideoPlayerDataEmbedded() {
@@ -130,19 +145,19 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     public String getDefPlaylistPlayerID() {
-        return (String) getProperties().get("defPlaylistPlayerID");
+        return this.config.defaultPlaylistPlayerId();
     }
 
     public String getDefPlaylistPlayerKey() {
-        return (String) getProperties().get("defPlaylistPlayerKey");
+        return this.config.defaultPlaylistPlayerKey();
     }
 
     public String getAccountAlias() {
-        return (String) getProperties().get("accountAlias");
+        return this.config.accountAlias();
     }
 
     public String[] getAllowedGroups() {
-        Object p = getProperties().get("allowed_groups");
+        Object p = this.config.allowedGroups();
         if (p == null) return new String[0];
         if (p instanceof String && ((String) p).trim().length() > 0) {
             return new String[]{((String) p).trim()};
@@ -160,13 +175,13 @@ public class ConfigurationServiceImpl implements ConfigurationService {
 
 
     public String getProxy() {
-        String proxy = (String) getProperties().get("proxy");
+        String proxy = this.config.proxyServer();
         loggerVar.debug("getProxy() " + proxy);
         return proxy;
     }
 
     public String getIngestProfile() {
-        return (String) getProperties().get("ingest_profile");
+        return this.config.defaultIngestProfile();
     }
 
 

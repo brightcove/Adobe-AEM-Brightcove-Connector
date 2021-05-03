@@ -33,13 +33,18 @@
 package com.coresecure.brightcove.wrapper.sling;
 
 
-import org.apache.felix.scr.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
+
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.ResourceResolver;
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,23 +52,43 @@ import org.slf4j.LoggerFactory;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Component(immediate = true)
-@Service
-@References({
-        @Reference(cardinality = ReferenceCardinality.OPTIONAL_MULTIPLE,
-                policy = ReferencePolicy.DYNAMIC,
-                referenceInterface = ConfigurationService.class,
-                name = "ConfigurationService")
-})
-
+@Component(
+    service = ConfigurationGrabber.class,
+    immediate = true,
+    reference = {
+            @Reference(
+                    name = "configurationService",
+                    service = com.coresecure.brightcove.wrapper.sling.ConfigurationService.class,
+                    policy = ReferencePolicy.DYNAMIC,
+                    policyOption = ReferencePolicyOption.GREEDY,
+                    cardinality = ReferenceCardinality.MULTIPLE,
+                    bind = "bindConfigurationService",
+                    unbind = "unbindConfigurationService"
+            )
+    }
+)
 public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationGrabberImpl.class);
 
     private static String KEY = "key";
 
-    private final Map<String, ConfigurationService> myConfigurationServices = new HashMap<String, ConfigurationService>();
+    private final Map<String, ConfigurationService> myConfigurationServices = new ConcurrentHashMap<String, ConfigurationService>();
     private ComponentContext componentContext;
+
+    protected final void bindConfigurationService(final ConfigurationService config,
+                                                    final Map<Object, Object> props) {
+
+        LOGGER.info("ConfigurationService bind() called");
+
+        myConfigurationServices.put(config.getAccountID(), config);
+    }
+
+    protected final void unbindConfigurationService(final ConfigurationService config,
+                                                    final Map<Object, Object> props) {
+        myConfigurationServices.remove(config.getAccountID());
+    }
 
     public ConfigurationService getConfigurationService(String key) {
         return myConfigurationServices.get(key);
@@ -115,28 +140,10 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
         return result;
     }
 
-    protected void bindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            ConfigurationService operation = (ConfigurationService) this.componentContext.locateService("ConfigurationService");
-            //Or you can use
-            //MyCustomServices operation = ref.getProperty("service.pid");
-            if (operation != null) {
-                myConfigurationServices.put(customKey, operation);
-            }
-        }
-    }
-
-    protected void unbindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            myConfigurationServices.remove(customKey);
-        }
-    }
-
     @Activate
     protected void activate(ComponentContext ctx) {
         this.componentContext = ctx;
+        LOGGER.info("Brightcove ConfigurationGrabber is active. ");
     }
 }
 

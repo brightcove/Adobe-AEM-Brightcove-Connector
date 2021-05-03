@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:rep="internal"
-    jcr:primaryType="rep:SystemUser"
-          jcr:uuid="e5be4ea1-4662-384a-bc52-747727192a49"
-          rep:authorizableId="brightcove_admin"
-    rep:principalName="brightcove_admin"/>

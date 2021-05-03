@@ -5,4 +5,4 @@
     jcr:description="Brightcove Video Player Component (HTML5)"
     jcr:primaryType="cq:Component"
     jcr:title="Brightcove Video Player (HTML5)"
-    componentGroup="General"/>
+    componentGroup="Brightcove"/>

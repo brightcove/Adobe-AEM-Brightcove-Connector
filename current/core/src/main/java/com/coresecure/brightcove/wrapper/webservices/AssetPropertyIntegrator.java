@@ -41,8 +41,10 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.day.cq.commons.jcr.JcrUtil;
-import org.apache.felix.scr.annotations.*;
-import org.apache.felix.scr.annotations.Properties;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -65,12 +67,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 
-@Service
-@Component
-@Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"html"}),
-        @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/dataload"})
-})
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=html",
+        "sling.servlet.paths=/bin/brightcove/dataload"
+    }
+)
+@ServiceDescription("Brightcove Data Load Servlet")
 public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
 
@@ -95,7 +98,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
         //INITIALIZING THE RESOURCE RESOLVER
         ExecutorService executor = Executors.newFixedThreadPool(assetIntegratorCronBundle.getMaxThreadNum());
         List<Future<String>> list = new ArrayList<Future<String>>();
-        LOGGER.trace("BRIGHTCOVE ASSET INTEGRATION - SYNCHRONIZING DATABASE");
+        LOGGER.debug("BRIGHTCOVE ASSET INTEGRATION - SYNCHRONIZING DATABASE");
         try {
 
 
@@ -147,7 +150,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                         list.add(future);
                     }
 
-                    LOGGER.trace(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
+                    LOGGER.debug(">>>>FINISHED BRIGHTCOVE SYNC PAYLOAD TRAVERSAL>>>>");
 
                 }
             }

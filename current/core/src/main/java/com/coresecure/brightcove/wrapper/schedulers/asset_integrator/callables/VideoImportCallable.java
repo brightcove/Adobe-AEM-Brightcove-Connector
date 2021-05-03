@@ -54,7 +54,6 @@ import javax.jcr.RepositoryException;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;

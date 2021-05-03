@@ -10,10 +10,8 @@ import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.Page;
 
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Properties;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Service;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
@@ -44,13 +42,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-@Service
-@Component
-@Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"json"}),
-        @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/getLocalVideoList"})
-})
+import javax.servlet.Servlet;
 
+
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=json",
+        "sling.servlet.paths=/bin/brightcove/getLocalVideoList"
+    }
+)
+@ServiceDescription("Brightcove Dropdown Options Servlet")
 public class GetLocalAssetList extends SlingAllMethodsServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GetLocalAssetList.class);

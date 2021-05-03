@@ -1,32 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Adobe AEM Brightcove Connector
- 
- Copyright (C) 2019 3|SHARE Inc.
- 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
- 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
- - Additional permission under GNU GPL version 3 section 7
- If you modify this Program, or any covered work, by linking or combining
- it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
- squeakysand-commons and squeakysand-osgi (or a modified version of those
- libraries), containing parts covered by the terms of APACHE LICENSE 2.0
- or MIT License, the licensors of this Program grant you additional
- permission to convey the resulting work.
- -->
-<!--
- |  Copyright 2015 Adobe Systems Incorporated
+ |  Copyright 2017 Adobe Systems Incorporated
  |
  |  Licensed under the Apache License, Version 2.0 (the "License");
  |  you may not use this file except in compliance with the License.
@@ -41,256 +15,95 @@
  |  limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.coresecure.brightcove.cq5</groupId>
-        <artifactId>brightcove_connector</artifactId>
-        <version>5.6-SNAPSHOT</version>
+        <groupId>com.coresecure</groupId>
+        <artifactId>brightcove</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>brightcove-services</artifactId>
-    <packaging>bundle</packaging>
-    <name>brightcove - Core</name>
-    <description>Core bundle for Brightcove</description>
-    <properties>
-        <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
-        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
-        <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
-    </properties>
+    <artifactId>brightcove.core</artifactId>
+    <name>Brightcove Connector - Core</name>
+    <description>Core bundle for Brightcove Connector</description>
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
+                <groupId>org.apache.sling</groupId>
+                <artifactId>sling-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.9</version>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>bnd-process</id>
                         <goals>
-                            <goal>prepare-agent</goal>
+                            <goal>bnd-process</goal>
+                        </goals>
+                        <configuration>
+                            <bnd><![CDATA[
+Import-Package: javax.annotation;version=0.0.0,*
+Include-Resource: /Users/paulegan/.m2/repository/org/jcodec/jcodec-javase/0.2.1/jcodec-javase-0.2.1.jar,/Users/paulegan/.m2/repository/org/jcodec/jcodec/0.2.1/jcodec-0.2.1.jar
+Export-Package: !*.impl.*,!*.internal.*,\
+    com.coresecure.*
+Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
+                                ]]></bnd>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-baseline-maven-plugin</artifactId>
+                <configuration>
+                    <failOnMissing>false</failOnMissing>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>baseline</id>
+                        <goals>
+                            <goal>baseline</goal>
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <destFile>${sonar.jacoco.reportPath}</destFile>
-                </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
-                    <instructions>
-                        <Embed-Dependency>
-                            httpclient;scope=compile,
-                            httpcore;scope=compile,
-                            httpmime;scope=compile,
-                            jsoup;scope=compile,
-                            jcodec;scope=compile,
-                            jcodec-javase;scope=compile
-                        </Embed-Dependency>
-                        <Import-Package>
-                            sun.net.www.protocol.https.*;resolution:=optional,javax.annotation;version=0,*
-                        </Import-Package>
-                        <Sling-Model-Packages>
-                            com.coresecure.brightcove.wrapper.models
-                        </Sling-Model-Packages>
-                    </instructions>
+                    <archive>
+                        <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <!-- Development profile: install only the bundle -->
-        <profile>
-            <id>autoInstallBundle</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.sling</groupId>
-                        <artifactId>maven-sling-plugin</artifactId>
-                        <configuration>
-                            <!-- Note that this requires /apps/brightcove/install to exist!!          -->
-                            <!--    This is typically the case when ui.apps is deployed first                -->
-                            <!--    Otherwise, create /apps/brightcove/install manually (CRXDE|Lite)  -->
-                            <slingUrlSuffix>/apps/brightcove/install/</slingUrlSuffix>
-                            <failOnError>true</failOnError>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>integrationTests</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
 
-                    <plugin>
-                        <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.7.2.201409121644</version>
-                        <configuration>
-                            <append>true</append>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>prepare-agent-integration</goal>
-                                </goals>
-                                <configuration>
-                                    <dumpOnExit>true</dumpOnExit>
-                                    <output>file</output>
-                                    <includes>
-                                        <include>com.ninedemons.*</include>
-                                    </includes>
-                                    <append>true</append>
-                                    <propertyName>jacoco.agent.it.arg</propertyName>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>jacoco-site</id>
-                                <phase>post-integration-test</phase>
-                                <goals>
-                                    <goal>report-integration</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
-                                </configuration>
-                            </execution>
-
-                        </executions>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>integration-test</id>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>verify</id>
-                                <goals>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <argLine>-Xmx1024m -XX:MaxPermSize=256m ${jacoco.agent.it.arg}</argLine>
-                            <debugForkedProcess>${maven.surefire.debug}</debugForkedProcess>
-                            <includes>
-                                <include>${tests.to.run}</include>
-                            </includes>
-                            <systemPropertyVariables>
-                                <test.server.url>${test.server.url}</test.server.url>
-                                <test.server.hostname>${test.server.hostname}</test.server.hostname>
-                                <test.server.username>${test.server.username}</test.server.username>
-                                <test.server.password>${test.server.password}</test.server.password>
-                                <jar.executor.server.port>${http.port}</jar.executor.server.port>
-                                <jar.executor.vm.options>${jar.executor.vm.options}  ${jacoco.agent.it.arg}</jar.executor.vm.options>
-                                <jar.executor.jar.folder>${project.basedir}/target/dependency</jar.executor.jar.folder>
-                                <jar.executor.jar.name.regexp>cq-quickstart.*jar$</jar.executor.jar.name.regexp>
-                                <jar.executor.work.folder>${jar.executor.work.folder}</jar.executor.work.folder>
-                                <jar.executor.jar.options>${jar.executor.jar.options}</jar.executor.jar.options>
-                                <additional.bundles.path>${project.basedir}/target/sling/additional-bundles</additional.bundles.path>
-                                <keepJarRunning>${keepJarRunning}</keepJarRunning>
-                                <server.ready.timeout.seconds>6000</server.ready.timeout.seconds>
-                                <sling.testing.timeout.multiplier>${sling.testing.timeout.multiplier}</sling.testing.timeout.multiplier>
-                                <server.ready.path.1>/libs/granite/core/content/login.html:QUICKSTART_HOMEPAGE</server.ready.path.1>
-                                <start.bundles.timeout.seconds>40</start.bundles.timeout.seconds>
-                                <bundle.install.timeout.seconds>30</bundle.install.timeout.seconds>
-
-                                <!--
-                                    Define additional bundles to install by specifying the beginning of their artifact name.
-                                    The bundles are installed in lexical order of these property names.
-                                    All bundles must be listed as dependencies in this pom, or they won't be installed.
-                                -->
-                                <sling.additional.bundle.1>org.apache.sling.junit.core</sling.additional.bundle.1>
-                                <sling.additional.bundle.2>org.apache.sling.junit.scriptable</sling.additional.bundle.2>
-                                <sling.additional.bundle.3>example.models</sling.additional.bundle.3>
-                                <sling.additional.bundle.5>example.core</sling.additional.bundle.5>
-                                <sling.additional.bundle.6>org.apache.sling.junit.remote</sling.additional.bundle.6>
-                                <sling.additional.bundle.7>org.apache.sling.testing.tools</sling.additional.bundle.7>
-                                <sling.additional.bundle.8>httpclient-osgi</sling.additional.bundle.8>
-                                <sling.additional.bundle.9>httpcore-osgi</sling.additional.bundle.9>
-                            </systemPropertyVariables>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-
-    </profiles>
     <dependencies>
-
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore-osgi</artifactId>
-            <version>4.1.4</version>
-            <scope>provided</scope>
+            <groupId>uk.org.lidalia</groupId>
+            <artifactId>slf4j-test</artifactId>
+            <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient-osgi</artifactId>
-            <version>4.1.2</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <version>4.1.4</version>
-            <scope>provided</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.adobe.aem</groupId>
-            <artifactId>uber-jar</artifactId>
-            <classifier>apis</classifier>
+            <artifactId>aem-sdk-api</artifactId>
+        </dependency>
+        <!-- <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.settings</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.jcr.jcr-wrapper</artifactId>
-            <version>2.0.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.jackrabbit</groupId>
-            <artifactId>jackrabbit-api</artifactId>
-            <version>2.5.3</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-            <version>3.2.2</version>
-            <scope>provided</scope>
-        </dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.annotations</artifactId>
+        </dependency> -->
+
+        <!-- JCodec -->
         <dependency>
             <groupId>org.jcodec</groupId>
             <artifactId>jcodec</artifactId>
@@ -301,80 +114,48 @@
             <artifactId>jcodec-javase</artifactId>
             <version>0.2.1</version>
         </dependency>
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-            <version>1</version>
-        </dependency>
 
-        <!-- OSGi Dependencies -->
+        <!-- Testing -->
         <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.scr</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.scr.annotations</artifactId>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>biz.aQute</groupId>
-            <artifactId>bndlib</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-        </dependency>
-        <!-- Other Dependencies -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.jcr</groupId>
-            <artifactId>jcr</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.models.api</artifactId>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit-addons</groupId>
             <artifactId>junit-addons</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.5.6</version>
+            <groupId>io.wcm</groupId>
+            <artifactId>io.wcm.testing.aem-mock.junit5</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.sling</groupId>
+                    <artifactId>org.apache.sling.models.impl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
         </dependency>
-        <!--JacocoTests-->
-        <dependency>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.9</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.sling/org.apache.sling.testing.sling-mock -->
+        <!-- Required to be able to support injection with @Self and @Via -->
         <dependency>
             <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.testing.sling-mock</artifactId>
-            <version>1.0.0</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/junit/junit -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>1.10.19</version>
+            <artifactId>org.apache.sling.models.impl</artifactId>
+            <version>1.4.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

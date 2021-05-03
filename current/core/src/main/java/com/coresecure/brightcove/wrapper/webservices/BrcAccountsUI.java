@@ -43,10 +43,12 @@ import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.iterators.TransformIterator;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Properties;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.servlets.annotations.SlingServletResourceTypes;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+
+import javax.servlet.Servlet;
+import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
@@ -71,11 +73,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-@Service
-@Component
-@Properties(value = {
-        @Property(name = "sling.servlet.resourceTypes", value= {"coresecure/brightcove/accountsUI","coresecure/brightcove/playersUI"})
-})
+
+@Component(service = { Servlet.class })
+@SlingServletResourceTypes(
+        resourceTypes={"coresecure/brightcove/accountsUI", "coresecure/brightcove/playersUI"},
+        methods=HttpConstants.METHOD_GET,
+        extensions="txt")
+@ServiceDescription("Brightcove Accounts Resource Servlet")
 public class BrcAccountsUI extends SlingAllMethodsServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcAccountsUI.class);

@@ -4,4 +4,5 @@
     jcr:description="Brightcove Player Definition"
     jcr:primaryType="cq:Component"
     jcr:title="Brightcove Player Definition"
-          sling:resourceSuperType="wcm/foundation/components/page"/>
+    componentGroup=".hidden"
+    sling:resourceSuperType="wcm/foundation/components/page"/>

@@ -34,7 +34,14 @@ package com.coresecure.brightcove.wrapper.schedulers.asset_integrator.impl;
 
 import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetIntegratorCronBundle;
 import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.runnables.AssetPropertyIntegratorRunnable;
-import org.apache.felix.scr.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.mime.MimeTypeService;
 import org.apache.sling.commons.scheduler.ScheduleOptions;
@@ -46,31 +53,28 @@ import org.slf4j.LoggerFactory;
 import java.util.Dictionary;
 import java.util.Hashtable;
 
-@Service
-@Component(
-        label="Brightcove Asset Integration Cronjob Scheduler Configuration",
-        description="Brightcove Data Sync Cronjob Manager",
-        metatype = true,
-        immediate = true,
-        name="com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetIntegratorCronBundle"
-)
-@Properties({
-        @Property(
-                name="enable",
-                label="CRON Enable",
-                description="Enable CRON",
-                boolValue=false),
-        @Property(
-                name="scheduler",label="CRON Scheduler",description="Scheduler CRON",value="0 5 0 ? * SUN"),
-        @Property(
-                name="maxthreads",label="Max Thread Number",description="Max Number of threads to call",intValue=20)
-
-})
+@Component(service = AssetIntegratorCronBundle.class)
+@Designate(ocd = AssetIntegratorCronBundleImpl.Config.class)
 public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle {
+
+    @ObjectClassDefinition(name = "A simple cleanup task", description = "Simple demo for cron-job like task with properties")
+	public static @interface Config {
+
+		@AttributeDefinition(name = "CRON Scheduler")
+		String scheduler_expression() default "0 5 0 ? * SUN";
+
+        @AttributeDefinition(name = "CRON Enable", description = "Enable this cron task.")
+		boolean enable_cron() default false;
+
+		@AttributeDefinition(name = "Max Thread Number", description = "Max number of threads to use for asset integration.")
+		int maxThreads() default 20;
+	}
 
 
     /** Default log. */
     protected final Logger log = LoggerFactory.getLogger(this.getClass());
+
+    private int maxThreads;
 
     @Reference
     private Scheduler scheduler;
@@ -81,36 +85,20 @@ public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle 
     @Reference
     ResourceResolverFactory resourceResolverFactory;
 
-    private Dictionary<String, Object> prop;
-    private Dictionary<String, Object> getProperties() {
-        if (prop == null)
-            return new Hashtable<String, Object>();
-        return prop;
-    }
-    public String getCRON() {
-        return (String) getProperties().get("scheduler");
-    }
-	public Boolean getStatus() {
-        return (Boolean) getProperties().get("enable");
-    }
-
     public int getMaxThreadNum() {
-        return (Integer) getProperties().get("maxthreads");
+        return this.maxThreads;
     }
-
-
 
     @Activate
-    protected void activate(ComponentContext componentContext) {
+    protected void activate(final Config config) {
         String jobName1 = "BrightcoveAssetIntegratorCron";
+        this.maxThreads = config.maxThreads();
         this.scheduler.unschedule(jobName1);
-        prop = componentContext.getProperties();
-        if (getStatus()) {
-            log.debug(prop.toString());
-            String schedulingExpression = getCRON();
+        if (config.enable_cron()) {
+            String schedulingExpression = config.scheduler_expression();
             log.info(jobName1 + " is scheduled with the following CRON: " + schedulingExpression);
             boolean canRunConcurrently = false;
-            AssetPropertyIntegratorRunnable assetPropertyIntegratorRunnable = new AssetPropertyIntegratorRunnable(mType, resourceResolverFactory,getMaxThreadNum());
+            AssetPropertyIntegratorRunnable assetPropertyIntegratorRunnable = new AssetPropertyIntegratorRunnable(mType, resourceResolverFactory, config.maxThreads());
             final Runnable job1 = assetPropertyIntegratorRunnable;
             final ScheduleOptions options = scheduler.EXPR(schedulingExpression).name(jobName1).canRunConcurrently(canRunConcurrently);
             this.scheduler.schedule(job1, options);
@@ -118,7 +106,7 @@ public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle 
     }
 
     @Deactivate
-    protected void deactivate(ComponentContext componentContext) {
+    protected void deactivate(final Config config) {
         String jobName1 = "BrightcoveAssetIntegratorCron";
         this.scheduler.unschedule(jobName1);
         log.info("Deactivated, goodbye!");

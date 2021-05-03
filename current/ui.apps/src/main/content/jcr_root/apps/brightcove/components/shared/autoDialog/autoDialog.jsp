@@ -30,7 +30,6 @@
  permission to convey the resulting work.
 --%>
 
-<%@ page import="com.coresecure.brightcove.wrapper.filter.CustomAddDialogTabFilter" %>
 <%@ page import="org.apache.sling.commons.json.JSONObject" %>
 <%@ page import="com.coresecure.brightcove.wrapper.sling.ServiceUtil" %>
 <%@ page import="org.apache.sling.commons.json.JSONArray" %>

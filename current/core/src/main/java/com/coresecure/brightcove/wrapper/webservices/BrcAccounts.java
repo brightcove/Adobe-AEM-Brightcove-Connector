@@ -38,10 +38,9 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Properties;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Service;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import javax.servlet.Servlet;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
@@ -63,12 +62,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-@Service
-@Component
-@Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"json"}),
-        @Property(name = "sling.servlet.paths", value = {"/bin/brightcove/accounts", "/bin/brightcove/accounts/ds"})
-})
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=json",
+        "sling.servlet.paths=/bin/brightcove/accounts",
+        "sling.servlet.paths=/bin/brightcove/accounts/ds"
+    }
+)
+@ServiceDescription("Brightcove Data Load Servlet")
 public class BrcAccounts extends SlingAllMethodsServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcAccounts.class);

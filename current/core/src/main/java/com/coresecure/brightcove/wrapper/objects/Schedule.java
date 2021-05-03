@@ -38,7 +38,6 @@ import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.annotation.Nonnull;
 
 public class Schedule {
     private static final Logger LOGGER = LoggerFactory.getLogger(Schedule.class);
@@ -50,7 +49,7 @@ public class Schedule {
         ends_at = aEnds_at;
     }
 
-    public Schedule(@Nonnull JSONObject aSchedule) throws JSONException {
+    public Schedule(JSONObject aSchedule) throws JSONException {
         this(aSchedule.getString(Constants.STARTS_AT),aSchedule.getString(Constants.ENDS_AT));
     }
 

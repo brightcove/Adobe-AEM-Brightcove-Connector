@@ -34,7 +34,5 @@ package com.coresecure.brightcove.wrapper.schedulers.asset_integrator;
 
 
 public interface AssetIntegratorCronBundle {
-    String getCRON();
-    Boolean getStatus();
     int getMaxThreadNum();
 }

@@ -44,13 +44,9 @@ import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.wcm.api.Page;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Properties;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Service;
-import org.apache.jackrabbit.api.security.user.Authorizable;
-import org.apache.jackrabbit.api.security.user.Group;
-import org.apache.jackrabbit.api.security.user.UserManager;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestParameter;
@@ -63,8 +59,6 @@ import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 import javax.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -72,12 +66,14 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 
-@Service
-@Component
-@Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"json", "js"}),
-        @Property(name = "sling.servlet.paths", value = "/bin/brightcove/api")
-})
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=json",
+        "sling.servlet.extensions=js",
+        "sling.servlet.paths=/bin/brightcove/api"
+    }
+)
+@ServiceDescription("Brightcove API Servlet")
 public class BrcApi extends SlingAllMethodsServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcApi.class);

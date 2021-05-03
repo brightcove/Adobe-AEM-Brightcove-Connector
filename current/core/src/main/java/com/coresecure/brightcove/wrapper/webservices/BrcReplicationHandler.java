@@ -41,7 +41,6 @@ import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.DamConstants;
 import com.day.cq.replication.*;
-import org.apache.felix.scr.annotations.*;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
@@ -56,35 +55,46 @@ import javax.jcr.RepositoryException;
 import java.io.InputStream;
 import java.util.*;
 
-@Service(TransportHandler.class)
-@Component(label = "Brightcove: Replication Agents", immediate = true, metatype = true)
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+
+@Component(service = TransportHandler.class)
+@Designate(ocd = BrcReplicationHandler.Config.class)
+
 public class BrcReplicationHandler implements TransportHandler {
+
+    @ObjectClassDefinition(name = "Brightcove: Replication Agents", description = "Configuration for the Brightcove Replication Agent")
+	public static @interface Config {
+
+		@AttributeDefinition(name = "Brightcove Target Directory", description = "Directory for Brightcove replication operations")
+		String brightcoveTargetDirectory() default "/content/dam";
+
+		@AttributeDefinition(name = "Brightcove Replication Protocol", description = "Protocol for the Brightcove replication handler")
+		String brightcoveProtocol() default "brightcove://";
+	}
+
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
 
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcReplicationHandler.class);
+
     /** Protocol for replication agent transport URI that triggers this transport handler. */
-    private Map<String, Object> properties;
-
-    private static final String DEFAULT_BRIGHTCOVE_PROTOCOL = "brightcove://";
-    @Property(label = "Brightcove Replication Protocol", value = DEFAULT_BRIGHTCOVE_PROTOCOL)
-    public static final String BRIGHTCOVE_PROTOCOL = "brightcove_protocol";
-
-
-    private static final String DEFAULT_TARGET_DIRECTORY = "/content/dam";
-    @Property(label = "Target Directory", description = "Add the folder to process this action on. (Limiting to specific folders in the DAM will improve performance)", value = DEFAULT_TARGET_DIRECTORY)
-    public static final String TARGET_DIRECTORY = "target_directory";
+    private String targetDirectory;
+    private String protocol;
 
 
     @Reference
     ConfigurationGrabber configurationGrabber;
 
-
     ConfigurationService cs;
-
-
 
     @Reference
     ResourceResolverFactory resourceResolverFactory;
@@ -92,10 +102,10 @@ public class BrcReplicationHandler implements TransportHandler {
     ReplicationLog replicationLog = null;
 
     @Activate
-    protected final void activate(final Map<String, Object> properties) throws Exception {
+    protected final void activate(final Config config) throws Exception {
         LOGGER.debug("activate");
         // Read in OSGi Properties for use by the OSGi Service in the Activate method
-        update(properties);
+        update(config);
     }
 
     @Deactivate
@@ -105,23 +115,17 @@ public class BrcReplicationHandler implements TransportHandler {
     }
 
     @Modified
-    protected void update(final Map<String, Object> aProperties) {
-        properties = aProperties;
-    }
-
-    private Map<String, Object> getProperties() {
-        if (properties == null) {
-            return new Hashtable<String, Object>();
-        }
-        return properties;
+    protected void update(final Config config) {
+        this.targetDirectory = config.brightcoveTargetDirectory();
+        this.protocol = config.brightcoveProtocol();
     }
 
     public String getTargetDirectory() {
-        return PropertiesUtil.toString(getProperties().get(TARGET_DIRECTORY), DEFAULT_TARGET_DIRECTORY);
+        return this.targetDirectory;
     }
 
     public String getBrightcoveProtocol() {
-        return PropertiesUtil.toString(getProperties().get(BRIGHTCOVE_PROTOCOL), DEFAULT_BRIGHTCOVE_PROTOCOL);
+        return this.protocol;
     }
 
     @Override

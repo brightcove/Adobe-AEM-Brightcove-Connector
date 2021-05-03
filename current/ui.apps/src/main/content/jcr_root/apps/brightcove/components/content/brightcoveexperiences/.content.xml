@@ -5,4 +5,4 @@
     jcr:description="Brightcove In-Page Experience Selector"
     jcr:primaryType="cq:Component"
     jcr:title="Brightcove In-Page Experience Selector"
-    componentGroup="General"/>
+    componentGroup="Brightcove"/>

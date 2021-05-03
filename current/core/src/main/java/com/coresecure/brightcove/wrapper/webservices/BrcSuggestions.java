@@ -36,8 +36,9 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.security.util.RequestConstants;
-import org.apache.felix.scr.annotations.Properties;
-import org.apache.felix.scr.annotations.Property;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
@@ -48,11 +49,13 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-
-@Properties(value = {
-        @Property(name = "sling.servlet.extensions", value = {"json"}),
-        @Property(name = "sling.servlet.paths", value = "/bin/brightcove/suggestions")
-})
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=json",
+        "sling.servlet.paths=/bin/brightcove/suggestions"
+    }
+)
+@ServiceDescription("Brightcove Suggestions Servlet")
 public class BrcSuggestions extends SlingAllMethodsServlet {
 
 

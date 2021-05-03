@@ -33,7 +33,13 @@
 package com.coresecure.brightcove.wrapper.filter;
 
 import com.day.cq.commons.TidyJsonItemWriter;
-import org.apache.felix.scr.annotations.*;
+import org.apache.sling.engine.EngineConstants;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import org.osgi.service.component.propertytypes.ServiceRanking;
+import org.osgi.service.component.propertytypes.ServiceVendor;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Deactivate;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
@@ -45,7 +51,6 @@ import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
@@ -58,13 +63,15 @@ import java.util.List;
 import java.util.Map;
 
 
-@Component(immediate = true)
-@Service(Filter.class)
-@Properties({
-        @Property(name = "sling.filter.scope", value = "request"),
-        @Property(name = "service.ranking", intValue = -1),
-        @Property(name = "sling.servlet.selectors", value = {"overlay", "infinity"})
-})
+@Component(service = Filter.class,
+           property = {
+                   EngineConstants.SLING_FILTER_SCOPE + "=" + EngineConstants.FILTER_SCOPE_REQUEST,
+                   EngineConstants.SLING_FILTER_SELECTORS + "=" + "overlay",
+                   EngineConstants.SLING_FILTER_SELECTORS + "=" + "infinity",
+           })
+@ServiceDescription("Custom Brightcove Dialog Filter")
+@ServiceRanking(-1)
+@ServiceVendor("Brightcove")
 public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements Filter {
 
     final static private Logger LOGGER = LoggerFactory.getLogger(CustomAddDialogTabFilter.class);

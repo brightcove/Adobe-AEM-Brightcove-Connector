@@ -34,9 +34,9 @@ package com.coresecure.brightcove.wrapper.webservices;
 
 import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.utils.Constants;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Service;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.propertytypes.ServiceDescription;
+import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
@@ -52,9 +52,16 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 
-@Service
-@Component
-@Property(name = "sling.servlet.paths", value = {"/bin/brightcove/image","/bin/services/brightcove/image","/bin/services/brightcove/cache/image"})
+
+@Component(service = { Servlet.class },
+    property = {
+        "sling.servlet.extensions=json",
+        "sling.servlet.paths=/bin/brightcove/image",
+        "sling.servlet.paths=/bin/services/brightcove/image",
+        "sling.servlet.paths=/bin/services/brightcove/cache/image"
+    }
+)
+@ServiceDescription("Brightcove Image Cache Servlet")
 public class BrcImageApi extends SlingAllMethodsServlet {
 
     @Override

@@ -32,25 +32,20 @@
  */
 package com.coresecure.brightcove.wrapper.sling;
 
-import org.apache.felix.scr.annotations.*;
-import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Dictionary;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Map;
 
-@Component(immediate = true, metatype = true, label = "Brightcove Certificate Service", description = "Brightcove Certificate Service Configuration")
-@Service(value = CertificateListService.class)
-@Properties({
-		@Property(name = "certificate_paths", label = "Certificate Path Mappings", description = "Certificate path mapping for different urls, should be like url:::certificate path", value = {
-				"https://players.api.brightcove.com/v2:::D:/cert/players_api.cer",
-				"https://cms.api.brightcove.com/v1:::D:/cert/cms_api.cer",
-				"https://ingest.api.brightcove.com/v1:::D:/cert/ingest_api.cer",
-				"https://oauth.brightcove.com/v4/access_token:::D:/cert/oath_brightcove.cer" }),
-		@Property(name = "enable-trusted-certificate", label = "Enable Trusted Certificate", description = "To Enable Enable Trusted Certificate, Value should be YES else NO", value = { "NO" }) })
+@Component(service = CertificateListService.class)
+@Designate(ocd = CertificateListServiceImpl.Config.class)
+
 /**
  * This class is used to get the certificate per domain. These certificate
  * is used to fix the Fortify scan issue.
@@ -59,24 +54,33 @@ import java.util.Map;
  * 
  */
 public class CertificateListServiceImpl implements CertificateListService {
-	private ComponentContext componentContext;
-	private static Logger loggerVar = LoggerFactory
-			.getLogger(CertificateListService.class);
-	private static final String CERTIFICATE_PATHS = "certificate_paths";
-	private static final String ENABLE_TRUSTED_CERTIFICATE = "enable-trusted-certificate";
-	private static final String SEPRATOR = ":::";
-	private Dictionary<String, Object> prop;
 
-	private Dictionary<String, Object> getProperties() {
-		if (prop == null)
-			return new Hashtable<String, Object>();
-		return prop;
+	@ObjectClassDefinition(name = "Brightcove Certificate Service", description = "Brightcove Certificate Service Configuration")
+	public static @interface Config {
+
+		@AttributeDefinition(name = "Certificate Path Mappings", description = "Certificate path mapping for different urls, should be like url:::certificate path")
+		String[] certificatePathMappings() default {
+			"https://players.api.brightcove.com/v2:::D:/cert/players_api.cer",
+			"https://cms.api.brightcove.com/v1:::D:/cert/cms_api.cer",
+			"https://ingest.api.brightcove.com/v1:::D:/cert/ingest_api.cer",
+			"https://oauth.brightcove.com/v4/access_token:::D:/cert/oath_brightcove.cer"
+		};
+
+		@AttributeDefinition(name = "Enable Trusted Certificate", description = "To Enable Enable Trusted Certificate, Value should be YES else NO")
+		String enableTrustedCertificate() default "NO";
 	}
+	
+	private static Logger logger = LoggerFactory
+			.getLogger(CertificateListService.class);
+
+	private static final String SEPRATOR = ":::";
+	private String enableTrustedCertificate = "NO";
+	private String[] certificatePathMappings;
 
 	@Activate
-	void activate(ComponentContext aComponentContext) {
-		this.componentContext = aComponentContext;
-		this.prop = componentContext.getProperties();
+	void activate(final Config config) {
+		this.enableTrustedCertificate = config.enableTrustedCertificate();
+		this.certificatePathMappings = config.certificatePathMappings();
 	}
 
 	/**
@@ -88,10 +92,11 @@ public class CertificateListServiceImpl implements CertificateListService {
 	 */
 	public Map<String, String> getCertificatePaths() {
 		Map<String, String> urlsPath = new HashMap<String, String>();
-		Object p = getProperties().get(CERTIFICATE_PATHS);
-		if (p instanceof String[]) {
-			return cleanStringArrayPaths((String[]) p);
+
+		if (this.certificatePathMappings != null) {
+			return cleanStringArrayPaths(this.certificatePathMappings);
 		}
+
 		return urlsPath;
 	}
 
@@ -101,7 +106,7 @@ public class CertificateListServiceImpl implements CertificateListService {
 	 * @return
 	 */
 	public String getEnableTrustedCertificate() {
-		return (String) getProperties().get(ENABLE_TRUSTED_CERTIFICATE);
+		return this.enableTrustedCertificate;
 	}
 
 	private Map<String, String> cleanStringArrayPaths(String[] input) {
@@ -113,6 +118,8 @@ public class CertificateListServiceImpl implements CertificateListService {
 				pathMaps.put(url, certPath);
 			}
 		}
+
+		logger.debug("cleanStringArrayPaths():", pathMaps.toString());
 
 		return pathMaps;
 	}
