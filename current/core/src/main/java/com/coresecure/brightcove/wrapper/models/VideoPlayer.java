@@ -11,6 +11,8 @@ import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.PageManager;
 import com.day.cq.wcm.api.components.ComponentContext;
 import com.day.cq.wcm.api.components.DropTarget;
+import com.fasterxml.jackson.annotation.JsonSetter.Value;
+
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -220,6 +222,10 @@ public class VideoPlayer {
                 LOGGER.info("found asset video id : " + droppedVideoId);
                 LOGGER.info("current video id : " + currentNode.getProperty("videoPlayer").getString());
                 currentNode.setProperty("videoPlayer", droppedVideoId);
+                
+                // now delete the property for next time to be clean
+                currentNode.setProperty("videoPlayerDropPath", "");
+
                 currentNode.getSession().save();
             }
 

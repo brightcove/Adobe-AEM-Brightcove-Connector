@@ -46,6 +46,7 @@ import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
+import org.apache.sling.models.annotations.injectorspecific.OSGiService;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Component
@@ -68,8 +70,12 @@ import java.util.List;
 })
 public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
 
+    @OSGiService
+    ConfigurationGrabber cg;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(GetBrightcoveAssetPath.class);
 
+    Set<String> services;
 
     @Override
     protected void doGet(final SlingHttpServletRequest request,
@@ -88,9 +94,24 @@ public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
         JSONObject root = new JSONObject();
 
         try {
-
-            String brcAccountId = ServiceUtil.getAccountFromCookie(request);
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+
+            String brcAccountId = request.getParameter("account_id");
+            
+            if ( brcAccountId == null || brcAccountId.length() == 0 ) {
+                brcAccountId = ServiceUtil.getAccountFromCookie(request);
+            }
+
+            if ( brcAccountId == null || brcAccountId.length() == 0 ) {
+                services = cg.getAvailableServices(request);
+
+                if ( services.size() > 0 ) {
+                    brcAccountId = (String) services.toArray()[0];
+                }
+            }
+
+            LOGGER.debug("brcAccountId:", brcAccountId);
+            
             ConfigurationService brcService = cg.getConfigurationService(brcAccountId);
             
             String assetsPath = brcService.getAssetIntegrationPath();
@@ -102,6 +123,7 @@ public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
             LOGGER.error("JSONException", e);
             outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");
         }
+
     }
 
 }

@@ -52,27 +52,25 @@
                         });
     
                         // now trigger the other fields
-                        contentSelector.trigger('coral-select:showitems');
-                        playerSelector.trigger('coral-select:showitems');
+                        contentSelector.trigger('coral-select:showitems');            playerSelector.trigger('coral-select:showitems');
                     });
                 }
             });
     
-            // /bin/brightcove/api?a=search_playlists&account_id=6066350955001&limit=30&start=0
-    
             contentSelector.addEventListener('coral-select:showitems', function(event) {
                 if (contentSelector.items.length == 0) {
-                    console.log(existingValues);
-                    var ACTION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? 'search_playlists' : 'search_videos';
-                    var CONDITION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? existingValues.videoPlayerPL : existingValues.videoPlayer
-                    $.getJSON(API_URL + "?a=" + ACTION + "&limit=30&start=0&account_id=" + accountSelector.value).done(function(data) {
-                        var playlists = data.items;
+                    var ACTION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? 'playlists' : 'videos';
+                    var CONDITION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
+                    $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+                        source: ACTION
+                    }).done(function(data) {
+                        var videos = data.items;
                         event.preventDefault();
-                        playlists.forEach(function(value, index) {
+                        videos.forEach(function(value, index) {
                             var item = {
                                 value: value.id,
                                 content: {
-                                    textContent: value.name
+                                    textContent: (ACTION == 'playlists') ? value.name : value.title
                                 }
                             }
                             if ( (CONDITION != null) && (item.value == CONDITION) ) {
@@ -88,7 +86,9 @@
     
             playerSelector.addEventListener('coral-select:showitems', function(event) {
                 if (playerSelector.items.length == 0) {
-                    $.getJSON(API_URL + "?a=local_players&limit=30&start=0&account_id=" + accountSelector.value).done(function(data) {
+                    $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+                        source: 'players'
+                    }).done(function(data) {
                         var players = data.items;
                         event.preventDefault();
                         players.forEach(function(value, index) {

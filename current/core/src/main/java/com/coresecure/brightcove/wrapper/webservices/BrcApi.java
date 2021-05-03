@@ -98,9 +98,9 @@ public class BrcApi extends SlingAllMethodsServlet {
     }
 
     private boolean getServices(SlingHttpServletRequest request) {
-        LOGGER.info("getServices");
         boolean result = false;
         String requestedAccount = AccountUtil.getSelectedAccount(request);
+        LOGGER.info("getServices", requestedAccount);
         Set<String> services = cg.getAvailableServices(request);
         if (services.contains(requestedAccount)) {
             cs = cg.getConfigurationService(requestedAccount);
@@ -239,6 +239,7 @@ public class BrcApi extends SlingAllMethodsServlet {
     }
 
     private JSONObject searchExperiences(SlingHttpServletRequest request) throws JSONException {
+        LOGGER.debug("searchExperiences called");
         JSONObject result = new JSONObject(serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
         return result;
     }
@@ -576,6 +577,7 @@ public class BrcApi extends SlingAllMethodsServlet {
     private JSONObject apiLogic(SlingHttpServletRequest request, SlingHttpServletResponse response, JSONObject jsonObject) throws JSONException, IOException {
         JSONObject result = jsonObject;
         String requestedAPI = request.getParameter("a");
+        LOGGER.debug("apiLogic requested :: ", requestedAPI);
         if ("local_players".equals(requestedAPI)) { //getPlayers
             result = getLocalPlayers(request);
         } else if ("players".equals(requestedAPI)) { //getPlayers
