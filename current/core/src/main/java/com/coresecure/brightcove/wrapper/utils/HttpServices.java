@@ -32,10 +32,38 @@
  */
 package com.coresecure.brightcove.wrapper.utils;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.net.HttpURLConnection;
+import java.net.ProtocolException;
+import java.net.Proxy;
+import java.net.URL;
+import java.net.URLConnection;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
 import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.CertificateListService;
-import org.apache.commons.codec.Encoder;
-import org.apache.commons.lang3.ObjectUtils;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.webdav.DavMethods;
 import org.apache.sling.commons.json.JSONArray;
@@ -47,26 +75,6 @@ import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.*;
-import java.lang.reflect.Field;
-import java.net.HttpURLConnection;
-import java.net.Proxy;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.charset.Charset;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.util.HashMap;
-import java.util.Map;
 
 public class HttpServices {
     private static Proxy PROXY = Proxy.NO_PROXY;
@@ -362,6 +370,24 @@ public class HttpServices {
         return responseJSON.toString();
     }
 
+    public SSLContext updatedGetSSLContext(String targetURL) {
+
+        SSLContext context = null;
+        CertificateListService certificateListService = getServiceReference();
+
+        if (null != certificateListService) {
+            String enableCert = certificateListService
+                    .getEnableTrustedCertificate();
+            String certPath = getCertificatePath(targetURL);
+
+            if (null != enableCert && "YES".equalsIgnoreCase(enableCert)) {
+                context = getSSlContext(certPath);
+            }
+        }
+
+        return context;
+    }
+
     public static String executePatch(String targetURL, String payload,
                                       Map<String, String> headers) {
         LOGGER.debug("executePatch - START: " + targetURL);
@@ -372,6 +398,8 @@ public class HttpServices {
         DataOutputStream wr = null;
         boolean isError = true;
         try {
+
+
 
 
             // Create connection
@@ -447,23 +475,43 @@ public class HttpServices {
         return exPatchResponse;
     }
 
-    private static void setRequestMethod(final HttpURLConnection c, final String value) {
+    private static void setRequestMethod(final HttpURLConnection conn, final String method) {
         try {
-            final Object target;
-            if (c instanceof HttpsURLConnection) {
-                final Field delegate = HttpsURLConnection.class.getDeclaredField("delegate");
-                delegate.setAccessible(true);
-                target = delegate.get(c);
-            } else {
-                target = c;
+            conn.setRequestMethod(method);
+        } catch (ProtocolException e) {
+            Class<?> c = conn.getClass();
+            Field methodField = null;
+            Field delegateField = null;
+            try {
+                delegateField = c.getDeclaredField("delegate");
+            } catch (NoSuchFieldException nsfe) {
+    
             }
-            final Field f = HttpURLConnection.class.getDeclaredField("method");
-            f.setAccessible(true);
-            f.set(target, value);
-        } catch (IllegalAccessException ex) {
-            throw new AssertionError(ex);
-        } catch (NoSuchFieldException ex) {
-            throw new AssertionError(ex);
+            while (c != null && methodField == null) {
+                try {
+                    methodField = c.getDeclaredField("method");
+                } catch (NoSuchFieldException nsfe) {
+    
+                }
+                if (methodField == null) {
+                    c = c.getSuperclass();
+                }
+            }
+            try {
+                if (methodField != null) {
+                    methodField.setAccessible(true);
+                    methodField.set(conn, method);
+                }
+        
+                if (delegateField != null) {
+                    delegateField.setAccessible(true);
+                    HttpURLConnection delegate = (HttpURLConnection) delegateField.get(conn);
+                    setRequestMethod(delegate, method);
+                }
+            } catch (Exception exception) {
+                LOGGER.info("Error setting request method to PATCH");
+            }
+            
         }
     }
 

@@ -1,35 +1,64 @@
-### AEM References ###
-**/geometrixx*
+# Created by https://www.gitignore.io/api/eclipse,java,maven
 
-### Mac OS X ###
-.DS_Store
-
-### Package Files ###
-*.ear
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.war
-*.zip
-
-#### Eclipse ###
-.classpath
-.project
+### Eclipse ###
+*.pydevproject
+.metadata
+.gradle
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
 .settings/
+.loadpath
 
-### VLT ###
-*.vlt
-*.vlt-sync.log
-*.vlt-sync-config.properties
+# Eclipse Core
+.project
 
-### SVN ###
-.svn/
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+
+# Java annotation processor (APT)
+.factorypath
+
+# PDT-specific
+.buildpath
+
+# sbteclipse plugin
+.target
+
+# TeXlipse plugin
+.texlipse
+
+
+### Java ###
+*.class
+.java-version
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
 
 ### Maven ###
-log/
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -38,50 +67,40 @@ pom.xml.next
 release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
-content/target/**
-bundle/target/**
+.mvn/timing.properties
 
-### Intellij ###
-# Created by https://www.gitignore.io
-# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm
+
+### Vault ###
+.vlt
+
+
+### IntelliJ ###
+.idea/
 *.iml
 
-## Directory-based project format:
-.idea/*
-cs_commons-dev/
-# if you remove the above rule, at least ignore the following:
-
-# User-specific stuff:
-**/workspace.xml
-**/.idea/tasks.xml
-**/.idea/dictionaries
-**/.idea/libraries
-**/.idea/.name
-**/.idea/scopes
-
-# Sensitive or high-churn files:
- .idea/dataSources.ids
- .idea/dataSources.xml
- .idea/sqlDataSources.xml
- .idea/dynamic.xml
- .idea/uiDesigner.xml
-
-# Gradle:
- .idea/gradle.xml
- .idea/libraries
-
-# Mongo Explorer plugin:
- .idea/mongoSettings.xml
-
-## File-based project format:
-*.ipr
-*.iws
-
-## Plugin-specific files:
-*.dir
-
-# IntelliJ
-/out/
-
-# VS Code
+### VS Code ###
 .vscode/
+
+
+### Node.js ###
+
+# Log files
+*.log
+
+# NPM
+node_modules/
+yarn.lock
+
+# Webpack
+build/
+dist/
+
+# Frontend Maven Plugin
+node/
+
+# Tests
+coverage/
+reports/
+
+# Others
+dispatcher/src/conf.d/variables/default.vars

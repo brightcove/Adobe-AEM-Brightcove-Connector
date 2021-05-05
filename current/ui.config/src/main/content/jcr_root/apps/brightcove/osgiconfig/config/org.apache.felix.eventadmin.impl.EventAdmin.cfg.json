@@ -1,0 +1,9 @@
+{
+    "org.apache.felix.eventadmin.IgnoreTimeout": [
+        "org.apache.felix*",
+        "org.apache.sling*",
+        "com.day*",
+        "com.adobe*",
+        "com.coresecure*"
+    ]
+}

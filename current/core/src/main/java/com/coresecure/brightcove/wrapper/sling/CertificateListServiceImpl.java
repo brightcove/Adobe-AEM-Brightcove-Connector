@@ -119,7 +119,7 @@ public class CertificateListServiceImpl implements CertificateListService {
 			}
 		}
 
-		logger.debug("cleanStringArrayPaths():", pathMaps.toString());
+		logger.debug("cleanStringArrayPaths(): {}", pathMaps.toString());
 
 		return pathMaps;
 	}
