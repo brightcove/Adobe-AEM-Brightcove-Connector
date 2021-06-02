@@ -66,6 +66,7 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     private ComponentContext componentContext;
 
     public ConfigurationService getConfigurationService(String key) {
+        LOGGER.debug("getConfigurationService() all: " + myConfigurationServices.keySet().toString() + ", using: " + myConfigurationServices.get(key).getAccountID());
         return myConfigurationServices.get(key);
     }
 
@@ -100,6 +101,7 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
             int i = 0;
             for (String account : getAvailableServices()) {
                 ConfigurationService cs = getConfigurationService(account);
+                LOGGER.debug("getAvailableServices() account: " + account + ", getAccountID(): " + cs.getAccountID());
                 List<String> allowedGroups = new ArrayList<String>(cs.getAllowedGroupsList());
                 allowedGroups.retainAll(memberOf);
                 if (allowedGroups.size() > 0) {
@@ -115,23 +117,16 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
         return result;
     }
 
-    protected void bindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            ConfigurationService operation = (ConfigurationService) this.componentContext.locateService("ConfigurationService");
-            //Or you can use
-            //MyCustomServices operation = ref.getProperty("service.pid");
-            if (operation != null) {
-                myConfigurationServices.put(customKey, operation);
-            }
+    protected void bindConfigurationService(final ConfigurationService service) {
+
+        if (service != null) {
+            LOGGER.debug("bindConfigurationService() binding: " + service.getAccountID());
+            myConfigurationServices.put(service.getAccountID(), service);
         }
     }
 
-    protected void unbindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            myConfigurationServices.remove(customKey);
-        }
+    protected void unbindConfigurationService(final ConfigurationService service) {
+        myConfigurationServices.remove(service.getAccountID());
     }
 
     @Activate
