@@ -73,7 +73,7 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
                         getLocalPlayersForDropdown(request, response);
                     }
                 }
-                
+
 
     }
 
@@ -83,19 +83,19 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
 
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
             String brcAccountId = request.getParameter("account_id");
-            
+
             if ( brcAccountId == null || brcAccountId.length() == 0 ) {
                 brcAccountId = ServiceUtil.getAccountFromCookie(request);
             }
-    
+
             if ( brcAccountId == null || brcAccountId.length() == 0 ) {
                 services = cg.getAvailableServices(request);
-    
+
                 if ( services.size() > 0 ) {
                     brcAccountId = (String) services.toArray()[0];
                 }
             }
-    
+
             return brcAccountId;
 
         } catch (Exception e) {
@@ -103,7 +103,7 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
             return null;
 
         }
-        
+
     }
 
 
@@ -117,7 +117,7 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
             String brcAccountId = getBrightcoveId(request);
 
             LOGGER.debug("brcAccountId:", brcAccountId);
-            
+
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
             ConfigurationService brcService = cg.getConfigurationService(brcAccountId);
             String assetsPath = brcService.getAssetIntegrationPath() + "/" + brcAccountId;
@@ -149,10 +149,11 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
                             if (title == null || title.length() == 0) {
                                 title = assetResource.getName();
                             }
-    
+
                             items.add(
                                 Json.createObjectBuilder()
                                     .add("path", assetResource.getPath())
+                                    .add("lastModified", videoAsset.getLastModified())
                                     .add("title", title)
                                     .add("id", metadataValues.get("brc_id").toString())
                                     .build()
@@ -184,7 +185,7 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
         try {
             String brcAccountId = getBrightcoveId(request);
             LOGGER.debug("brcAccountId:", brcAccountId);
-            
+
             serviceUtil = new ServiceUtil(brcAccountId);
 
             outWriter.write(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), 0, 100, false, false).toString());
@@ -208,15 +209,15 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
 
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
             ConfigurationService brcService = cg.getConfigurationService(brcAccountId);
-            
+
             //serviceUtil = new ServiceUtil(brcAccountId);
             //outWriter.write(serviceUtil.getPlayers().toString());
-            
+
             String playersPath = brcService.getPlayersLoc();
             ResourceResolver resourceResolver = request.getResourceResolver();
             Resource res = resourceResolver.resolve(playersPath);
             Iterator<Resource> playersItr = res.listChildren();
-            
+
             JsonObjectBuilder bo = Json.createObjectBuilder();
 
             if (TextUtil.notEmpty(brcAccountId)) {
