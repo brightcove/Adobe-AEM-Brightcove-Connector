@@ -3,7 +3,15 @@
 ## Add the repository to the main `POM.xml` file (either a private repository or a public one depending upon where the connector package is hosted).
 
 '''xml
-
+<repository>
+    <id>central</id>
+    <name>[[Central Repository]]</name>
+    <url>[[https://repo.maven.apache.org/maven2]]</url>
+    <layout>default</layout>
+    <snapshots>
+        <enabled>false</enabled>
+    </snapshots>
+</repository>
 '''
 
 ## Add a dependency on the connector package in the main `POM.xml`.
