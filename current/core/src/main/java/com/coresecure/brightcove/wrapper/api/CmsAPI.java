@@ -386,7 +386,7 @@ public class CmsAPI {
     }
 
     public JSONObject getVideosCount(String q) {
-        return getVideosCount(q, false);
+        return getVideosCount(q, true);
     }
     //getAPI
     public JSONObject getVideosCount(String q, boolean dam_only) {
@@ -513,7 +513,7 @@ public class CmsAPI {
 
 
     public JSONArray getVideos(String q, int limit, int offset, String sort) {
-        return getVideos(q, limit, offset, sort, false);
+        return getVideos(q, limit, offset, sort, true);
     }
 
     //ACTUAL GET VIDEOS FUNCTION
