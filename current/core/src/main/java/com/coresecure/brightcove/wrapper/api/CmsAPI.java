@@ -386,7 +386,7 @@ public class CmsAPI {
     }
 
     public JSONObject getVideosCount(String q) {
-        return getVideosCount(q, false);
+        return getVideosCount(q, true);
     }
     //getAPI
     public JSONObject getVideosCount(String q, boolean dam_only) {
