@@ -513,7 +513,7 @@ public class CmsAPI {
 
 
     public JSONArray getVideos(String q, int limit, int offset, String sort) {
-        return getVideos(q, limit, offset, sort, false);
+        return getVideos(q, limit, offset, sort, true);
     }
 
     //ACTUAL GET VIDEOS FUNCTION
