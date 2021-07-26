@@ -1,38 +1,40 @@
 (function($, $document) {
     "use strict";
 
-    // test to see if this is either the player or playlist component
-    console.log('init dynamic_dropdown()');
-
     var ACCOUNTID = "./account", PLAYLISTS = "./videoPlayerPL", 
                     PLAYERS = "./playerPath", VIDEOS = "./videoPlayer";
     var API_URL = "/bin/brightcove/api";
-    var existingValues = {};
-    const RES_PLAYLIST_COMPONENT = 'brightcove/components/content/brightcoveplayer-playlist';
-    const RES_PLAYER_COMPONENT = 'brightcove/components/content/brightcoveplayer';
 
-    function adjustLayoutHeight(){
-        $(".coral-FixedColumn-column").css("height", "20rem");
+    var existingValues = {};
+
+    const DIALOG_VIDEO_FIELD_SELECTOR = '.brightcove-dialog-video-dropdown';
+    const DIALOG_PLAYLIST_FIELD_SELECTOR = '.brightcove-dialog-playlist-dropdown';
+    const DIALOG_PLAYER_FIELD_SELECTOR = '.brightcove-dialog-player-dropdown';
+    const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-account-dropdown';
+
+    function isBrightcoveDialog() {
+        return ( $(DIALOG_ACCOUNT_FIELD_SELECTOR).length > 0 );
     }
 
     $document.on("dialog-ready", function(e) {
 
-        var dialogRes = $('.cq-Dialog form input[name="./sling:resourceType"]');
+        if ( isBrightcoveDialog() ) {
 
-        // only act on the dialogs that matter
-        if ( dialogRes.val().indexOf('brightcoveplayer') >= 0 ) {
-            adjustLayoutHeight();
+            console.log("brightcove dialog ready");
 
-            var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
-            var contentSelector =  (dialogRes.val() == RES_PLAYER_COMPONENT) ? $("[name='" + VIDEOS +"']").get(0) : $("[name='" + PLAYLISTS +"']").get(0)
-            var playerSelector =  $("[name='" + PLAYERS +"']").get(0);
+            var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 ) 
+                ? $(DIALOG_VIDEO_FIELD_SELECTOR).get(0)
+                : $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
+
+            var playerSelector =  $(DIALOG_PLAYER_FIELD_SELECTOR).get(0);
     
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
-                accountSelector.trigger('coral-select:showitems');
             });
     
             accountSelector.addEventListener('coral-select:showitems', function(event) {
+                accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
                         var accounts = data.accounts;
@@ -53,15 +55,17 @@
                         });
     
                         // now trigger the other fields
-                        contentSelector.trigger('coral-select:showitems');            playerSelector.trigger('coral-select:showitems');
+                        contentSelector.trigger('coral-select:showitems');
+                        playerSelector.trigger('coral-select:showitems');
                     });
                 }
             });
     
             contentSelector.addEventListener('coral-select:showitems', function(event) {
+                contentSelector.items.clear();
                 if (contentSelector.items.length == 0) {
-                    var ACTION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? 'playlists' : 'videos';
-                    var CONDITION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
+                    var ACTION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? 'playlists' : 'videos';
+                    var CONDITION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
                         source: ACTION
                     }).done(function(data) {
@@ -83,9 +87,8 @@
                 }
             });
     
-            // /bin/brightcove/api?a=local_players&account_id=6066350955001&limit=30&start=0
-    
             playerSelector.addEventListener('coral-select:showitems', function(event) {
+                playerSelector.items.clear();
                 if (playerSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
                         source: 'players'
@@ -107,8 +110,7 @@
                     });
                 }
             });
-        }        
-
+        }
     });
 
 })($, $(document));

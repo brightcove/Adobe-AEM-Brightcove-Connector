@@ -44,7 +44,7 @@
                         <configuration>
                             <bnd><![CDATA[
 Import-Package: javax.annotation;version=0.0.0,*
-Include-Resource: /Users/paulegan/.m2/repository/org/jcodec/jcodec-javase/0.2.1/jcodec-javase-0.2.1.jar,/Users/paulegan/.m2/repository/org/jcodec/jcodec/0.2.1/jcodec-0.2.1.jar
+Include-Resource: jcodec-javase-0.2.1.jar,jcodec-0.2.1.jar
 Export-Package: !*.impl.*,!*.internal.*,\
     com.coresecure.*
 Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
