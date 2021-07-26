@@ -31,6 +31,7 @@
     
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
+                accountSelector.trigger('coral-select:showitems');
             });
     
             accountSelector.addEventListener('coral-select:showitems', function(event) {
