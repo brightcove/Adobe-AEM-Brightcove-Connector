@@ -20,9 +20,9 @@
         if ( dialogRes.val() == RES_EXPERIENCE_COMPONENT ) {
             //adjustLayoutHeight();
 
-            $('.js-coral-Autocomplete-selectList').on('click', function(event) {
-                console.log($(event.target));
-            });
+            // $('.js-coral-Autocomplete-selectList').on('click', function(event) {
+            //     console.log($(event.target));
+            // });
 
             var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
             var contentSelector =  $("[name='" + EXPERIENCES +"']").parent().parent().find('[data-granite-autocomplete-src]');
@@ -32,7 +32,6 @@
     
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
-                console.log(existingValues);
                 accountSelector.trigger('coral-select:showitems');
             });
     
