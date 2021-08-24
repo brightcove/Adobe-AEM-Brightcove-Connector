@@ -66,11 +66,11 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     private ComponentContext componentContext;
 
     public ConfigurationService getConfigurationService(String key) {
-        LOGGER.debug("getConfigurationService() all: " + myConfigurationServices.keySet().toString() + ", using: " + myConfigurationServices.get(key).getAccountID());
         return myConfigurationServices.get(key);
     }
 
     public Set<String> getAvailableServices() {
+        LOGGER.debug("getAvailableServices() all: " + myConfigurationServices.keySet().toString());
         return myConfigurationServices.keySet();
     }
 
@@ -101,7 +101,6 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
             int i = 0;
             for (String account : getAvailableServices()) {
                 ConfigurationService cs = getConfigurationService(account);
-                LOGGER.debug("getAvailableServices() account: " + account + ", getAccountID(): " + cs.getAccountID());
                 List<String> allowedGroups = new ArrayList<String>(cs.getAllowedGroupsList());
                 allowedGroups.retainAll(memberOf);
                 if (allowedGroups.size() > 0) {
