@@ -20,8 +20,6 @@
 
         if ( isBrightcoveDialog() ) {
 
-            console.log("brightcove dialog ready");
-
             var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
             var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 ) 
                 ? $(DIALOG_VIDEO_FIELD_SELECTOR).get(0)
@@ -64,11 +62,13 @@
     
             contentSelector.addEventListener('coral-select:showitems', function(event) {
                 contentSelector.items.clear();
+                var account_id = (accountSelector.selectedItem != null) ? accountSelector.selectedItem.value : "";
                 if (contentSelector.items.length == 0) {
                     var ACTION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? 'playlists' : 'videos';
                     var CONDITION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
-                        source: ACTION
+                        source: ACTION,
+                        account_id: account_id
                     }).done(function(data) {
                         var videos = data.items;
                         event.preventDefault();
