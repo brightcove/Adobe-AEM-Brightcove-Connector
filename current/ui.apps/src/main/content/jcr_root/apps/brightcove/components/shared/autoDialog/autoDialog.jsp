@@ -85,7 +85,7 @@
         <div  class="coral-Form-fieldwrapper foundation-field-edit">
             <label class="coral-Form-fieldlabel">Projection</label>
             <coral-select class="coral-Form-field" data-metaType="dropdown" name="./jcr:content/metadata/brc_projection" data-foundation-validation="" data-validation="" >
-                <coral-select-item <%="".equals(map.get("brc_projection","")) ? "selected='selected'" : ""%> value=""></coral-select-item>
+                <coral-select-item <%="".equals(map.get("brc_projection","")) ? "selected='selected'" : ""%> value="">Standard</coral-select-item>
                 <coral-select-item <%="equirectangular".equals(map.get("brc_projection","EMPTY")) ? "selected='selected'" : ""%> value="equirectangular">360 Degree</coral-select-item>
             </coral-select>
         </div>
