@@ -62,10 +62,10 @@
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title (Editable in Basic Tab)</label><input  class="coral-Form-field" data-metaType="text" type="text" value="<%=map.get("dc:title","")%>" disabled="" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" maxlength="250" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Long Description</label><textarea  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_long_description" value="<%=map.get("brc_long_description","")%>" data-foundation-validation="" data-validation="" is="coral-textarea"><%=map.get("brc_long_description","")%></textarea></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Long Description</label><textarea maxlength="5000" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_long_description" value="<%=map.get("brc_long_description","")%>" data-foundation-validation="" data-validation="" is="coral-textarea"><%=map.get("brc_long_description","")%></textarea></div>
         </div>
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit">
@@ -77,10 +77,10 @@
             </div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_url" value="<%=map.get("brc_link_url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input maxlength="250" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_url" value="<%=map.get("brc_link_url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_text" value="<%=map.get("brc_link_text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input maxlength="255" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_text" value="<%=map.get("brc_link_text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
 
         <div  class="coral-Form-fieldwrapper foundation-field-edit">
