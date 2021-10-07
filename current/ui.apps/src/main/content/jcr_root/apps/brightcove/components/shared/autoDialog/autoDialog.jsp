@@ -40,21 +40,23 @@
 
 
     Resource asset_res = slingRequest.getParameter("item") != null ? resourceResolver.resolve(slingRequest.getParameter("item")) : resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
-    String requestedAccount = asset_res.getParent().getName();
 
-    Resource metadataRes = asset_res.getChild("jcr:content/metadata");
-    ValueMap map = metadataRes.adaptTo(ValueMap.class);
+    ValueMap parentProps = asset_res.getParent().getValueMap();
 
-    ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+    if ( parentProps != null && parentProps.get("jcr:createdBy").equals("brightcove_admin") ) {
+        String requestedAccount = asset_res.getParent().getName();
 
+        Resource metadataRes = asset_res.getChild("jcr:content/metadata");
+        ValueMap map = metadataRes.adaptTo(ValueMap.class);
 
-    JSONObject custom_fields_obj = serviceUtil.getCustomFields();
-    JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
-
-    Resource custom_fields = metadataRes.getChild("brc_custom_fields");
-    ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
+        ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
 
+        JSONObject custom_fields_obj = serviceUtil.getCustomFields();
+        JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
+
+        Resource custom_fields = metadataRes.getChild("brc_custom_fields");
+        ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
 %>
 
     <div  class="aem-assets-metadata-form-column">
@@ -175,6 +177,24 @@
         <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Duration</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_duration" value="<%=map.get("brc_duration","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
     </div>
 </div>
+<%
+    } else {
+%>
+<div  class="aem-assets-metadata-form-column" style="width: 100%;">
+    <div class="foundation-field-editable">
+        <div  class="coral-Form-fieldwrapper foundation-field-edit">
+            <label data-metatype="section" class="coral-Form-fieldlabel">
+                <h3>Notice</h3>
+                <span>
+                    This resource is not managed by Brightcove and does not have any associated Brightcove metadata.
+                </span>
+            </label>
+        </div>
+    </div>
+</div>
+<%
+    }
+%>
 
 
 
