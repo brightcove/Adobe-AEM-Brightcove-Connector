@@ -8,9 +8,9 @@
     var existingValues = {};
     var account_id = "";
 
-    const DIALOG_VIDEO_FIELD_SELECTOR = '.brightcove-dialog-video-dropdown';
+    const DIALOG_VIDEO_FIELD_SELECTOR = '.brightcove-dialog-video-autocomplete';
     const DIALOG_PLAYLIST_FIELD_SELECTOR = '.brightcove-dialog-playlist-dropdown';
-    const DIALOG_PLAYER_FIELD_SELECTOR = '.brightcove-dialog-video-autocomplete';
+    const DIALOG_PLAYER_FIELD_SELECTOR = '.brightcove-dialog-player-dropdown';
     const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-account-dropdown';
 
     function isBrightcoveDialog() {
@@ -32,9 +32,9 @@
         var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
         account_id = (accountSelector.selectedItem != null) 
                             ? accountSelector.selectedItem.value : "";
-        $(DIALOG_PLAYER_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
+        $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
             updateQueryStringParameter(
-                $(DIALOG_PLAYER_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src'),
+                $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src'),
                 "account_id",
                 account_id)
             );
@@ -83,7 +83,7 @@
     
                         // now trigger the other fields
                         //contentSelector.trigger('coral-select:showitems');
-                        //playerSelector.trigger('coral-select:showitems');
+                        playerSelector.trigger('coral-select:showitems');
                     });
                 }
             });
@@ -94,9 +94,15 @@
     
             playerSelector.addEventListener('coral-select:showitems', function(event) {
                 playerSelector.items.clear();
+
+                var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+                var account_id = (accountSelector.selectedItem != null) 
+                            ? accountSelector.selectedItem.value : "";
+
                 if (playerSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
-                        source: 'players'
+                        source: 'players',
+                        account_id: account_id
                     }).done(function(data) {
                         var players = data.items;
                         event.preventDefault();
