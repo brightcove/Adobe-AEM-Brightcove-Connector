@@ -1,10 +1,6 @@
 (function($, $document) {
     "use strict";
 
-    var ACCOUNTID = "./account", PLAYLISTS = "./videoPlayerPL", 
-                    PLAYERS = "./playerPath", VIDEOS = "./videoPlayer";
-    var API_URL = "/bin/brightcove/api";
-
     var existingValues = {};
     var account_id = "";
 
@@ -30,7 +26,7 @@
 
     function updateAutocompleteWithAcountId() {
         var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
-        account_id = (accountSelector.selectedItem != null) 
+        account_id = (accountSelector.selectedItem != null)
                             ? accountSelector.selectedItem.value : "";
         $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
             updateQueryStringParameter(
@@ -38,7 +34,7 @@
                 "account_id",
                 account_id)
             );
-        
+
     }
 
 
@@ -47,17 +43,17 @@
         if ( isBrightcoveDialog() ) {
 
             var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
-            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 ) 
+            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 )
                 ? $(DIALOG_VIDEO_FIELD_SELECTOR).get(0)
                 : $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
 
             var playerSelector =  $(DIALOG_PLAYER_FIELD_SELECTOR).get(0);
-    
+
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
                 accountSelector.trigger('coral-select:showitems');
             });
-    
+
             accountSelector.addEventListener('coral-select:showitems', function(event) {
                 accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
@@ -80,7 +76,7 @@
                         });
 
                         updateAutocompleteWithAcountId();
-    
+
                         // now trigger the other fields
                         //contentSelector.trigger('coral-select:showitems');
                         playerSelector.trigger('coral-select:showitems');
@@ -91,12 +87,12 @@
             accountSelector.addEventListener("change", function(event) {
                 updateAutocompleteWithAcountId();
             });
-    
+
             playerSelector.addEventListener('coral-select:showitems', function(event) {
                 playerSelector.items.clear();
 
                 var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
-                var account_id = (accountSelector.selectedItem != null) 
+                var account_id = (accountSelector.selectedItem != null)
                             ? accountSelector.selectedItem.value : "";
 
                 if (playerSelector.items.length == 0) {
