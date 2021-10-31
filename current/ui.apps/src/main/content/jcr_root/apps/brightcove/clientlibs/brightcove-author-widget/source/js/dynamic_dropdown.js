@@ -28,13 +28,43 @@
         var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
         account_id = (accountSelector.selectedItem != null)
                             ? accountSelector.selectedItem.value : "";
-        $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
-            updateQueryStringParameter(
-                $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src'),
-                "account_id",
-                account_id)
-            );
 
+        if ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) {
+            // this is a playlist component
+            var contentSelector = $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
+            contentSelector.items.clear();
+
+            var ACTION = 'playlists';
+            var CONDITION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
+
+            $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+                source: ACTION,
+                account_id: account_id
+            }).done(function(data) {
+                var videos = data.items;
+                event.preventDefault();
+                videos.forEach(function(value, index) {
+                    var item = {
+                        value: value.id,
+                        content: {
+                            textContent: (ACTION == 'playlists') ? value.name : value.title
+                        }
+                    }
+                    if ( (CONDITION != null) && (item.value == CONDITION) ) {
+                        item.selected = true;
+                    }
+                    contentSelector.items.add(item);
+                });
+            });
+        } else {
+            // this is a player component
+            $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
+                updateQueryStringParameter(
+                    $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src'),
+                    "account_id",
+                    account_id)
+                );
+        }
     }
 
 
