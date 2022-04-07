@@ -33,6 +33,9 @@ import javax.jcr.Node;
 import java.util.UUID;
 import org.apache.jackrabbit.util.Text;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @Model(
         adaptables=SlingHttpServletRequest.class
 )
@@ -222,7 +225,7 @@ public class VideoPlayer {
                 LOGGER.info("found asset video id : " + droppedVideoId);
                 LOGGER.info("current video id : " + currentNode.getProperty("videoPlayer").getString());
                 currentNode.setProperty("videoPlayer", droppedVideoId);
-                
+
                 // now delete the property for next time to be clean
                 currentNode.setProperty("videoPlayerDropPath", "");
 
@@ -230,6 +233,15 @@ public class VideoPlayer {
             }
 
             videoID = properties.get("videoPlayer", "").trim();
+
+            // check to see if the video ID is actually in the format "name [ID]"
+            Pattern p = Pattern.compile("\\[(.*?)\\]");
+            Matcher m = p.matcher(videoID);
+
+            if (m.find()) {
+                videoID = m.group(1);
+            }
+
             playlistID = properties.get("videoPlayerPL", "").trim();
 
             account = properties.get("account", "").trim();

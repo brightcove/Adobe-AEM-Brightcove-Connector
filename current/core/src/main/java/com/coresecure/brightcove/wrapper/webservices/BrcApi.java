@@ -197,7 +197,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         result = serviceUtil.deletePlaylist(request.getParameter("playlist"));
         return result;
     }
-    
+
     private JSONObject getVideosInFolder(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         result = new JSONObject(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
@@ -681,8 +681,9 @@ public class BrcApi extends SlingAllMethodsServlet {
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < itemsArray.length(); i++) {
                     JSONObject item = new JSONObject();
-                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("id") + "\">" + itemsArray.getJSONObject(i).getString("name") + "</li>");
+                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]\">" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]</li>");
                 }
+                LOGGER.debug("dropdown values requested");
                 response.getWriter().write(builder.toString());
                 break try_loop;
             }
