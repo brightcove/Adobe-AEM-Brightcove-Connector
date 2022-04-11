@@ -160,7 +160,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
                 folderId + "/videos/" + videoId;
             try {
@@ -183,7 +183,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
                 folderId + "/videos/" + videoId;
             try {
@@ -206,7 +206,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists/" +
                 playlistId;
             try {
@@ -399,7 +399,7 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/counts/videos";
             try {
                 //String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
-                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : 
+                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
                 "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
                 json = getJSONObjectResponse(targetURL, urlParameters, headers);
             }
@@ -528,7 +528,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
             // String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "")
-            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
