@@ -204,9 +204,21 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
+    private JSONObject getVideosWithLabel(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getVideosWithLabel(request.getParameter("label"), Integer.parseInt(request.getParameter(Constants.START))));
+        return result;
+    }
+
     private JSONObject getFolders(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         result = new JSONObject(serviceUtil.getFolders());
+        return result;
+    }
+
+    private JSONObject getLabels(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getLabels());
         return result;
     }
 
@@ -612,6 +624,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getFolders(request);
         } else if ("get_videos_in_folder".equals(requestedAPI)) {
             result = getVideosInFolder(request);
+        } else if ("get_videos_with_label".equals(requestedAPI)) {
+            result = getVideosWithLabel(request);
         } else if ("move_video_to_folder".equals(requestedAPI)) {
             result = moveVideoToFolder(request);
         } else if ("remove_video_from_folder".equals(requestedAPI)) {
@@ -624,6 +638,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getVideosInPlayList(request);
         } else if ("update_playlist".equals(requestedAPI)) {
             result = updatePlaylist(request);
+        } else if ("list_labels".equals(requestedAPI)) {
+            result = getLabels(request);
         } else {
             result.put(Constants.ERROR, 404);
         }
