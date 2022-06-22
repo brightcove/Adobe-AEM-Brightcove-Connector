@@ -381,6 +381,7 @@ public class ServiceUtil {
 
             if (videos.length() > 0 ) {
                 items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
             }
 
             result = items.toString(1);
@@ -398,6 +399,7 @@ public class ServiceUtil {
 
             if (videos.length() > 0 ) {
                 items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
             }
 
             result = items.toString(1);
@@ -415,6 +417,7 @@ public class ServiceUtil {
 
             if (folders.length() > 0 ) {
                 items.put("items", folders);
+                items.put(Constants.TOTALS, folders.length());
             }
 
             result = items.toString(1);
@@ -433,6 +436,7 @@ public class ServiceUtil {
 
             if (labels.getJSONArray("labels").length() > 0 ) {
                 items.put("items", labels.getJSONArray("labels"));
+                items.put(Constants.TOTALS, labels.getJSONArray("labels").length());
             }
 
             result = items.toString(1);
