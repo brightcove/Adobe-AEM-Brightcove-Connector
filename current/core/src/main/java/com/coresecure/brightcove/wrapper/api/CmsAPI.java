@@ -663,6 +663,10 @@ public class CmsAPI {
         return getVideos("labels:" + label);
     }
 
+    public JSONArray getOnlyClipVideos(String q, int limit, int offset, String sort) {
+        return getVideos(q, limit, offset, sort, true, true);
+    }
+
     public JSONArray getFolders(int limit, int offset) {
         JSONArray json = new JSONArray();
         TokenObj authToken = account.getLoginToken();
