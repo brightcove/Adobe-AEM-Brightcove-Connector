@@ -197,16 +197,28 @@ public class BrcApi extends SlingAllMethodsServlet {
         result = serviceUtil.deletePlaylist(request.getParameter("playlist"));
         return result;
     }
-    
+
     private JSONObject getVideosInFolder(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         result = new JSONObject(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
         return result;
     }
 
+    private JSONObject getVideosWithLabel(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getVideosWithLabel(request.getParameter("label"), Integer.parseInt(request.getParameter(Constants.START))));
+        return result;
+    }
+
     private JSONObject getFolders(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         result = new JSONObject(serviceUtil.getFolders());
+        return result;
+    }
+
+    private JSONObject getLabels(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = new JSONObject(serviceUtil.getLabels());
         return result;
     }
 
@@ -612,6 +624,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getFolders(request);
         } else if ("get_videos_in_folder".equals(requestedAPI)) {
             result = getVideosInFolder(request);
+        } else if ("get_videos_with_label".equals(requestedAPI)) {
+            result = getVideosWithLabel(request);
         } else if ("move_video_to_folder".equals(requestedAPI)) {
             result = moveVideoToFolder(request);
         } else if ("remove_video_from_folder".equals(requestedAPI)) {
@@ -624,6 +638,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getVideosInPlayList(request);
         } else if ("update_playlist".equals(requestedAPI)) {
             result = updatePlaylist(request);
+        } else if ("list_labels".equals(requestedAPI)) {
+            result = getLabels(request);
         } else {
             result.put(Constants.ERROR, 404);
         }
@@ -681,8 +697,9 @@ public class BrcApi extends SlingAllMethodsServlet {
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < itemsArray.length(); i++) {
                     JSONObject item = new JSONObject();
-                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("id") + "\">" + itemsArray.getJSONObject(i).getString("name") + "</li>");
+                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]\">" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]</li>");
                 }
+                LOGGER.debug("dropdown values requested");
                 response.getWriter().write(builder.toString());
                 break try_loop;
             }

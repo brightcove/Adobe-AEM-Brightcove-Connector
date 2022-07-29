@@ -137,6 +137,7 @@ public class BrcReplicationHandler implements TransportHandler {
             is_authorized = false;
             return is_authorized;
         }
+        LOGGER.debug("isAuthorized(): User is " + replicationAction.getUserId());
         Authorizable auth = userManager.getAuthorizable(replicationAction.getUserId());
 
         if (auth == null) {

@@ -3,6 +3,7 @@
     xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
     jcr:primaryType="nt:unstructured"
     jcr:title="Brightcove Video Player"
+    extraClientlibs="[brightcove.player.dialogs]"
     sling:resourceType="cq/gui/components/authoring/dialog">
     <content
         jcr:primaryType="nt:unstructured"
@@ -20,31 +21,30 @@
                             <account
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                granite:class="brightcove-dialog-account-dropdown"
                                 fieldDescription=""
                                 fieldLabel="Account:"
                                 name="./account">
                             </account>
-                            <!-- <playlistList
+                            <autocompletevideo
                                 jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/foundation/form/autocomplete"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/autocomplete"
+                                granite:class="brightcove-dialog-video-autocomplete"
                                 emptyText="Select"
                                 fieldLabel="Video:"
-                                forceSelection="true"
-                                multiple="false"
                                 name="./videoPlayer">
-                                <options
-                                    jcr:primaryType="nt:unstructured"
-                                    sling:resourceType="granite/ui/components/foundation/form/autocomplete/list"
-                                    src="/bin/brightcove/api.jsx?a=search_playlists&amp;query={query}" /> -->
-                            <playlistList
-                                jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/coral/foundation/form/select"
-                                emptyText="Select"
-                                fieldLabel="Video:"
-                                name="./videoPlayer"/>
+                                    <datasource
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="brightcove/api/videos/datasource" />
+                                    <options
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/foundation/form/autocomplete/list"
+                                        src="/bin/brightcove/api.jsx?a=search_videos&amp;query={query}&amp;start={start}&amp;limit=20" />
+                            </autocompletevideo>
                             <videoList
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                granite:class="brightcove-dialog-player-dropdown"
                                 emptyText="Select"
                                 fieldLabel="Player:"
                                 name="./playerPath"/>

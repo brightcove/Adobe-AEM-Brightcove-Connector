@@ -1,41 +1,39 @@
 (function($, $document) {
     "use strict";
 
-    // test to see if this is either the player or playlist component
-
     var ACCOUNTID = "./account", EXPERIENCES = "./experience";
-    var API_URL = "/bin/brightcove/api";
     var existingValues = {};
-    const RES_EXPERIENCE_COMPONENT = 'brightcove/components/content/brightcoveexperiences';
 
-    function adjustLayoutHeight(){
-        $(".coral-FixedColumn-column").css("height", "20rem");
+    const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-experiences-account-dropdown';
+
+    function isBrightcoveDialog() {
+        return ( $(DIALOG_ACCOUNT_FIELD_SELECTOR).length > 0 );
+    }
+
+    function updateQueryStringParameter(uri, key, value) {
+        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        }
+        else {
+            return uri + separator + key + "=" + value;
+        }
     }
 
     $document.on("dialog-ready", function(e) {
 
-        var dialogRes = $('.cq-Dialog form input[name="./sling:resourceType"]');
-
         // only act on the dialogs that matter
-        if ( dialogRes.val() == RES_EXPERIENCE_COMPONENT ) {
-            //adjustLayoutHeight();
-
-            $('.js-coral-Autocomplete-selectList').on('click', function(event) {
-                console.log($(event.target));
-            });
+        if ( isBrightcoveDialog() ) {
 
             var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
             var contentSelector =  $("[name='" + EXPERIENCES +"']").parent().parent().find('[data-granite-autocomplete-src]');
 
-            console.log(contentSelector);
-            console.log(contentSelector.attr('data-granite-autocomplete-src'));
-    
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
-                console.log(existingValues);
                 accountSelector.trigger('coral-select:showitems');
             });
-    
+
             accountSelector.addEventListener('coral-select:showitems', function(event) {
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
@@ -61,23 +59,23 @@
                         });
 
                         // add the account ID to the suggestion API URL
-                        contentSelector.attr('data-granite-autocomplete-src', contentSelector.attr('data-granite-autocomplete-src') + '&account_id=' + selected);
+                        contentSelector.attr('data-granite-autocomplete-src',
+                            updateQueryStringParameter(
+                                contentSelector.attr('data-granite-autocomplete-src'),
+                                'account_id',
+                                selected
+                            )
+                        );
 
                         //contentSelector.trigger('coral-select:showitems');
-    
+
                         // now trigger the other fields
                         //contentSelector.trigger('coral-autocomplete:showsuggestions');
                     });
                 }
             });
-    
-            // /bin/brightcove/api?a=search_playlists&account_id=6066350955001&limit=30&start=0
-    
-            // contentSelector.addEventListener('coral-select:showitems', function(event) {
-            //     console.log('will this show?');
-            // });
-    
-        }        
+
+        }
 
     });
 

@@ -83,6 +83,7 @@ $(function () {
 
     Load(getAllVideosURL());
     loadFolders();
+    loadLabels();
     var app = new CQ.Switcher({});
     app.render(document.body);
     //app = new CQ.HomeLink({});
@@ -106,12 +107,22 @@ $(function () {
         }
     });
 
+    $('input#filter_clips').on('change', function(event) {
+        if (event.currentTarget.checked) {
+            // filter only clips
+            $('#tbData tr').hide();
+            $('#tbData tr.state-clip').show();
+        } else {
+            // display all
+            $('#tbData tr').show();
+        }
+    });
+
     $('#tbData').on('click', '.edit-playlist', function(event) {
         editPlaylistHandler(event);
     })
 
     $('.pml-dialog_content').on('click', '.playlist-listing li a', function(event) {
-        console.log(event.target);
         $(event.target).parents('li').remove();
     })
 
@@ -122,10 +133,10 @@ $(function () {
             id: $(event.target).parent().attr('data-playlist')
         }
         console.log(playlist);
-        showPopup('Delete Playlist', 
+        showPopup('Delete Playlist',
                     'Are you sure you want to delete the playlist "' + playlist.name + '"?',
-                    'Delete', 
-                    'Cancel', 
+                    'Delete',
+                    'Cancel',
                     function(dialog) {
                         var data = {
                             a: 'delete_playlist',
@@ -260,7 +271,7 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
     } else {
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
-    
+
     $popup.show();
 }
 
@@ -281,7 +292,7 @@ function suggestVideosForPlaylist(data) {
                     }
                     var videoId = $item.attr('data-id');
                     var videoName = $item.attr('data-name');
-                    
+
                     // add the item to the list
                     $('.pml-dialog .playlist-listing')
                         .append($('<li data-id="'+videoId+'"><span><span class="handle"></span>'+videoName+'</span><a href="#" data-video-id="'+videoId+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
@@ -310,6 +321,15 @@ function getFolderListingUrl(id) {
     var sort_type = $("#trHeader th.sortable").not("NONE").attr("data-sorttype");
     return apiLocation +
                     '.js?account_id='+$("#selAccount").val()+'&a=get_videos_in_folder&callback=showAllVideosCallBack&folder=' + id + '&sort=' + sort_type + sort_by
+                    + '&limit=' + paging.size + '&start=' + paging.generic;
+}
+
+function getLabelListingUrl(id) {
+    loadStart();
+    var sort_by = $("#trHeader th.sortable").not("NONE").attr("data-sortby");
+    var sort_type = $("#trHeader th.sortable").not("NONE").attr("data-sorttype");
+    return apiLocation +
+                    '.js?account_id='+$("#selAccount").val()+'&a=get_videos_with_label&callback=showAllVideosCallBack&label=' + id + '&sort=' + sort_type + sort_by
                     + '&limit=' + paging.size + '&start=' + paging.generic;
 }
 
@@ -356,6 +376,45 @@ function loadFolderCallback(data) {
     });
 }
 
+function loadLabels() {
+    // first set up the select change event
+    $('#label_list').on('change', function() {
+        $('.butDiv').hide();
+        var selected = $(this).val();
+        if (selected == 'all') {
+            Load(getAllVideosURL());
+        } else {
+            console.log('search videos by label=' + selected);
+            Load(getLabelListingUrl(selected));
+        }
+    });
+
+    // now make the API call to load the folder options
+    var data = {
+        a: 'list_labels',
+        callback: 'loadLabelCallback'
+    };
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: data,
+        async: true,
+        success: function (data)
+        {
+            // do something here?
+        }
+    });
+}
+
+function loadLabelCallback(data) {
+    var $label_select = $('#label_list');
+    $.each(data.items, function (i, n) {
+        console.log(n);
+        $label_select
+            .append($('<option>', { value : n }).text(n));
+    });
+}
+
 function editPlaylistHandler(event) {
     event.preventDefault();
     var data = {
@@ -374,7 +433,7 @@ function editPlaylistHandler(event) {
             // do something here?
         }
     });
-    
+
 }
 
 function editPlaylistListingCallback(data) {
@@ -390,7 +449,7 @@ function editPlaylistListingCallback(data) {
             videos: $sortable.toArray(),
             playlistId: data.playlist
         };
-    
+
         $.ajax({
             type: 'GET',
             url: '/bin/brightcove/api.js',
@@ -477,7 +536,7 @@ function buildMainVideoList(title) {
     $.each(oCurrentVideoList, function (i, n) {
         modDate = new Date(n.updated_at);
         $("#tbData").append(
-            "<tr style=\"cursor:pointer;\" class=\"state-" + n.state.toLowerCase() + "\" id=\"" + (i) + "\"> \
+            "<tr style=\"cursor:pointer;\" class=\"" + (n.clip_source_video_id ? 'state-clip' : '') + " state-" + n.state.toLowerCase() + "\" id=\"" + (i) + "\"> \
             <td>\
                 <input type=\"checkbox\" value=\"" + (n.id) + "\" id=\"" + (i) + "\" data-folder-id=\"" + ((n.folder_id) ? n.folder_id : '') + "\" onclick=\"checkCheck()\">\
             </td><td>"
@@ -921,7 +980,7 @@ function uploadPoster()
         content: {
           innerHTML: '<form class="coral-Form coral-Form--vertical">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
           'value="' + document.getElementById('divMeta.videoStillURL').src + '"' +
           '></div></form>'
@@ -960,7 +1019,7 @@ function uploadPoster()
         } else {
             alert('Please provide a valid poster image source URL.');
         }
-        
+
     });
     document.body.appendChild(dialog);
     dialog.show();
@@ -983,7 +1042,7 @@ function uploadThumbnail()
         content: {
           innerHTML: '<form class="coral-Form coral-Form--vertical">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
           'value="' + document.getElementById('divMeta.thumbnailURL').src + '"' +
           '></div></form>'
@@ -1022,7 +1081,7 @@ function uploadThumbnail()
         } else {
             alert('Please provide a valid thumbnail source URL.');
         }
-        
+
     });
     document.body.appendChild(dialog);
     dialog.show();
@@ -1246,23 +1305,23 @@ function uploadtrack()
         content: {
           innerHTML: '<div class="coral-Form coral-Form--vertical" id="upload_text_track_form">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' +
           '<coral-select name="text_track_language_field" placeholder="Language" id="text_track_language_field"></coral-select>' +
-          '</div>' + 
+          '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_label_field" labelledby="label-vertical-textfield-1" value="">' +
           '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' +
           '<coral-select name="text_track_type_field" placeholder="Text Type" id="text_track_type_field"></coral-select>' +
-          '</div>' + 
+          '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
           '<coral-checkbox value="true" id="text_track_default_field">Make Default Track</coral-checkbox>' +
-          '</div>' + 
-          '<div class="or_field_split">' + 
+          '</div>' +
+          '<div class="or_field_split">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_source_url_field" labelledby="label-vertical-3" value="">' +
           '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
@@ -1335,7 +1394,7 @@ function uploadtrack()
         } else {
             alert('Please provide values for all fields.');
         }
-        
+
     });
 
     document.body.appendChild(dialog);
@@ -1619,7 +1678,7 @@ function createPlaylistBox() {
             );
 
             if (1 != idx) {
-                form.playlist.value += ','; 
+                form.playlist.value += ',';
             }
             form.playlist.value += oCurrentVideoList[i - 3].id;
             idx++;

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
     jcr:primaryType="nt:unstructured"
     jcr:title="Brightcove Playlist Player"
+    extraClientlibs="[brightcove.player.dialogs]"
     sling:resourceType="cq/gui/components/authoring/dialog">
     <content
         jcr:primaryType="nt:unstructured"
@@ -19,19 +21,22 @@
                             <account
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                granite:class="brightcove-dialog-account-dropdown"
                                 fieldDescription=""
                                 fieldLabel="Account:"
                                 name="./account">
                             </account>
-                            <playlistList
+                            <autocompletevideo
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                granite:class="brightcove-dialog-playlist-dropdown"
                                 emptyText="Select"
                                 fieldLabel="Playlist:"
                                 name="./videoPlayerPL"/>
                             <videoList
                                 jcr:primaryType="nt:unstructured"
                                 sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                granite:class="brightcove-dialog-player-dropdown"
                                 emptyText="Select"
                                 fieldLabel="Player"
                                 name="./playerPath"/>

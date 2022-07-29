@@ -45,7 +45,7 @@ Copyright (C) 2019 3|SHARE Inc.
     <groupId>com.coresecure.brightcove.cq5</groupId>
     <artifactId>brightcove_connector</artifactId>
     <packaging>pom</packaging>
-    <version>5.6-SNAPSHOT</version>
+    <version>5.6.2</version>
     <description>
         Parent Maven POM for the 'Adobe CQ5 Brightcove Connector API' project.
     </description>
@@ -123,7 +123,7 @@ Copyright (C) 2019 3|SHARE Inc.
                                 </requireMavenVersion>
                                 <requireJavaVersion>
                                     <message>Project must be compiled with Java 6 or higher</message>
-                                    <version>1.6.0</version>
+                                    <version>1.8.0</version>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>
@@ -135,8 +135,8 @@ Copyright (C) 2019 3|SHARE Inc.
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -146,7 +146,7 @@ Copyright (C) 2019 3|SHARE Inc.
                 <artifactId>maven-idea-plugin</artifactId>
                 <version>2.2.1</version>
                 <configuration>
-                    <jdkLevel>1.6</jdkLevel>
+                    <jdkLevel>1.8</jdkLevel>
                     <linkModules>true</linkModules>
                     <downloadSources>true</downloadSources>
                 </configuration>
@@ -185,12 +185,16 @@ Copyright (C) 2019 3|SHARE Inc.
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.2</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
                 </plugin>
                 <!-- Apache Felix SCR Plugin -->
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-scr-plugin</artifactId>
-                    <version>1.20.0</version>
+                    <version>1.26.2</version>
                     <executions>
                         <execution>
                             <id>generate-scr-scrdescriptor</id>
@@ -212,7 +216,7 @@ Copyright (C) 2019 3|SHARE Inc.
                         <dependency>
                             <groupId>org.slf4j</groupId>
                             <artifactId>slf4j-simple</artifactId>
-                            <version>1.5.11</version>
+                            <version>1.7.25</version>
                         </dependency>
                     </dependencies>
                 </plugin>
@@ -454,7 +458,7 @@ Copyright (C) 2019 3|SHARE Inc.
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.5.11</version>
+                <version>1.7.25</version>
                 <scope>provided</scope>
             </dependency>
             <!-- Servlet API -->
@@ -501,7 +505,7 @@ Copyright (C) 2019 3|SHARE Inc.
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
-                <version>1.5.11</version>
+                <version>1.7.25</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

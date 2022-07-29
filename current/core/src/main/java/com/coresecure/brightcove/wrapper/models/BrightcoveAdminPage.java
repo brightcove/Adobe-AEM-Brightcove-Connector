@@ -102,6 +102,7 @@ public class BrightcoveAdminPage {
                 LOGGER.error(e.getClass().getName(),e);
             }
             for (String service : services) {
+                LOGGER.debug("BrightcoveAdminPage Modal: " + service);
                 configurationServices.add(cg.getConfigurationService(service));
             }
         }

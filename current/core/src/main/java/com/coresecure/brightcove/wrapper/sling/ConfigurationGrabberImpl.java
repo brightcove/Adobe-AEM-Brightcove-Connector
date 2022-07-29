@@ -70,6 +70,7 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     }
 
     public Set<String> getAvailableServices() {
+        LOGGER.debug("getAvailableServices() all: " + myConfigurationServices.keySet().toString());
         return myConfigurationServices.keySet();
     }
 
@@ -115,23 +116,16 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
         return result;
     }
 
-    protected void bindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            ConfigurationService operation = (ConfigurationService) this.componentContext.locateService("ConfigurationService");
-            //Or you can use
-            //MyCustomServices operation = ref.getProperty("service.pid");
-            if (operation != null) {
-                myConfigurationServices.put(customKey, operation);
-            }
+    protected void bindConfigurationService(final ConfigurationService service) {
+
+        if (service != null) {
+            LOGGER.debug("bindConfigurationService() binding: " + service.getAccountID());
+            myConfigurationServices.put(service.getAccountID(), service);
         }
     }
 
-    protected void unbindConfigurationService(ServiceReference ref) {
-        synchronized (this.myConfigurationServices) {
-            String customKey = (String) ref.getProperty(KEY);
-            myConfigurationServices.remove(customKey);
-        }
+    protected void unbindConfigurationService(final ConfigurationService service) {
+        myConfigurationServices.remove(service.getAccountID());
     }
 
     @Activate

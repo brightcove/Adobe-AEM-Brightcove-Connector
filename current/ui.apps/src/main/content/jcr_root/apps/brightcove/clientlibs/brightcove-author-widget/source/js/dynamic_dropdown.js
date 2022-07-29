@@ -1,37 +1,91 @@
 (function($, $document) {
     "use strict";
 
-    // test to see if this is either the player or playlist component
-
-    var ACCOUNTID = "./account", PLAYLISTS = "./videoPlayerPL", 
-                    PLAYERS = "./playerPath", VIDEOS = "./videoPlayer";
-    var API_URL = "/bin/brightcove/api";
     var existingValues = {};
-    const RES_PLAYLIST_COMPONENT = 'brightcove/components/content/brightcoveplayer-playlist';
-    const RES_PLAYER_COMPONENT = 'brightcove/components/content/brightcoveplayer';
+    var account_id = "";
 
-    function adjustLayoutHeight(){
-        $(".coral-FixedColumn-column").css("height", "20rem");
+    const DIALOG_VIDEO_FIELD_SELECTOR = '.brightcove-dialog-video-autocomplete';
+    const DIALOG_PLAYLIST_FIELD_SELECTOR = '.brightcove-dialog-playlist-dropdown';
+    const DIALOG_PLAYER_FIELD_SELECTOR = '.brightcove-dialog-player-dropdown';
+    const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-account-dropdown';
+
+    function isBrightcoveDialog() {
+        return ( $(DIALOG_ACCOUNT_FIELD_SELECTOR).length > 0 );
     }
+
+    function updateQueryStringParameter(uri, key, value) {
+        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        }
+        else {
+            return uri + separator + key + "=" + value;
+        }
+    }
+
+    function updateAutocompleteWithAcountId() {
+        var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+        account_id = (accountSelector.selectedItem != null)
+                            ? accountSelector.selectedItem.value : "";
+
+        if ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) {
+            // this is a playlist component
+            var contentSelector = $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
+            contentSelector.items.clear();
+
+            var ACTION = 'playlists';
+            var CONDITION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
+
+            $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+                source: ACTION,
+                account_id: account_id
+            }).done(function(data) {
+                var videos = data.items;
+                event.preventDefault();
+                videos.forEach(function(value, index) {
+                    var item = {
+                        value: value.id,
+                        content: {
+                            textContent: (ACTION == 'playlists') ? value.name : value.title
+                        }
+                    }
+                    if ( (CONDITION != null) && (item.value == CONDITION) ) {
+                        item.selected = true;
+                    }
+                    contentSelector.items.add(item);
+                });
+            });
+        } else {
+            // this is a player component
+            $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src',
+                updateQueryStringParameter(
+                    $(DIALOG_VIDEO_FIELD_SELECTOR + ' ul.coral-SelectList').attr('data-granite-autocomplete-src'),
+                    "account_id",
+                    account_id)
+                );
+        }
+    }
+
 
     $document.on("dialog-ready", function(e) {
 
-        var dialogRes = $('.cq-Dialog form input[name="./sling:resourceType"]');
+        if ( isBrightcoveDialog() ) {
 
-        // only act on the dialogs that matter
-        if ( dialogRes.val().indexOf('brightcoveplayer') >= 0 ) {
-            adjustLayoutHeight();
+            var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 )
+                ? $(DIALOG_VIDEO_FIELD_SELECTOR).get(0)
+                : $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
 
-            var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
-            var contentSelector =  (dialogRes.val() == RES_PLAYER_COMPONENT) ? $("[name='" + VIDEOS +"']").get(0) : $("[name='" + PLAYLISTS +"']").get(0)
-            var playerSelector =  $("[name='" + PLAYERS +"']").get(0);
-    
+            var playerSelector =  $(DIALOG_PLAYER_FIELD_SELECTOR).get(0);
+
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
                 accountSelector.trigger('coral-select:showitems');
             });
-    
+
             accountSelector.addEventListener('coral-select:showitems', function(event) {
+                accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
                         var accounts = data.accounts;
@@ -50,44 +104,31 @@
                             }
                             accountSelector.items.add(item);
                         });
-    
+
+                        updateAutocompleteWithAcountId();
+
                         // now trigger the other fields
-                        contentSelector.trigger('coral-select:showitems');            playerSelector.trigger('coral-select:showitems');
+                        //contentSelector.trigger('coral-select:showitems');
+                        playerSelector.trigger('coral-select:showitems');
                     });
                 }
             });
-    
-            contentSelector.addEventListener('coral-select:showitems', function(event) {
-                if (contentSelector.items.length == 0) {
-                    var ACTION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? 'playlists' : 'videos';
-                    var CONDITION = (dialogRes.val() == RES_PLAYLIST_COMPONENT) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
-                    $.getJSON("/bin/brightcove/getLocalVideoList.json", {
-                        source: ACTION
-                    }).done(function(data) {
-                        var videos = data.items;
-                        event.preventDefault();
-                        videos.forEach(function(value, index) {
-                            var item = {
-                                value: value.id,
-                                content: {
-                                    textContent: (ACTION == 'playlists') ? value.name : value.title
-                                }
-                            }
-                            if ( (CONDITION != null) && (item.value == CONDITION) ) {
-                                item.selected = true;
-                            }
-                            contentSelector.items.add(item);
-                        });
-                    });
-                }
+
+            accountSelector.addEventListener("change", function(event) {
+                updateAutocompleteWithAcountId();
             });
-    
-            // /bin/brightcove/api?a=local_players&account_id=6066350955001&limit=30&start=0
-    
+
             playerSelector.addEventListener('coral-select:showitems', function(event) {
+                playerSelector.items.clear();
+
+                var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+                var account_id = (accountSelector.selectedItem != null)
+                            ? accountSelector.selectedItem.value : "";
+
                 if (playerSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
-                        source: 'players'
+                        source: 'players',
+                        account_id: account_id
                     }).done(function(data) {
                         var players = data.items;
                         event.preventDefault();
@@ -106,8 +147,7 @@
                     });
                 }
             });
-        }        
-
+        }
     });
 
 })($, $(document));
