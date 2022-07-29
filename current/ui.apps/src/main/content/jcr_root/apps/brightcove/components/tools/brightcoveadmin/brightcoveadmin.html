@@ -28,7 +28,7 @@
                 <div class="navbar">
                     <div class="navbar-inner">
                         <div class="container">
-                            <ul class="nav">
+                            <ul class="nav nav-pills visible-lg-inline-block">
                                 <li class="active">
                                     <a id="allVideos" onclick='searchVal="";$(this).parent("li").parent("ul").children("li").attr("class","");$(this).parent("li").attr("class","active");Load(getAllVideosURL());'>All Videos</a>
                                 </li>
@@ -55,7 +55,8 @@
                             <td width="75%" valign="top">
                                 <table id="listTable" width="100%" cellspacing="0" callpadding="0">
                                     <tr>
-                                        <div id="accountDiv" style="float:right;padding:5px">
+                                        <div id="accountDiv" style="float:right;padding:5px;
+                                        margin-bottom: 10px;">
                                             <select data-sly-list.currentService="${adminPage.configurationServices}" id='selAccount' name="selAccount" style="position: relative;top: 5px;">
                                                 <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
                                                     <option value="${currentService.accountID}" class="selected" selected="selected">${currentService.accountAlias} (${currentService.accountID})</option>
@@ -68,28 +69,29 @@
                                     </tr>
                                     <tr class="trCenterHeader">
                                         <td id="tdOne">
-                                            <div id="headTitle" style="font-weight:bold">All Videos</div>
-
-                                            <div id="divVideoCount" style="float:left"></div>
+                                            <div class="result-count pull-left">
+                                                <div id="headTitle" style="font-weight:bold">All Videos</div>
+                                                <div id="divVideoCount" ></div>
+                                            </div>
 
                                             <div id="searchDiv" style="float:right;padding:5px">
 
                                                 <label class="filter_clips" for="filter_clips" style="display: inline-block; margin-right: 5px;">
                                                     <input type="checkbox" id="filter_clips">
-                                                    <span style="position: relative;top: 2px; margin-left: 2px;">Show Only Clips</span>
+                                                    <span style="position: relative;top: -2px; margin-left: 2px;">Show Only Clips</span>
                                                 </label>
 
-                                                <select id='label_list' name="label_list" style="position: relative;top: 5px;">
+                                                <select id='label_list' name="label_list" >
                                                     <option value="all">All Labels</option>
                                                 </select>
 
-                                                <select id='fldr_list' name="fldr_list" style="position: relative;top: 5px;">
+                                                <select id='fldr_list' name="fldr_list" >
                                                     <option value="all">All Folders</option>
                                                 </select>
 
                                                 <input id="search" type="text" value="Search Video" onClick="this.value=''">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
-                                                <select id='selField' name="selField" style="position: relative;top: 5px;">
+                                                <select id='selField' name="selField" >
                                                     <option value="every_field">In Every Field</option>
                                                     <option value="name">In Name</option>
                                                     <option value="reference_id">In Reference ID</option>
