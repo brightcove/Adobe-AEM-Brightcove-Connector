@@ -57,11 +57,6 @@ var tUploadBar,
 
 //called once body loads.  sets the api location and loads all videos
 $(function () {
-    if ($.browser.msie) {
-        //IE css opacity hack
-        $("#screen").css("filter", "alpha(opacity = 65)")
-            .css("zoom", 1);
-    }
 
     //Initialize the paging object
     //each member variable stores the current page
@@ -438,7 +433,7 @@ function editPlaylistHandler(event) {
 
 function editPlaylistListingCallback(data) {
     var $search = $('<form autocomplete="off" class="playlist-add-input"><input type="text" placeholder="Search for a video to add" /><ul class="autocomplete"></ul></form>').prop('outerHTML');
-    var $message = $('<ul class="playlist-listing" data-playlist-id="'+data.playlist+'" id="edit-playlist-sortable">');
+    var $message = $('<ul class="playlist-listing list-unstyled" data-playlist-id="'+data.playlist+'" id="edit-playlist-sortable">');
     data.items.forEach(function(item, index) {
         $message
             .append($('<li data-id="'+item.id+'"><span><span class="handle"></span>'+item.name+'</span><a href="#" data-video-id="'+item.id+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
@@ -912,24 +907,15 @@ function openBox(id) {
         .css("top", ($(window).height() / 6))
         .draggable();
 
-    //TODO: replace jquery ui with extjs for consistency
-
-    if (!$.browser.msie) {
-        $("#screen, #" + id).fadeIn("fast");
-    } else {
-        $("#screen, #" + id).show();
-    }
+    $("#screen, #" + id).fadeIn("fast");
 }
 
 //close an open overlay and hide the screen, if a form is passed, reset it.
 function closeBox(id, form) {
     //Don't close the screen if another window is open
     var strSelect = '#' + id + (($("div.overlay:visible").length > 1) ? "" : ",#screen");
-    if (!$.browser.msie) {
-        $(strSelect).fadeOut("fast");
-    } else {
-        $(strSelect).hide();
-    }
+    $(strSelect).fadeOut("fast");
+
     if (null != form) {
         form.reset();
     }
@@ -1610,11 +1596,7 @@ function metaEdit() {
 //where loading times might be a little long.
 function loadStart()
 {
-    if (!$.browser.msie) {
-        $("#loading").slideDown("fast");
-    } else {
-        $("#loading").show();
-    }
+    $("#loading").slideDown("fast");
     $(".loading").show();
 }
 
@@ -1624,11 +1606,7 @@ function loadEnd()
     $("#syncdbutton").css("color", "#333333");
     $("#syncdbutton").html('SYNC DATABASE');
     $("#syncdbutton").prop('disabled', false);
-    if (!$.browser.msie) {
-        $("#loading").slideUp("fast");
-    } else {
-        $("#loading").hide();
-    }
+    $("#loading").slideUp("fast");
     $(".loading").hide();
 }
 
@@ -1637,15 +1615,8 @@ function syncStart()
     $("#syncdbutton").css("color", "#6D8CAE");
     $("#syncdbutton").html('LOADING SYNC');
     $("#syncdbutton").prop('disabled', true);
-    if (!$.browser.msie)
-    {
-        $("#loading").slideDown("fast");
-        $(".loading").show();
-    }
-    else
-    {
-        $("#loading").show();
-    }
+    $("#loading").slideDown("fast");
+    $(".loading").show();
 
     $(".loadingMsg").hide();
     $(".syncingMsg").show();

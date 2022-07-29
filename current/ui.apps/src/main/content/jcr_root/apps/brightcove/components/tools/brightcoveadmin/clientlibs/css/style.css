@@ -392,6 +392,19 @@ div.delConfPop {
   font-size: 12;
 }
 
+#searchDiv {
+  margin-top: 10px;
+}
+
+#searchDiv #searchBut {
+  top: -2px;
+  position: relative;
+}
+
+#searchDiv select {
+  height: 30px;
+}
+
 div.hLine {
   border-color: white;
   border-style: solid;
@@ -668,9 +681,7 @@ td.tdMetadata, th#trHeader {
 }
 
 input#search {
-  position: relative;
-  top: 5px;
-  height: 28px;
+  height: 30px;
 }
 
 tr.select {
@@ -1425,6 +1436,7 @@ body {
 
 .pml-dialog .playlist-listing {
   margin: 0;
+  margin-top: 1rem;
 }
 
 .pml-dialog .playlist-add-input input {
