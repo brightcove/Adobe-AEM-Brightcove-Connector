@@ -2,4 +2,3 @@
 
 jquery.js
 bootstrap.js
-bootstrap-tab.js
