@@ -9,9 +9,9 @@
 -->
 <workspaceFilter version="1.0">
 
-    <filter root="/apps/brightcove">
-        <exclude pattern="/apps/brightcove/install/(.*).jar"/>
-    </filter>
+    <filter root="/apps/brightcove" />
+        <!-- <exclude pattern="/apps/brightcove/install/(.*).jar"/>
+    </filter> -->
 
     <filter root="/apps/cq/core/content/nav/brightcove"/>
 
@@ -28,7 +28,6 @@
         <exclude pattern="/etc/designs/cs/brightcove/jcr:content.*"/>
     </filter>
 
-    <filter root="/libs/cq/gui/content/common/links/brightcove"/>
     <filter root="/conf/global/settings/dam/adminui-extension/metadataschema/brightcove"/>
 
     <filter root="/etc/replication/agents.author/brightcove"/>

@@ -196,9 +196,12 @@ public class ServiceUtil {
         return brAPI.cms.getVideoSources(videoID);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
-        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false);
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false, false);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, dam_only, false);
+    }
+    public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only, boolean clips_only) {
         LOGGER.debug("getList: " + query);
 
 
@@ -214,7 +217,7 @@ public class ServiceUtil {
                 totalItems = brAPI.cms.getVideosCount(query).getLong("count");
 
                 while (offset < totalItems && full_scroll) {
-                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort, dam_only));
+                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort, dam_only, clips_only));
                     for (int i = 0; i < videos_page.length(); i++) {
                         JSONObject video = videos_page.getJSONObject(i);
                         videos.put(video);
@@ -378,6 +381,25 @@ public class ServiceUtil {
 
             if (videos.length() > 0 ) {
                 items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public String getVideosWithLabel(String label, int offset) {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONArray videos = brAPI.cms.getVideosWithLabel(label, offset);
+
+            if (videos.length() > 0 ) {
+                items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
             }
 
             result = items.toString(1);
@@ -395,6 +417,26 @@ public class ServiceUtil {
 
             if (folders.length() > 0 ) {
                 items.put("items", folders);
+                items.put(Constants.TOTALS, folders.length());
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public String getLabels() {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONObject labels = brAPI.cms.getLabels();
+            LOGGER.debug("getLabels(): " + labels.toString());
+
+            if (labels.getJSONArray("labels").length() > 0 ) {
+                items.put("items", labels.getJSONArray("labels"));
+                items.put(Constants.TOTALS, labels.getJSONArray("labels").length());
             }
 
             result = items.toString(1);

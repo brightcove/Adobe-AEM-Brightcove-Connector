@@ -1,10 +1,8 @@
 ### AEM References ###
 **/geometrixx*
 
-
 ### Mac OS X ###
 .DS_Store
-
 
 ### Package Files ###
 *.ear
@@ -21,7 +19,6 @@
 .classpath
 .project
 .settings/
-
 
 ### VLT ###
 *.vlt
@@ -82,5 +79,9 @@ cs_commons-dev/
 
 ## Plugin-specific files:
 *.dir
+
 # IntelliJ
 /out/
+
+# VS Code
+.vscode/
