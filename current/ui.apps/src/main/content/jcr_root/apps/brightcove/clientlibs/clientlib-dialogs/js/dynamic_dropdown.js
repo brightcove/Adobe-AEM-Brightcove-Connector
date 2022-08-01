@@ -1,7 +1,7 @@
 (function($, $document) {
     "use strict";
 
-    var ACCOUNTID = "./account", PLAYLISTS = "./videoPlayerPL", 
+    var ACCOUNTID = "./account", PLAYLISTS = "./videoPlayerPL",
                     PLAYERS = "./playerPath", VIDEOS = "./videoPlayer";
     var API_URL = "/bin/brightcove/api";
 
@@ -21,19 +21,19 @@
         if ( isBrightcoveDialog() ) {
 
             var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
-            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 ) 
+            var contentSelector =  ( $(DIALOG_VIDEO_FIELD_SELECTOR).length > 0 )
                 ? $(DIALOG_VIDEO_FIELD_SELECTOR).get(0)
                 : $(DIALOG_PLAYLIST_FIELD_SELECTOR).get(0);
 
             var playerSelector =  $(DIALOG_PLAYER_FIELD_SELECTOR).get(0);
-    
+
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
                 accountSelector.trigger('coral-select:showitems');
             });
-    
+
             accountSelector.addEventListener('coral-select:showitems', function(event) {
-                accountSelector.items.clear();
+                //accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
                         var accounts = data.accounts;
@@ -52,16 +52,16 @@
                             }
                             accountSelector.items.add(item);
                         });
-    
+
                         // now trigger the other fields
                         contentSelector.trigger('coral-select:showitems');
                         playerSelector.trigger('coral-select:showitems');
                     });
                 }
             });
-    
+
             contentSelector.addEventListener('coral-select:showitems', function(event) {
-                contentSelector.items.clear();
+                //contentSelector.items.clear();
                 var account_id = (accountSelector.selectedItem != null) ? accountSelector.selectedItem.value : "";
                 if (contentSelector.items.length == 0) {
                     var ACTION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? 'playlists' : 'videos';
@@ -87,12 +87,14 @@
                     });
                 }
             });
-    
+
             playerSelector.addEventListener('coral-select:showitems', function(event) {
                 playerSelector.items.clear();
+                var account_id = (accountSelector.selectedItem != null) ? accountSelector.selectedItem.value : "";
                 if (playerSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/getLocalVideoList.json", {
-                        source: 'players'
+                        source: 'players',
+                        account_id: account_id
                     }).done(function(data) {
                         var players = data.items;
                         event.preventDefault();
