@@ -104,9 +104,11 @@
                                                 </button>
                                             </div>
                                             <div id="searchDiv_pl" style="float:right;padding:5px;display:none;">
-
+                                                <!--<button id="searchBut" class="btn-create-playlist">
+                                                    Create Playlist
+                                                </button>-->
                                                 <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''"
-                                                       style="position: relative;top: 5px; height: 28px">
+                                                       style="position: relative;top: 5px; height: 30px; margin-left: 15px;">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;">
                                                     <option value="find_playlist_by_id">In Playlist ID</option>
@@ -123,11 +125,11 @@
                                     <tr>
                                         <td id="tdTwo">
                                             <div name="butDiv" class="butDiv">
-                                                    <!--  <span name="buttonRow">
+                                                      <span name="buttonRow">
                                                         <button id="newplstButton" onClick="createPlaylistBox()">Create Playlist
                                                         </button>
                                                     </span>
-                                                    <span name="buttonRow">
+                                                    <!--<span name="buttonRow">
                                                         <button id="newplstButton" onClick="moveToFolder()">Move to Folder
                                                         </button>
                                                     </span>  -->
@@ -314,53 +316,51 @@
                     <!--Create Playlist -->
                     <div id="createPlaylistDiv" style="display:none" class="overlay tbInput">
                         <form id="createPlaylistForm" method="POST" enctype="multipart/form-data" target="postFrame">
-                            <br/>
-                            <center><span class="title">Create Playlist:</span>
-                                <br/>
-                                <br/>
-                                <span class="subTitle">Title is Required</span>
-                            </center>
-                            <div class="hLine"></div>
-                            <table>
-                                <tr class="requiredFields">
-                                    <td>Title:</td>
-                                    <td style="width:100%">
-                                        <input type="text" name="plst.name" id="plst.name"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Short Description:</td>
-                                    <td>
-                                        <input type="text" name="plst.shortDescription" id="plst.shortDescription"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Reference ID:</td>
-                                    <td>
-                                        <input type="text" name="plst.referenceId" id="plst.referenceId"/>
-                                    </td>
-                                </tr>
-                            </table>
-                            <fieldset>
-                                <legend>Videos</legend>
-                                <table id="createPlstVideoTable">
-                                    <tr style="background-color:#e5e5e5">
-                                        <td class="tdMainTableHead" style="width:100%">Video Name</td>
-                                        <td class="tdMainTableHead" style="width:40%">ID</td>
+                            <div class="pml-dialog_header">
+                                Create Playlist
+                            </div>
+                            <div class="pml-dialog_content">
+                                <table>
+                                    <tr class="requiredFields">
+                                        <td width="25%">Title:</td>
+                                        <td style="width:100%">
+                                            <input type="text" name="plst.name" id="plst.name"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Description:</td>
+                                        <td width="25%">
+                                            <input type="text" name="plst.shortDescription" id="plst.shortDescription"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="display: none;">
+                                        <td>Reference ID:</td>
+                                        <td>
+                                            <input type="text" name="plst.referenceId" id="plst.referenceId"/>
+                                        </td>
                                     </tr>
                                 </table>
-                                <input type="hidden" name="a" value="create_playlist"/>
-                                <input type="hidden" name="playlist" id="playlist"/>
-                            </fieldset>
-                            <div class="hLine"></div>
-                            <br>
-                            <center>
-                                <button type="button" id="createPlstSubmit" onClick="createPlaylistSubmit()">Create Playlist
+                                <table style="padding-bottom: 0;">
+                                    <tr style="background-color:#e5e5e5;">
+                                        <td class="tdMainTableHead" style="padding: 0.25rem;">Video Name</td>
+                                        <td class="tdMainTableHead" style="width: 25%; padding: 0.25rem;">ID</td>
+                                    </tr>
+                                </table>
+                                <table id="createPlstVideoTable" style="padding-top: 0;">
+
+                                </table>
+                                <fieldset style="display: none;">
+                                    <input type="hidden" name="a" value="create_playlist"/>
+                                    <input type="hidden" name="playlist" id="playlist"/>
+                                </fieldset>
+                            </div>
+                            <div class="pml-dialog_footer">
+                                <button type="button" id="createPlstSubmit" class="btn btn-primary" onClick="createPlaylistSubmit()">Create Playlist
                                 </button>
-                                <button type="button" id="createPlstCancel"
+                                <button type="button" id="createPlstCancel"  class="btn btn-secondary"
                                         onClick="$('#createPlstVideoTable').empty();closeBox('createPlaylistDiv',this.form)">Cancel
                                 </button>
-                            </center>
+                            </div>
                         </form>
                     </div>
 

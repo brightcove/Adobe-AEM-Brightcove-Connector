@@ -237,7 +237,7 @@ div.overlay {
   border-color: #333333;
   border-style: solid;
   border: 0;
-  padding: 0 30px;
+  font-size: 1rem;
   -webkit-box-shadow: 0px 2px 10px rgba(0, 0, 0, .5);
   -moz-box-shadow: 0px 0px 10px rgba(0, 0, 0, .5);
   -ms-box-shadow: 0px 2px 10px rgba(0, 0, 0, .5);
@@ -410,12 +410,19 @@ div.delConfPop {
   position: relative;
 }
 
-#searchDiv select, #searchDiv_pl select {
+#searchDiv select, #searchDiv_pl select, #search_pl {
   height: 30px;
 }
 
 #divMeta.shortDescription pre {
   white-space: pre-wrap;
+}
+
+/* Create Playlist Styles */
+.pml-dialog .input-playlist-name {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
 }
 
 div.hLine {
@@ -1411,31 +1418,35 @@ body {
   box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
 }
 
-.pml-dialog .pml-dialog_header {
+.pml-dialog_header {
   background: #f1f1f1;
   padding: 1rem;
   font-weight: bold;
   height: auto;
 }
 
-.pml-dialog .pml-dialog_content {
+.pml-dialog_content {
   padding: 1rem;
   flex: 1;
 }
 
-.pml-dialog .pml-dialog_footer {
+.pml-dialog_content input[name*='plst'] {
+  width: 100%;
+}
+
+.pml-dialog_footer {
   padding: 0.5rem 1rem;
   text-align: right;
   height: auto;
   background: #f1f1f1;
 }
 
-.pml-dialog .pml-dialog_footer .btn:hover {
+.pml-dialog_footer .btn:hover {
   background: -webkit-linear-gradient(top, #ffffff, #e5e5e5);
 }
 
-.pml-dialog .pml-dialog_footer .btn-secondary,
-.pml-dialog .pml-dialog_footer .btn-secondary:hover {
+.pml-dialog_footer .btn-secondary,
+.pml-dialog_footer .btn-secondary:hover {
   background: none;
   border: 0;
   box-shadow: none;

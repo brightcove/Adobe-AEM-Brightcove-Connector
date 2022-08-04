@@ -117,6 +117,24 @@ $(function () {
         editPlaylistHandler(event);
     })
 
+    $('#searchDiv_pl').on('click', '.btn-create-playlist', function(event) {
+        var $message =
+            $('<p>Please enter a name for your playlist:</p>')
+            .append($('<input class="input-playlist-name" type="text" autofocus />'));
+        showPopup('Create Playlist',
+            $message.prop('outerHTML'),
+            'Create',
+            'Cancel',
+            function(dialog) {
+                // call the API here.
+                // now reload the view
+                Load(getAllPlaylistsURL());
+            },
+            function(dialog) {
+                // do nothing here
+            })
+    });
+
     $('.pml-dialog_content').on('click', '.playlist-listing li a', function(event) {
         $(event.target).parents('li').remove();
     })
@@ -1644,19 +1662,19 @@ function createPlaylistBox() {
     for (var i = 3; i < l; i++) {
         if (inputTags[i].checked) {
             $("#createPlstVideoTable").append(
-                '<tr ><td>' + oCurrentVideoList[i - 3].name +
-                '</td><td>' + oCurrentVideoList[i - 3].id + '</td></tr>'
+                '<tr ><td>' + oCurrentVideoList[i - 4].name +
+                '</td><td style="width: 25%;" >' + oCurrentVideoList[i - 4].id + '</td></tr>'
             );
 
             if (1 != idx) {
                 form.playlist.value += ',';
             }
-            form.playlist.value += oCurrentVideoList[i - 3].id;
+            form.playlist.value += oCurrentVideoList[i - 4].id;
             idx++;
         }
     }
     if (1 == idx) {
-        alert("Cannot Create Empty Playlist, Please Select Some Videos");
+        alert("Please select at least one video to create a playlist.");
         return;
     }
     openBox("createPlaylistDiv");

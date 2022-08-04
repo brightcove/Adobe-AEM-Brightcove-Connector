@@ -373,6 +373,16 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONObject createPlaylist(String title) {
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.createBlankPlaylist(title);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
     public String getVideosInFolder(String folder, int offset) {
         JSONObject items = new JSONObject();
         String result = "";
