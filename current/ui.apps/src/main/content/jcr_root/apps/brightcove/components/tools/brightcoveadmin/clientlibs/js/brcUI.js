@@ -733,7 +733,7 @@ function showMetaData(idx) {
     document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
     document.getElementById('divMeta.id').innerHTML = v.id;
-    document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null ? v.description : "") + "</pre>";
+    document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
 
     //Construct the tag section:
     var tagsObject = "";
