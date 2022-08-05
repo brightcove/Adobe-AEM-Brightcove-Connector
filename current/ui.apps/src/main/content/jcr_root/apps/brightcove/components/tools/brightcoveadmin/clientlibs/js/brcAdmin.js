@@ -337,8 +337,7 @@ function createPlaylistSubmit() {
             //  alert(data);    do your stuff
             $('#createPlstVideoTable').empty();
             closeBox('createPlaylistDiv', formObject);
-            Load(getAllPlaylistsURL());
-            loadEnd();
+            $('#allPlaylists').click();
         },
         error: function ( data )
         {
