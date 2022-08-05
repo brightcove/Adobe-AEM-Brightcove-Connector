@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION};
+    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS};
 
     private String account_id;
     public static final int DEFAULT_LIMIT = 100;
@@ -729,6 +729,10 @@ public class ServiceUtil {
         {
             key = NameConstants.PN_TAGS;
         }
+        // else if (x.equals(Constants.LABELS))
+        // {
+        //     key = Constants.LABELS;
+        // }
         else if (Constants.NAME.equals(x))
         {
             key = DamConstants.DC_TITLE;      //NAME -> ASSET TITLE
@@ -741,6 +745,49 @@ public class ServiceUtil {
     }
 
     private void setMapJSONArray(String key, JSONArray objArray, ResourceResolver resourceResolver, ModifiableValueMap map) {
+        TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
+        if (tagManager == null) return;
+        try {
+            if (key.equals(NameConstants.PN_TAGS)) {
+                List<String> tags = new ArrayList<String>();
+                for (int cnt = 0; cnt < objArray.length(); cnt++) {
+                    String tagValue = objArray.getString(cnt);
+
+                    String tagKey = tagValue.replaceAll(": ", ":").trim();
+
+
+                    try {
+                        if (tagManager.canCreateTag(tagKey)) {
+
+                            Tag tag = tagManager.createTag(tagKey, tagValue, "");
+
+                            //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
+                            resourceResolver.commit();
+                            LOGGER.trace("tag created > {}", tagValue);
+                            //tagManager.setTags(assetRes, new Tag[]{tag}, true);
+                        } else {
+                            //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
+                            //tagManager.setTags(assetRes, tags, true);
+                            LOGGER.warn("tag create failed [exists] > added >  {}", tagValue);
+
+                        }
+                        tags.add(tagKey);
+                    } catch (InvalidTagFormatException e) {
+                        LOGGER.error(e.getClass().getName(), e);
+                    }
+                }
+                resourceResolver.commit();
+                map.put(key, tags.toArray());
+            } else {
+                LOGGER.trace("setMapJSONArray() is using a generic array for " + key);
+                map.put(key, objArray.join("#@#").split("#@#"));
+            }
+        }catch (Exception e) {
+            LOGGER.error(e.getClass().getName(),e);
+        }
+    }
+
+    private void setLabelsJSONArray(String key, JSONArray objArray, ResourceResolver resourceResolver, ModifiableValueMap map) {
         TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
         if (tagManager == null) return;
         try {
@@ -925,6 +972,7 @@ public class ServiceUtil {
 
                 // LOGGER.trace(innerObj.toString(1));
                 LOGGER.trace("UPDATING ASSET>>: " + newAsset.getPath());
+                LOGGER.trace("ASSET JSON>>: " + innerObj.toString());
 
                 Resource assetRes = newAsset.adaptTo(Resource.class);                        //INITIALIZE THE ASSET RESOURCE
                 ModifiableValueMap assetmap = assetRes.getChild(NameConstants.NN_CONTENT).adaptTo(ModifiableValueMap.class);
@@ -960,8 +1008,14 @@ public class ServiceUtil {
 
                     //IF THE CURRENT METADATA IS AN ARRAY
                     if (obj instanceof JSONArray) {
+                        LOGGER.trace("FOUND ARRAY>>: " + key);
                         JSONArray objArray = (JSONArray) obj;
-                        setMapJSONArray(key, objArray, resourceResolver, map);
+                        if (key.equals(NameConstants.PN_TAGS)) {
+                            setMapJSONArray(key, objArray, resourceResolver, map);
+                        }
+                        else {
+                            setMapJSONArray(key, objArray, resourceResolver, map);
+                        }
                     } else if (obj instanceof JSONObject) {
 
                         JSONObject objObject = (JSONObject) obj;

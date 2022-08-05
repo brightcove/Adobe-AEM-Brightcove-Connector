@@ -31,6 +31,7 @@ public class Constants {
     public static final String PROJECTION = "projection";
 
     public static final String TAGS = "tags";
+    public static final String LABELS = "labels";
     public static final String GEO = "geo";
     public static final String SCHEDULE = "schedule";
     public static final String LINK = "link";
