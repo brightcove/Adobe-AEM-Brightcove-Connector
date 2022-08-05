@@ -57,6 +57,7 @@ public class Video {
     public final String long_description;
     public final String state;
     public final Collection<String> tags;
+    public final Collection<String> labels;
     public final Map<String, Object> custom_fields;
     public final Geo geo;
     public final RelatedLink link;
@@ -93,10 +94,10 @@ public class Video {
     }
 
     public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages) {
-        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, null, null);
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, null);
     }
 
-    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId) {
+    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels) {
         id = aId;
         account_id = aAccountId;
         name = aName;
@@ -105,6 +106,7 @@ public class Video {
         long_description = aLong_description;
         state = aState;
         tags = aTags;
+        labels = aLabels;
         geo = aGeo;
         schedule = aSchedule;
         link = aLink;
@@ -130,6 +132,7 @@ public class Video {
         String locallong_description = null;
         String localstate = null;
         Collection<String> localtags = null;
+        Collection<String> localLabels = null;
         Map<String, Object> localcustom_fields = null;
         Geo localgeo = null;
         RelatedLink locallink = null;
@@ -160,6 +163,14 @@ public class Video {
                     localtags.add(video.getJSONArray(Constants.TAGS).getString(i));
                 }
             }
+            if (!video.isNull(Constants.LABELS))
+            {
+                localLabels = new ArrayList<String>();
+                for (int i = 0; i < video.getJSONArray(Constants.LABELS).length(); i++)
+                {
+                    localLabels.add(video.getJSONArray(Constants.LABELS).getString(i));
+                }
+            }
         }
         catch(Exception e)
         {
@@ -176,6 +187,7 @@ public class Video {
             this.long_description = locallong_description;
             this.state = localstate;
             this.tags = localtags;
+            this.labels = localLabels;
             this.custom_fields = localcustom_fields;
             this.geo = localgeo;
             this.link = locallink;
@@ -188,7 +200,7 @@ public class Video {
     }
 
     public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS, Constants.LABELS});
         return json;
     }
 

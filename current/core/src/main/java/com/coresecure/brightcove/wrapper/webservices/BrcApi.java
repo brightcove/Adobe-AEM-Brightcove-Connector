@@ -198,6 +198,12 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
+    private JSONObject createBlankPlaylist(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        result = serviceUtil.createPlaylist(request.getParameter("title"));
+        return result;
+    }
+
     private JSONObject getVideosInFolder(SlingHttpServletRequest request) throws JSONException {
         JSONObject result = new JSONObject();
         result = new JSONObject(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
@@ -610,6 +616,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = deleteVideo(request);
         } else if ("create_playlist".equals(requestedAPI)) {
             result = createPlaylist(request);
+        } else if ("create_blank_playlist".equals(requestedAPI)) {
+            result = createBlankPlaylist(request);
         } else if ("create_video".equals(requestedAPI)) {
             result = createVideo(request);
         } else if ("update_video".equals(requestedAPI)) {
