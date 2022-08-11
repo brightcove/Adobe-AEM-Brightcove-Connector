@@ -97,16 +97,20 @@
             <label class="coral-Form-fieldlabel">Labels</label>
             <coral-multifield class="coral-Form-field coral3-Multifield" data-metatype="mvtext"data-foundation-validation=""
                 data-validation="" data-granite-coral-multifield-name="./jcr:content/metadata/brc_labels" role="list">
+                <%
+                    String[] labels = map.get("brc_labels", String[].class);
+                    if (labels != null) {
+                        for (int i = 0; i < labels.length; i++) {
+                            if (labels[i].length() > 0) {
+                %>
                 <coral-multifield-item class="coral3-Multifield-item" role="listitem">
-                    <%
-                        String[] labels = map.get("brc_labels", String[].class);
-                        if (labels != null) {
-                            for (int i = 0; i < labels.length; i++) {
-                    %>
-                    <coral-multifield-item-content><input type="text"
-                            name="./jcr:content/metadata/brc_labels" value=<%=labels[i]%>
+                    <coral-multifield-item-content>
+                        <input type="text"
+                            name="./jcr:content/metadata/brc_labels" value="<%=labels[i].replaceAll("\"", "")%>"
                             data-foundation-validation="" data-validation="" is="coral-textfield"
-                            class="coral3-Textfield" aria-invalid="false"></coral-multifield-item-content><button
+                            class="coral3-Textfield" aria-invalid="false">
+                    </coral-multifield-item-content>
+                    <button
                         is="coral-button" class="coral3-Button coral3-Button--quiet coral3-Multifield-remove" size="M"
                         variant="quiet" type="button" handle="remove" icon="delete" iconsize="S" tracking="off">
                         <coral-icon class="coral3-Icon coral3-Icon--sizeS coral3-Icon--delete" icon="delete" size="S"
@@ -122,6 +126,7 @@
                     </button>
                 </coral-multifield-item>
                 <%
+                            }
                         }
                     }
                 %>

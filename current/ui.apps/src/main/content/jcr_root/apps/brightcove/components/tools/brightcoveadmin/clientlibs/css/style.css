@@ -416,10 +416,11 @@ div.delConfPop {
 
 #divMeta.shortDescription pre {
   white-space: pre-wrap;
+  margin-top: 5px;
 }
 
 /* Create Playlist Styles */
-.pml-dialog .input-playlist-name {
+.pml-dialog .input-playlist-name, .pml-dialog .input-label-name {
   display: block;
   width: 100%;
   margin-top: 10px;
@@ -698,6 +699,10 @@ td.tdMetadata, th#trHeader {
   -webkit-box-shadow: 0 0px 0px rgba(0, 0, 0, 0.075);
   -moz-box-shadow: 0 0px 0px rgba(0, 0, 0, 0.075);
   box-shadow: 0 0px 0px rgba(0, 0, 0, 0.075);
+}
+
+.thumbnail a {
+  display: block;
 }
 
 input#search {

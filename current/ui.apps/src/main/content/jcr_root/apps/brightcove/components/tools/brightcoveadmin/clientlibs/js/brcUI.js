@@ -32,7 +32,6 @@
 
 //CONFIG
 
-//FIX FOR PROBLEM 5.5 TODO:REMOVE
 $( document ).ready(function() {
     console.log($("#selAccount").val());
     if(CQ.Ext!=null)
@@ -396,6 +395,23 @@ function loadLabels() {
         var selected = $(this).val();
         if (selected == 'all') {
             Load(getAllVideosURL());
+        } else if (selected == 'create') {
+            var $message =
+                $('<p>Label Name:</p>')
+                .append($('<input class="input-label-name" type="text" autofocus />'));
+            showPopup('Create New Label',
+                $message.prop('outerHTML'),
+                'Create',
+                'Cancel',
+                function(dialog) {
+                    // call the API here.
+                    // now reload the view
+                    Load(getAllVideosURL());
+                },
+                function(dialog) {
+                    // do nothing here
+                    triggerLabelClick('all');
+                })
         } else {
             console.log('search videos by label=' + selected);
             Load(getLabelListingUrl(selected));
@@ -426,6 +442,11 @@ function loadLabelCallback(data) {
         $label_select
             .append($('<option>', { value : n }).text(n));
     });
+    $label_select.append($('<option>', { value : 'create' }).text('Create New Label'))
+}
+
+function triggerLabelClick(selected) {
+    $('#label_list').val(selected).trigger('change');
 }
 
 function editPlaylistHandler(event) {
@@ -753,6 +774,8 @@ function showMetaData(idx) {
     document.getElementById('divMeta.id').innerHTML = v.id;
     document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
 
+    console.log(v);
+
     //Construct the tag section:
     var tagsObject = "";
     if ("" != v.tags) {
@@ -766,6 +789,19 @@ function showMetaData(idx) {
         }
     }
     document.getElementById('divMeta.tags').innerHTML = tagsObject;
+
+    var labelsObject = "";
+    if (v.labels) {
+        var labels = v.labels.toString().split(',');
+        for (var k = 0; k < labels.length; k++) {
+            if (k > 0) {
+                labelsObject += ', ';
+            }
+            labelsObject += '<a style="cursor:pointer;color:blue;text-decoration:underline"' +
+                'onclick="triggerLabelClick(\'' + labels[k] + '\'); return false;" >' + labels[k] + '</a>';
+        }
+    }
+    document.getElementById('divMeta.labels').innerHTML = labelsObject;
 
     //if there's no link text use the linkURL as the text
     var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";

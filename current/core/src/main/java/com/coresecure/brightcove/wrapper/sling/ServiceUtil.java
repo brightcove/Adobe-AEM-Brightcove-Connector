@@ -1256,6 +1256,13 @@ public class ServiceUtil {
         Collection<String> tags = JcrUtil.tagsToCollection(tagsList);
         list = null;
 
+        String[] rawList = metadataRes.getValueMap().get(getKey(Constants.LABELS),new String[]{});
+        List<String> labelList = new ArrayList<String>(Arrays.asList(rawList));
+        rawList = labelList.toArray(new String[0]);
+        //REMOVE BRIGHTCOVE TAG BEFORE PUSH
+        Collection<String> labels = JcrUtil.tagsToCollection(rawList);
+        labelList = null;
+
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
         String name = map.get(DamConstants.DC_TITLE, asset.getName());

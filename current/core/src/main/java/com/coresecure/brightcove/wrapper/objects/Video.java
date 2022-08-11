@@ -106,7 +106,6 @@ public class Video {
         long_description = aLong_description;
         state = aState;
         tags = aTags;
-        labels = aLabels;
         geo = aGeo;
         schedule = aSchedule;
         link = aLink;
@@ -116,6 +115,7 @@ public class Video {
         projection = new Projection(aProjection);
         text_tracks = aText_tracks;
         images = aImages;
+        labels = aLabels;
     }
 
     private Object getNotNull(JSONObject video, String key) throws JSONException{
