@@ -407,6 +407,29 @@ public class CmsAPI {
         return json;
     }
 
+    public JSONObject createLabel(String label) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null)
+        {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/labels";
+            try {
+                LOGGER.debug("Label {}", label.toString());
+                String response = account.platform.postAPI(targetURL, "{ \"path\": \"" + label + "\" }", headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e)
+            {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createLabel: {} Response: {}", label, json);
+        return json;
+    }
+
     public JSONObject getVideosCount(String q) {
         return getVideosCount(q, true);
     }

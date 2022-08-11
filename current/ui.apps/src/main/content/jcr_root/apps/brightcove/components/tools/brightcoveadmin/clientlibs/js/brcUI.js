@@ -119,15 +119,13 @@ $(function () {
     $('#searchDiv_pl').on('click', '.btn-create-playlist', function(event) {
         var $message =
             $('<p>Please enter a name for your playlist:</p>')
-            .append($('<input class="input-playlist-name" type="text" autofocus />'));
+            .append($('<input class="input-playlist-name" required type="text" autofocus />'));
         showPopup('Create Playlist',
             $message.prop('outerHTML'),
             'Create',
             'Cancel',
             function(dialog) {
-                // call the API here.
-                // now reload the view
-                Load(getAllPlaylistsURL());
+                // do something here
             },
             function(dialog) {
                 // do nothing here
@@ -404,9 +402,31 @@ function loadLabels() {
                 'Create',
                 'Cancel',
                 function(dialog) {
-                    // call the API here.
-                    // now reload the view
-                    Load(getAllVideosURL());
+
+                    // do some basic validationå
+                    var labelName = $('.input-label-name').val();
+                    if (labelName == '' || !labelName.startsWith('/')) {
+                        $('.input-label-name').addClass('error');
+                        return false;
+                    } else {
+                        // call the API here.
+                        var data = {
+                            a: 'create_label',
+                            label: labelName
+                        };
+                        $.ajax({
+                            type: 'GET',
+                            url: '/bin/brightcove/api.js',
+                            data: data,
+                            async: true,
+                            success: function (data)
+                            {
+                                // do something here?
+                            }
+                        });
+                    }
+
+                    location.reload();
                 },
                 function(dialog) {
                     // do nothing here
@@ -433,6 +453,10 @@ function loadLabels() {
             // do something here?
         }
     });
+}
+
+function editLabels(event) {
+    alert('editing labels...');
 }
 
 function loadLabelCallback(data) {

@@ -182,9 +182,15 @@ function deleteVideoURL(videoId) {
 
 function showAllVideosCallBack(o) {
     if (null == o.error) {
+        var totals = o.totals;
         oCurrentVideoList = o.items;
+        if (!oCurrentVideoList) {
+            // the results are empty
+            oCurrentVideoList = new Array();
+            totals = 0;
+        }
         buildMainVideoList("All Videos");
-        doPageList(o.totals, "Videos");
+        doPageList(totals, "Videos");
     } else {
         var message = (null != o.error.message) ? o.error.message : o.error;
         console.log("Server Error: " + message);
