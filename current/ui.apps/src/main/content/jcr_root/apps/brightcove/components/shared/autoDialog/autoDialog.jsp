@@ -92,7 +92,7 @@
                 <coral-select-item <%="equirectangular".equals(map.get("brc_projection","EMPTY")) ? "selected='selected'" : ""%> value="equirectangular">360 Degree</coral-select-item>
             </coral-select>
         </div>
-
+        <!--
         <div class="coral-Form-fieldwrapper foundation-field-edit">
             <label class="coral-Form-fieldlabel">Labels</label>
             <coral-multifield class="coral-Form-field coral3-Multifield" data-metatype="mvtext"data-foundation-validation=""
@@ -143,6 +143,7 @@
                     </template>
             </coral-multifield>
         </div>
+        -->
 
     </div>
 

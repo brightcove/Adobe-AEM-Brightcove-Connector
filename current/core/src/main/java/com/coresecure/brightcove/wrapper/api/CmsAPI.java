@@ -323,6 +323,34 @@ public class CmsAPI {
         return json;
     }
 
+    public JSONObject updateLabels(String videoId, String[] labels) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos"
+                + "/" + videoId;
+            try {
+                LOGGER.debug("targetURL: {}", targetURL);
+                JSONObject request = new JSONObject();
+                ArrayList<String> labelArray = new ArrayList<String>();
+                for (String item : labels) {
+                    labelArray.add(item);
+                }
+                request.put("labels", new JSONArray(labelArray));
+                LOGGER.info("updateVideoParams: {}", request.toString(1));
+                String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
     //deleteAPI
     public JSONObject deleteVideo(String videoID) {
         JSONObject json = new JSONObject();

@@ -463,6 +463,16 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
+    private JSONObject updateLabels(SlingHttpServletRequest request) throws JSONException {
+        JSONObject result = new JSONObject();
+        if ( (request.getParameter("labels") != null) && (request.getParameter("videoId") != null) ) {
+            String[] labels = request.getParameterValues("labels");
+            String videoId = request.getParameter("videoId");
+            result = brAPI.cms.updateLabels(videoId, labels);
+        }
+        return result;
+    }
+
     private JSONObject removeTextTrack(SlingHttpServletRequest request) throws JSONException {
         try {
             String trackID = request.getParameter("track");
@@ -666,6 +676,8 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getVideosInPlayList(request);
         } else if ("update_playlist".equals(requestedAPI)) {
             result = updatePlaylist(request);
+        } else if ("update_labels".equals(requestedAPI)) {
+            result = updateLabels(request);
         } else if ("list_labels".equals(requestedAPI)) {
             result = getLabels(request);
         } else if ("create_label".equals(requestedAPI)) {

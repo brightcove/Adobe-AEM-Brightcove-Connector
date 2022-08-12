@@ -136,6 +136,10 @@ $(function () {
         $(event.target).parents('li').remove();
     })
 
+    $('.pml-dialog_content').on('click', '.label-listing li a', function(event) {
+        $(event.target).parents('li').remove();
+    })
+
     $('#tbData').on('click', '.playlist-actions a', function(event) {
         event.preventDefault();
         var playlist = {
@@ -162,6 +166,7 @@ $(function () {
                                 // do something here?
                             }
                         });
+                        dialog.hide();
                         Load(getAllPlaylistsURL());
                     },
                     function(dialog) {
@@ -180,6 +185,31 @@ $(function () {
                 start: 0,
                 limit: 3,
                 callback: 'suggestVideosForPlaylist'
+            };
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: data,
+                async: true,
+                success: function (data)
+                {
+                    // do something here?
+                }
+            });
+        };
+    });
+
+    $('.pml-dialog').on('keyup', '.label-add-input input', function(event) {
+        var query = $(event.target).val();
+        var $parent = $(event.target).parents('.label-add-input');
+        if (query) {
+            // perform an AJAX video search
+            var data = {
+                a: 'list_labels',
+                query: query,
+                start: 0,
+                limit: 3,
+                callback: 'suggestLabelsForVideo'
             };
             $.ajax({
                 type: 'GET',
@@ -265,7 +295,6 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
             event.preventDefault();
             if (onSuccess)
                 onSuccess($popup);
-            $popup.hide();
         });
     if (btnSecondaryText) {
         $popup.find('.pml-dialog_footer .btn-secondary')
@@ -283,6 +312,39 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
     }
 
     $popup.show();
+}
+
+function suggestLabelsForVideo(data) {
+    $('.pml-dialog .autocomplete').empty();
+    if (data.items.length > 0) {
+        $.each(data.items, function(i, n) {
+            if (n.includes($('.label-add-input input').val())) {
+                $('.pml-dialog .autocomplete')
+                .append(
+                    $('<li class="autocomplete-item" data-name="'+n+'">'+n+'<img src="/etc/designs/cs/brightcove/shared/img/add.svg" /></li>')
+                    .click(function(event) {
+                        // assign a click handler to add that to the playlist
+                        var $item = $(event.target);
+
+                        console.log($item);
+
+                        // make sure we have the autocomplete item and not the SVG icon
+                        if ($item.localName == 'img') {
+                            $item = $item.parent();
+                        }
+                        var label = $item.attr('data-name');
+
+                        // add the item to the list
+                        $('.pml-dialog .label-listing')
+                            .append($('<li><span><span class="handle"></span>'+label+'</span><a href="#"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+
+                        // clear the search
+                        $('.pml-dialog .label-add-input input').val();
+                    })
+                )
+            }
+        })
+    }
 }
 
 function suggestVideosForPlaylist(data) {
@@ -346,6 +408,9 @@ function getLabelListingUrl(id) {
 function loadFolders() {
     // first set up the select change event
     $('#fldr_list').on('change', function() {
+        // reset the label search
+        $('#label_list').val('all');
+
         $('.butDiv').hide();
         var selected = $(this).val();
         if (selected == 'all') {
@@ -389,6 +454,9 @@ function loadFolderCallback(data) {
 function loadLabels() {
     // first set up the select change event
     $('#label_list').on('change', function() {
+        // reset the folder search
+        $('#fldr_list').val('all');
+
         $('.butDiv').hide();
         var selected = $(this).val();
         if (selected == 'all') {
@@ -407,8 +475,8 @@ function loadLabels() {
                     var labelName = $('.input-label-name').val();
                     if (labelName == '' || !labelName.startsWith('/')) {
                         $('.input-label-name').addClass('error');
-                        return false;
                     } else {
+                        $('.input-label-name').removeClass('error');
                         // call the API here.
                         var data = {
                             a: 'create_label',
@@ -424,9 +492,9 @@ function loadLabels() {
                                 // do something here?
                             }
                         });
+                        dialog.hide();
+                        location.reload();
                     }
-
-                    location.reload();
                 },
                 function(dialog) {
                     // do nothing here
@@ -456,7 +524,48 @@ function loadLabels() {
 }
 
 function editLabels(event) {
-    alert('editing labels...');
+    var data = {
+        videoId: document.getElementById('divMeta.previewDiv').value,
+        items: $(document.getElementById('divMeta.labels')).find('a').map(function() {
+            return $(this).text()
+          })
+          .get()
+    };
+    console.log(data.items);
+    var $search = $('<form autocomplete="off" class="label-add-input"><input type="text" placeholder="Search for a label to add" /><ul class="autocomplete list-unstyled"></ul></form>').prop('outerHTML');
+    var $message = $('<ul class="label-listing list-unstyled" data-label-id="'+data.videoId+'" id="edit-labels-sortable">');
+    data.items.forEach(function(item, index) {
+        $message
+            .append($('<li data-id="'+item+'"><span><span class="handle"></span>'+item+'</span><a href="#" data-label-id="'+item+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+    });
+    showPopup('Edit Labels', $search + $message.prop('outerHTML'), 'Update', 'Cancel', function(event) {
+        var playlistData = {
+            a: 'update_labels',
+            labels: $('#edit-labels-sortable')
+                        .find('li')
+                        .map(function(item) { return $(this).text() }).get(),
+            videoId: data.videoId
+        };
+
+        $.ajax({
+            type: 'GET',
+            url: '/bin/brightcove/api.js',
+            data: $.param(playlistData, true),
+            async: true,
+            success: function (data)
+            {
+                location.reload();
+            }
+        });
+
+        event.hide();
+    }, null);
+    var el = document.getElementById("edit-labels-sortable");
+    $sortable = Sortable.create(el);
+}
+
+function callback(data) {
+    // generic callback
 }
 
 function loadLabelCallback(data) {
@@ -464,9 +573,9 @@ function loadLabelCallback(data) {
     $.each(data.items, function (i, n) {
         console.log(n);
         $label_select
-            .append($('<option>', { value : n }).text(n));
+            .append($('<option>', { value : n }).html(n));
     });
-    $label_select.append($('<option>', { value : 'create' }).text('Create New Label'))
+    $label_select.append($('<option>', { value : 'create' }).text('+ Create New Label'))
 }
 
 function triggerLabelClick(selected) {
@@ -518,6 +627,8 @@ function editPlaylistListingCallback(data) {
                 // do we need to do something here?
             }
         });
+
+        event.hide();
     }, null);
     var el = document.getElementById("edit-playlist-sortable");
     $sortable = Sortable.create(el);
@@ -821,7 +932,7 @@ function showMetaData(idx) {
             if (k > 0) {
                 labelsObject += ', ';
             }
-            labelsObject += '<a style="cursor:pointer;color:blue;text-decoration:underline"' +
+            labelsObject += '<a href="#" style="cursor:pointer;color:blue;text-decoration:underline"' +
                 'onclick="triggerLabelClick(\'' + labels[k] + '\'); return false;" >' + labels[k] + '</a>';
         }
     }
