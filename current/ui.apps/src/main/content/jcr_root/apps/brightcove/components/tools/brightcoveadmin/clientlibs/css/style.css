@@ -394,6 +394,11 @@ div.delConfPop {
   margin-bottom: 2px;
 }
 
+#tdMeta .variant {
+  display: block;
+  margin-bottom: 2px;
+}
+
 .hdr-labels {
   display: flex;
   justify-content: space-between;
@@ -408,6 +413,11 @@ div.delConfPop {
 
 .pml-dialog .error {
   border: 1px solid red;
+}
+
+.pml-dialog details summary {
+  font-weight: bold;
+  margin-bottom: 2px;
 }
 
 div.hLine {

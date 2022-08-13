@@ -282,6 +282,42 @@ $(function () {
         $('.butDiv').toggle(paging.selectedVideos.length > 0);
     });
 
+    $('body').on('click', '.variant', function(event) {
+        event.preventDefault();
+        var variantId = $(event.target).attr('data-variant-id');
+        var videoId = $(event.target).attr('data-video-idx');
+        var variant = oCurrentVideoList[videoId].variants[variantId];
+
+        var content = "<div>";
+        content += "<p><strong>Video Name:</strong><br />" + variant.language + "</p>";
+
+        if (variant.description)
+            content += "<p><strong>Description:</strong><br />" + variant.description + "</p>";
+
+        if (variant.long_description)
+            content += "<p><strong>Long Description:</strong><br />" + variant.long_description + "</p>";
+
+        if (variant.custom_fields && JSON.stringify(variant.custom_fields) !== '{}') {
+            content += "<p><strong>Custom Fields:</strong></p>";
+            for (const prop in variant.custom_fields) {
+                content += "<details open>"
+                content += "<summary>" + prop + "</summary>";
+                content += "<p>" + variant.custom_fields[prop] + "</p>";
+                content += "</details>";
+            }
+        }
+
+        content += "</div>";
+
+        showPopup('Variant Details for Language: ' + variant.language,
+                content,
+                'OK',
+                '',
+                function(dialog) {
+                    dialog.hide();
+                });
+    });
+
 });
 
 function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, onCancel) {
@@ -879,6 +915,28 @@ function showPlaylist() {
 
 }
 
+function showVariants(v, idx) {
+    if (v) {
+
+        var elVariants = document.getElementById('divMeta.variants');
+
+        // immediately update the text if there are no variants present
+        if (!v.variants) {
+            elVariants.textContent = "No variants.";
+            return;
+        }
+
+        // now we show the variants
+        elVariants.innerHTML = '';
+        for (var x = 0; x < v.variants.length; x++) {
+            var link = '<a href="#" class="variant" data-variant-id="'
+                        + x + '" data-video-idx="' + idx + '">'
+                        + v.variants[x].language + '</a>';
+            elVariants.innerHTML += link;
+        }
+    }
+}
+
 function showMetaData(idx) {
 
 
@@ -891,7 +949,7 @@ function showMetaData(idx) {
     //CURRENTLY
     var v = oCurrentVideoList[idx];
 
-
+    showVariants(v, idx);
 
     // Populate the metadata panel
     document.getElementById('divMeta.name').innerHTML = v.name;
@@ -908,8 +966,6 @@ function showMetaData(idx) {
 
     document.getElementById('divMeta.id').innerHTML = v.id;
     document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
-
-    console.log(v);
 
     //Construct the tag section:
     var tagsObject = "";

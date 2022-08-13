@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS};
+    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS, Constants.VARIANTS};
 
     private String account_id;
     public static final int DEFAULT_LIMIT = 100;

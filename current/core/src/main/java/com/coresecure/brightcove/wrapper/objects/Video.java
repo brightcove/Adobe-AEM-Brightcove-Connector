@@ -65,6 +65,7 @@ public class Video {
     public final boolean complete;
     public final EconomicsEnum economics;
     public final JSONArray text_tracks;
+    public final JSONArray variants;
     public final Images images;
 
 
@@ -94,10 +95,14 @@ public class Video {
     }
 
     public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages) {
-        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, null);
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, null, null);
     }
 
-    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, Collection<String> aLabels) {
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, aLabels, null);
+    }
+
+    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels, JSONArray aVariants) {
         id = aId;
         account_id = aAccountId;
         name = aName;
@@ -114,6 +119,7 @@ public class Video {
         economics = aEconomics;
         projection = new Projection(aProjection);
         text_tracks = aText_tracks;
+        variants = aVariants;
         images = aImages;
         labels = aLabels;
     }
@@ -140,6 +146,7 @@ public class Video {
         boolean localcomplete = false;
         EconomicsEnum localeconomics = null;
         JSONArray localtext_tracks = null;
+        JSONArray localvariants = null;
         Images localimages = null;
         try {
             localid = (String) getNotNull(video, Constants.ID);
@@ -154,6 +161,7 @@ public class Video {
             localschedule = (Schedule) getNotNull(video, Constants.SCHEDULE);
             locallink = (RelatedLink) getNotNull(video, Constants.LINK);
             localtext_tracks = (JSONArray) getNotNull(video, Constants.TEXT_TRACKS);
+            localvariants = (JSONArray) getNotNull(video, Constants.VARIANTS);
             localcomplete = (Boolean) getNotNull(video, Constants.COMPLETE);
             if (!video.isNull(Constants.TAGS))
             {
@@ -195,6 +203,7 @@ public class Video {
             this.complete = localcomplete;
             this.economics = localeconomics;
             this.text_tracks = localtext_tracks;
+            this.variants = localvariants;
             this.images = localimages;
         }
     }
