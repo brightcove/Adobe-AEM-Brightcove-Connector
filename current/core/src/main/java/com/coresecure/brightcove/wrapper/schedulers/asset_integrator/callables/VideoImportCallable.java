@@ -229,7 +229,6 @@ public class VideoImportCallable implements Callable<String> {
 
             LOGGER.trace(">>>>START>>>>> {} >> {}", id ,active);
 
-            //TODO: CHECK IF VIDEO COMING INTO DAM (1) IS ACTIVE (2) HAS AN ID + SRC IMAGE??
             if (!active) {
                 LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toString(1));
                 if (resourceResolver != null) {
@@ -246,8 +245,6 @@ public class VideoImportCallable implements Callable<String> {
 
             //INITIALIZING ASSET SEARCH // INITIALIZATION
             Asset newAsset = null;
-
-            //TODO: PRINTING DEBUGGER (ENABLE TO DEBUG)
 
             //USNIG THE CONFIGURATION - BUILD THE DIRECTORY TO SEARCH FOR THE LOCAL ASSETS OR BUILD INTO
             String localpath = cleanPath(confPath,brightcove_filename);

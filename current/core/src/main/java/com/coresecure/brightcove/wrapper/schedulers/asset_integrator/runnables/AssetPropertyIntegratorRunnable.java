@@ -117,6 +117,9 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 session.save();
                 final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
+                // TODO: Get folders for each account and create them
+                // TODO: Save the folder_id value for each folder as a property
+
                 //GET VIDEOS
                 int startOffset = 0;
                 JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0, Constants.NAME, true)); //QUERY<------

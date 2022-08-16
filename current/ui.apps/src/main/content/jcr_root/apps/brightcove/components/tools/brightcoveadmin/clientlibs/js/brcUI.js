@@ -607,7 +607,6 @@ function callback(data) {
 function loadLabelCallback(data) {
     var $label_select = $('#label_list');
     $.each(data.items, function (i, n) {
-        console.log(n);
         $label_select
             .append($('<option>', { value : n }).html(n));
     });
@@ -948,6 +947,8 @@ function showMetaData(idx) {
 
     //CURRENTLY
     var v = oCurrentVideoList[idx];
+
+    console.log(v);
 
     showVariants(v, idx);
 

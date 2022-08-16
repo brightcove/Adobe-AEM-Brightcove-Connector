@@ -73,9 +73,6 @@ public class BrcImageApi extends SlingAllMethodsServlet {
 
         JSONObject video = brAPI.cms.getVideoImages(VideoIDStr);
 
-
-        //TODO: MODULARIZE
-
         // Find a single video
         if (video != null && video.has(Constants.POSTER)) {
             JSONObject poster = video.getJSONObject(Constants.POSTER);
