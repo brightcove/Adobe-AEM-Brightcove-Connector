@@ -419,6 +419,15 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONArray getFoldersAsJsonArray() {
+        try {
+            return brAPI.cms.getFolders(100, 0);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+            return null;
+        }
+    }
+
     public String getFolders() {
         JSONObject items = new JSONObject();
         String result = "";

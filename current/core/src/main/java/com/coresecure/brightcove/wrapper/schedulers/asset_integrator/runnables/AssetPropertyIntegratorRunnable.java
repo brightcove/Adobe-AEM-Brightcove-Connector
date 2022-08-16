@@ -41,9 +41,12 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.commons.jcr.JcrUtil;
+
+import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.json.JSONArray;
+import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.commons.mime.MimeTypeService;
 import org.slf4j.Logger;
@@ -117,8 +120,22 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 session.save();
                 final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
-                // TODO: Get folders for each account and create them
-                // TODO: Save the folder_id value for each folder as a property
+                // get all the folders in the account
+                JSONArray folders = serviceUtil.getFoldersAsJsonArray();
+                if (folders.length() > 0) {
+                    for (int x = 0; x < folders.length(); x++) {
+                        JSONObject folder = folders.getJSONObject(x);
+                        String folderId = folder.getString("id");
+                        String folderName = folder.getString("name");
+
+                        // create a new sling folder for each folder in the account
+                        Node folderNode = JcrUtil.createPath(basePath + folderName.replaceAll(" ", "_").concat("/"),
+                                            "sling:OrderedFolder", session);
+                        folderNode.setProperty("jcr:title", folderName);
+                        folderNode.setProperty("brc_folder_id", folderId);
+                        session.save();
+                    }
+                }
 
                 //GET VIDEOS
                 int startOffset = 0;

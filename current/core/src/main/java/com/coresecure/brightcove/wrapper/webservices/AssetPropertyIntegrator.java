@@ -41,6 +41,8 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.day.cq.commons.jcr.JcrUtil;
+import com.day.crx.JcrConstants;
+
 import org.apache.felix.scr.annotations.*;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -55,7 +57,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.Node;
+import javax.jcr.NodeIterator;
+import javax.jcr.RepositoryException;
 import javax.jcr.Session;
+import javax.jcr.query.Query;
+import javax.jcr.query.QueryManager;
+import javax.jcr.query.QueryResult;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.*;
@@ -128,6 +135,59 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                     accountFolder.setProperty("jcr:title", cs.getAccountAlias());
                     session.save();
                     final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+
+                    JSONArray folders = serviceUtil.getFoldersAsJsonArray();
+                    LOGGER.trace("<<< " + basePath + " USED AS BASE PATH!");
+                    LOGGER.trace("<<< " + folders.length() + " FOLDERS FOUND IN ACCOUNT: " + requestedAccount);
+
+                    if (folders.length() > 0) {
+                        for (int x = 0; x < folders.length(); x++) {
+                            JSONObject folder = folders.getJSONObject(x);
+                            String folderId = folder.getString("id");
+                            String folderName = folder.getString("name");
+
+                            String localFolderName = folderName.replaceAll(" ", "_").toLowerCase();
+
+                            // check if folder (1) already exists or (2) has been renamed
+                            QueryManager qm = session.getWorkspace().getQueryManager();
+                            String query = "SELECT * FROM [sling:OrderedFolder] AS node "
+                                    + "WHERE ISDESCENDANTNODE(node, \"" + basePath +"\") "
+                                    + "AND CONTAINS([brc_folder_id], \"" + folderId + "\")";
+                            Query q = qm.createQuery(query, Query.JCR_SQL2);
+                            QueryResult result = q.execute();
+                            NodeIterator results = result.getNodes();
+
+                            if (results.hasNext()) {
+
+                                // folder exists so update the title if it has been renamed
+                                Node existingFolder = results.nextNode();
+                                existingFolder.setProperty("jcr:title", folderName);
+
+                                LOGGER.trace("<<< " + existingFolder.getPath() + " EXISTING FOLDER FOUND!");
+
+                                if (!existingFolder.getPath().endsWith(localFolderName)) {
+                                    // the folder has been renamed
+                                    LOGGER.trace("<<< " + existingFolder + " compared to " + localFolderName);
+                                    LOGGER.trace("<<< " + folderName + " HAS BEEN RENAMED AND MUST BE MOVED!");
+                                    session.move(existingFolder.getPath(), basePath + localFolderName);
+                                }
+
+                            } else {
+
+                                // folder does not exist so we need to create it
+                                Node folderNode = JcrUtil.createPath(basePath + localFolderName,
+                                                "sling:OrderedFolder", session);
+                                folderNode.setProperty("jcr:title", folderName);
+                                folderNode.setProperty("brc_folder_id", folderId);
+
+                                LOGGER.trace("<<< " + folderNode.getPath() + " NEW FOLDER CREATED!");
+
+                            }
+
+                            // save everything to the repository
+                            session.save();
+                        }
+                    }
 
                     //GET VIDEOS
                     int startOffset = 0;
