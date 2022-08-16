@@ -52,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
 import java.util.*;
@@ -180,7 +181,15 @@ public class BrcReplicationHandler implements TransportHandler {
         if (parent == null) {
             return result;
         }
-        String account_id = parent.getName();
+        // update this to make sure we grab the right parent now that we have subfolders
+        String account_id;
+        Node parentNode = parent.adaptTo(Node.class);
+        if (parentNode.hasProperty("brc_folder_id")) {
+            // this is not the actual account folder, so let's go up one more
+            account_id = parent.getParent().getName();
+        } else {
+            account_id = parent.getName();
+        }
         Asset _asset = asset_res.adaptTo(Asset.class);
         if (_asset == null){
             LOGGER.warn("Asset removed or not existing");

@@ -162,20 +162,20 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                                 // folder exists so update the title if it has been renamed
                                 Node existingFolder = results.nextNode();
                                 existingFolder.setProperty("jcr:title", folderName);
-
                                 LOGGER.trace("<<< " + existingFolder.getPath() + " EXISTING FOLDER FOUND!");
 
-                                if (!existingFolder.getPath().endsWith(localFolderName)) {
-                                    // the folder has been renamed
-                                    LOGGER.trace("<<< " + existingFolder + " compared to " + localFolderName);
-                                    LOGGER.trace("<<< " + folderName + " HAS BEEN RENAMED AND MUST BE MOVED!");
-                                    session.move(existingFolder.getPath(), basePath + localFolderName);
-                                }
+                                // we don't need to move if we use the folderId as the node path!
+                                // if (!existingFolder.getPath().endsWith(localFolderName)) {
+                                //     // the folder has been renamed
+                                //     LOGGER.trace("<<< " + existingFolder + " compared to " + localFolderName);
+                                //     LOGGER.trace("<<< " + folderName + " HAS BEEN RENAMED AND MUST BE MOVED!");
+                                //     session.move(existingFolder.getPath(), basePath + localFolderName);
+                                // }
 
                             } else {
 
                                 // folder does not exist so we need to create it
-                                Node folderNode = JcrUtil.createPath(basePath + localFolderName,
+                                Node folderNode = JcrUtil.createPath(basePath + folderId,
                                                 "sling:OrderedFolder", session);
                                 folderNode.setProperty("jcr:title", folderName);
                                 folderNode.setProperty("brc_folder_id", folderId);
