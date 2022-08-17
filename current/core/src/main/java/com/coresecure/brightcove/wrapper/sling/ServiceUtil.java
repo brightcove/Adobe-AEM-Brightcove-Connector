@@ -1008,6 +1008,8 @@ public class ServiceUtil {
                         break;
                     }
 
+                    // set the sync time
+                    map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
 
                     String key = getKey(x);
 
@@ -1048,9 +1050,6 @@ public class ServiceUtil {
                     }
                 }
 
-                //AFTER SETTING ALL THE METADATA - SET THE LAST UPDATE TIME
-                //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-                map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
                 resourceResolver.commit();
                 LOGGER.trace(">>UPDATED METADATA FOR VIDEO : [{}]",map.get(Constants.BRC_ID));
 
