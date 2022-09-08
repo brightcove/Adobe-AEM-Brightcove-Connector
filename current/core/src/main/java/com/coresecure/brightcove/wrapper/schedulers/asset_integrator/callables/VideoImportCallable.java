@@ -54,6 +54,7 @@ import javax.jcr.RepositoryException;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -116,7 +117,7 @@ public class VideoImportCallable implements Callable<String> {
             binary = binaryRes.binary;
             mime_type = binaryRes.mime_type;
         } else {
-            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, "/etc/designs/cs/brightcove/shared/img/noThumbnail.jpg", mType);
+            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, "/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/noThumbnail.jpg", mType);
             if (binaryRes.binary != null) {
                 binary = binaryRes.binary;
                 mime_type = binaryRes.mime_type;
@@ -192,12 +193,22 @@ public class VideoImportCallable implements Callable<String> {
         return newAsset;
     }
 
-    private String cleanPath(String confPath, String filename){
+    private String cleanPath(String confPath, String filename) {
         return (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedServiceAccount + "/").concat(filename);
     }
+
+    private String cleanPath(String confPath, String filename, String folderId) {
+        String accountFolder = (confPath.endsWith("/") ? confPath : confPath.concat("/")).concat(requestedServiceAccount + "/");
+        if (folderId == null || folderId.length() == 0)
+            return accountFolder.concat(filename);
+        else
+            return accountFolder.concat(folderId + "/").concat(filename);
+    }
+
     private String cleanFilename(JSONObject innerObj) throws JSONException{
         return innerObj.getString(Constants.ORIGINAL_FILENAME) != null ? innerObj.getString(Constants.ORIGINAL_FILENAME).replaceAll("%20", " ") : null;
     }
+
     private Asset getAsset(String oldpath, String localpath ){
         Resource resource = resourceResolver.getResource(oldpath);
         if(resource != null) {
@@ -209,6 +220,7 @@ public class VideoImportCallable implements Callable<String> {
         }
         return null;
     }
+
     public String call(){
         // Get the Service resource resolver
         try {
@@ -228,7 +240,6 @@ public class VideoImportCallable implements Callable<String> {
 
             LOGGER.trace(">>>>START>>>>> {} >> {}", id ,active);
 
-            //TODO: CHECK IF VIDEO COMING INTO DAM (1) IS ACTIVE (2) HAS AN ID + SRC IMAGE??
             if (!active) {
                 LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toString(1));
                 if (resourceResolver != null) {
@@ -240,17 +251,18 @@ public class VideoImportCallable implements Callable<String> {
             String name = innerObj.getString(Constants.NAME);
             String brightcove_filename = id + ".mp4"; //BRIGHTCOVE FILE NAME IS ID + . MP4 <-
             String original_filename = cleanFilename(innerObj);
+            String brightcove_folder_id = (innerObj.isNull(Constants.FOLDER_ID) ? "" : innerObj.getString(Constants.FOLDER_ID));
 
-            LOGGER.trace("SYNCING VIDEO>>[" + name + "\tSTATE:ACTIVE\tTO BE:" + original_filename + "]");
+            LOGGER.trace("SYNCING VIDEO >> [" + name + "\tSTATE:ACTIVE\tTO BE:" + original_filename + "]");
+
+            LOGGER.trace("VIDEO HAS FOLDER ID >> [" + brightcove_folder_id + "]");
 
             //INITIALIZING ASSET SEARCH // INITIALIZATION
             Asset newAsset = null;
 
-            //TODO: PRINTING DEBUGGER (ENABLE TO DEBUG)
-
             //USNIG THE CONFIGURATION - BUILD THE DIRECTORY TO SEARCH FOR THE LOCAL ASSETS OR BUILD INTO
-            String localpath = cleanPath(confPath,brightcove_filename);
-            String oldpath = cleanPath(confPath,original_filename);
+            String localpath = cleanPath(confPath, brightcove_filename, brightcove_folder_id);
+            String oldpath = cleanPath(confPath, original_filename, brightcove_folder_id);
 
             LOGGER.trace("SEARCHING FOR LOCAL ASSET");
             LOGGER.trace(">>ORIGINAL: " + oldpath);
@@ -285,9 +297,7 @@ public class VideoImportCallable implements Callable<String> {
 
                 }
 
-
             }
-
 
             LOGGER.trace(">>>>>>>>>{" + id + "}>>>>>END>>>>");
 

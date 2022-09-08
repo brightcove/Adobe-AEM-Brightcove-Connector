@@ -30,6 +30,7 @@
  permission to convey the resulting work.
 --%>
 
+<%@ page import="com.coresecure.brightcove.wrapper.filter.CustomAddDialogTabFilter" %>
 <%@ page import="org.apache.sling.commons.json.JSONObject" %>
 <%@ page import="com.coresecure.brightcove.wrapper.sling.ServiceUtil" %>
 <%@ page import="org.apache.sling.commons.json.JSONArray" %>
@@ -39,21 +40,31 @@
 
 
     Resource asset_res = slingRequest.getParameter("item") != null ? resourceResolver.resolve(slingRequest.getParameter("item")) : resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
-    String requestedAccount = asset_res.getParent().getName();
 
-    Resource metadataRes = asset_res.getChild("jcr:content/metadata");
-    ValueMap map = metadataRes.adaptTo(ValueMap.class);
+    ValueMap parentProps = asset_res.getParent().getValueMap();
 
-    ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+    if ( parentProps != null && parentProps.get("jcr:createdBy").equals("brightcove_admin") ) {
+
+        String requestedAccount;
+        Node parentNode = asset_res.getParent().adaptTo(Node.class);
+        if (parentNode.hasProperty("brc_folder_id")) {
+            // this is not the actual account folder, so let's go up one more
+            requestedAccount = parentNode.getParent().getName();
+        } else {
+            requestedAccount = parentNode.getName();
+        }
+
+        Resource metadataRes = asset_res.getChild("jcr:content/metadata");
+        ValueMap map = metadataRes.adaptTo(ValueMap.class);
+
+        ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
 
-    JSONObject custom_fields_obj = serviceUtil.getCustomFields();
-    JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
+        JSONObject custom_fields_obj = serviceUtil.getCustomFields();
+        JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
 
-    Resource custom_fields = metadataRes.getChild("brc_custom_fields");
-    ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
-
-
+        Resource custom_fields = metadataRes.getChild("brc_custom_fields");
+        ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
 %>
 
     <div  class="aem-assets-metadata-form-column">
@@ -61,10 +72,10 @@
             <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Title (Editable in Basic Tab)</label><input  class="coral-Form-field" data-metaType="text" type="text" value="<%=map.get("dc:title","")%>" disabled="" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Short Description</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_description" maxlength="250" value="<%=map.get("brc_description","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Long Description</label><textarea  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_long_description" value="<%=map.get("brc_long_description","")%>" data-foundation-validation="" data-validation="" is="coral-textarea"><%=map.get("brc_long_description","")%></textarea></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Long Description</label><textarea maxlength="5000" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_long_description" value="<%=map.get("brc_long_description","")%>" data-foundation-validation="" data-validation="" is="coral-textarea"><%=map.get("brc_long_description","")%></textarea></div>
         </div>
         <div class="foundation-field-editable">
             <div  class="coral-Form-fieldwrapper foundation-field-edit">
@@ -76,10 +87,10 @@
             </div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_url" value="<%=map.get("brc_link_url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Link to Related Item</label><input maxlength="250" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_url" value="<%=map.get("brc_link_url","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
         <div class="foundation-field-editable">
-            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input  class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_text" value="<%=map.get("brc_link_text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+            <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Text for Related Item</label><input maxlength="255" class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_link_text" value="<%=map.get("brc_link_text","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
         </div>
 
         <div  class="coral-Form-fieldwrapper foundation-field-edit">
@@ -174,6 +185,24 @@
         <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Duration</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_duration" value="<%=map.get("brc_duration","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
     </div>
 </div>
+<%
+    } else {
+%>
+<div  class="aem-assets-metadata-form-column" style="width: 100%;">
+    <div class="foundation-field-editable">
+        <div  class="coral-Form-fieldwrapper foundation-field-edit">
+            <label data-metatype="section" class="coral-Form-fieldlabel">
+                <h3>Notice</h3>
+                <span>
+                    This resource is not managed by Brightcove and does not have any associated Brightcove metadata.
+                </span>
+            </label>
+        </div>
+    </div>
+</div>
+<%
+    }
+%>
 
 
 

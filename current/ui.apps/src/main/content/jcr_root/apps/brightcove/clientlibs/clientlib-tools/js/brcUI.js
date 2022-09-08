@@ -32,7 +32,6 @@
 
 //CONFIG
 
-//FIX FOR PROBLEM 5.5 TODO:REMOVE
 $( document ).ready(function() {
     console.log($("#selAccount").val());
     if(CQ.Ext!=null)
@@ -57,11 +56,6 @@ var tUploadBar,
 
 //called once body loads.  sets the api location and loads all videos
 $(function () {
-    if ($.browser.msie) {
-        //IE css opacity hack
-        $("#screen").css("filter", "alpha(opacity = 65)")
-            .css("zoom", 1);
-    }
 
     //Initialize the paging object
     //each member variable stores the current page
@@ -83,6 +77,7 @@ $(function () {
 
     Load(getAllVideosURL());
     loadFolders();
+    loadLabels();
     var app = new CQ.Switcher({});
     app.render(document.body);
     //app = new CQ.HomeLink({});
@@ -106,12 +101,42 @@ $(function () {
         }
     });
 
+    $('input#filter_clips').on('change', function(event) {
+        if (event.currentTarget.checked) {
+            // filter only clips
+            $('#tbData tr').hide();
+            $('#tbData tr.state-clip').show();
+        } else {
+            // display all
+            $('#tbData tr').show();
+        }
+    });
+
     $('#tbData').on('click', '.edit-playlist', function(event) {
         editPlaylistHandler(event);
     })
 
+    $('#searchDiv_pl').on('click', '.btn-create-playlist', function(event) {
+        var $message =
+            $('<p>Please enter a name for your playlist:</p>')
+            .append($('<input class="input-playlist-name" required type="text" autofocus />'));
+        showPopup('Create Playlist',
+            $message.prop('outerHTML'),
+            'Create',
+            'Cancel',
+            function(dialog) {
+                // do something here
+            },
+            function(dialog) {
+                // do nothing here
+            })
+    });
+
     $('.pml-dialog_content').on('click', '.playlist-listing li a', function(event) {
-        console.log(event.target);
+        $(event.target).parents('li').remove();
+    })
+
+    $('.pml-dialog_content').on('click', '.label-listing li a', function(event) {
         $(event.target).parents('li').remove();
     })
 
@@ -122,10 +147,10 @@ $(function () {
             id: $(event.target).parent().attr('data-playlist')
         }
         console.log(playlist);
-        showPopup('Delete Playlist', 
+        showPopup('Delete Playlist',
                     'Are you sure you want to delete the playlist "' + playlist.name + '"?',
-                    'Delete', 
-                    'Cancel', 
+                    'Delete',
+                    'Cancel',
                     function(dialog) {
                         var data = {
                             a: 'delete_playlist',
@@ -141,6 +166,7 @@ $(function () {
                                 // do something here?
                             }
                         });
+                        dialog.hide();
                         Load(getAllPlaylistsURL());
                     },
                     function(dialog) {
@@ -159,6 +185,31 @@ $(function () {
                 start: 0,
                 limit: 3,
                 callback: 'suggestVideosForPlaylist'
+            };
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: data,
+                async: true,
+                success: function (data)
+                {
+                    // do something here?
+                }
+            });
+        };
+    });
+
+    $('.pml-dialog').on('keyup', '.label-add-input input', function(event) {
+        var query = $(event.target).val();
+        var $parent = $(event.target).parents('.label-add-input');
+        if (query) {
+            // perform an AJAX video search
+            var data = {
+                a: 'list_labels',
+                query: query,
+                start: 0,
+                limit: 3,
+                callback: 'suggestLabelsForVideo'
             };
             $.ajax({
                 type: 'GET',
@@ -231,6 +282,42 @@ $(function () {
         $('.butDiv').toggle(paging.selectedVideos.length > 0);
     });
 
+    $('body').on('click', '.variant', function(event) {
+        event.preventDefault();
+        var variantId = $(event.target).attr('data-variant-id');
+        var videoId = $(event.target).attr('data-video-idx');
+        var variant = oCurrentVideoList[videoId].variants[variantId];
+
+        var content = "<div>";
+        content += "<p><strong>Video Name:</strong><br />" + variant.language + "</p>";
+
+        if (variant.description)
+            content += "<p><strong>Description:</strong><br />" + variant.description + "</p>";
+
+        if (variant.long_description)
+            content += "<p><strong>Long Description:</strong><br />" + variant.long_description + "</p>";
+
+        if (variant.custom_fields && JSON.stringify(variant.custom_fields) !== '{}') {
+            content += "<p><strong>Custom Fields:</strong></p>";
+            for (const prop in variant.custom_fields) {
+                content += "<details open>"
+                content += "<summary>" + prop + "</summary>";
+                content += "<p>" + variant.custom_fields[prop] + "</p>";
+                content += "</details>";
+            }
+        }
+
+        content += "</div>";
+
+        showPopup('Variant Details for Language: ' + variant.language,
+                content,
+                'OK',
+                '',
+                function(dialog) {
+                    dialog.hide();
+                });
+    });
+
 });
 
 function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, onCancel) {
@@ -244,7 +331,6 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
             event.preventDefault();
             if (onSuccess)
                 onSuccess($popup);
-            $popup.hide();
         });
     if (btnSecondaryText) {
         $popup.find('.pml-dialog_footer .btn-secondary')
@@ -260,8 +346,41 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
     } else {
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
-    
+
     $popup.show();
+}
+
+function suggestLabelsForVideo(data) {
+    $('.pml-dialog .autocomplete').empty();
+    if (data.items.length > 0) {
+        $.each(data.items, function(i, n) {
+            if (n.includes($('.label-add-input input').val())) {
+                $('.pml-dialog .autocomplete')
+                .append(
+                    $('<li class="autocomplete-item" data-name="'+n+'">'+n+'<img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/add.svg" /></li>')
+                    .click(function(event) {
+                        // assign a click handler to add that to the playlist
+                        var $item = $(event.target);
+
+                        console.log($item);
+
+                        // make sure we have the autocomplete item and not the SVG icon
+                        if ($item.localName == 'img') {
+                            $item = $item.parent();
+                        }
+                        var label = $item.attr('data-name');
+
+                        // add the item to the list
+                        $('.pml-dialog .label-listing')
+                            .append($('<li><span><span class="handle"></span>'+label+'</span><a href="#"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg" /></a></li>'));
+
+                        // clear the search
+                        $('.pml-dialog .label-add-input input').val();
+                    })
+                )
+            }
+        })
+    }
 }
 
 function suggestVideosForPlaylist(data) {
@@ -270,7 +389,7 @@ function suggestVideosForPlaylist(data) {
         $.each(data.items, function(i, n) {
             $('.pml-dialog .autocomplete')
             .append(
-                $('<li class="autocomplete-item" data-name="'+n.name+'" data-id="'+n.id+'">'+n.name+'<img src="/etc/designs/cs/brightcove/shared/img/add.svg" /></li>')
+                $('<li class="autocomplete-item" data-name="'+n.name+'" data-id="'+n.id+'">'+n.name+'<img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/add.svg" /></li>')
                 .click(function(event) {
                     // assign a click handler to add that to the playlist
                     var $item = $(event.target);
@@ -281,10 +400,10 @@ function suggestVideosForPlaylist(data) {
                     }
                     var videoId = $item.attr('data-id');
                     var videoName = $item.attr('data-name');
-                    
+
                     // add the item to the list
                     $('.pml-dialog .playlist-listing')
-                        .append($('<li data-id="'+videoId+'"><span><span class="handle"></span>'+videoName+'</span><a href="#" data-video-id="'+videoId+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+                        .append($('<li data-id="'+videoId+'"><span><span class="handle"></span>'+videoName+'</span><a href="#" data-video-id="'+videoId+'"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg" /></a></li>'));
 
                     // clear the search
                     $('.pml-dialog .playlist-add-input input').val();
@@ -313,9 +432,21 @@ function getFolderListingUrl(id) {
                     + '&limit=' + paging.size + '&start=' + paging.generic;
 }
 
+function getLabelListingUrl(id) {
+    loadStart();
+    var sort_by = $("#trHeader th.sortable").not("NONE").attr("data-sortby");
+    var sort_type = $("#trHeader th.sortable").not("NONE").attr("data-sorttype");
+    return apiLocation +
+                    '.js?account_id='+$("#selAccount").val()+'&a=get_videos_with_label&callback=showAllVideosCallBack&label=' + id + '&sort=' + sort_type + sort_by
+                    + '&limit=' + paging.size + '&start=' + paging.generic;
+}
+
 function loadFolders() {
     // first set up the select change event
     $('#fldr_list').on('change', function() {
+        // reset the label search
+        $('#label_list').val('all');
+
         $('.butDiv').hide();
         var selected = $(this).val();
         if (selected == 'all') {
@@ -356,6 +487,136 @@ function loadFolderCallback(data) {
     });
 }
 
+function loadLabels() {
+    // first set up the select change event
+    $('#label_list').on('change', function() {
+        // reset the folder search
+        $('#fldr_list').val('all');
+
+        $('.butDiv').hide();
+        var selected = $(this).val();
+        if (selected == 'all') {
+            Load(getAllVideosURL());
+        } else if (selected == 'create') {
+            var $message =
+                $('<p>Label Name:</p>')
+                .append($('<input class="input-label-name" type="text" autofocus />'));
+            showPopup('Create New Label',
+                $message.prop('outerHTML'),
+                'Create',
+                'Cancel',
+                function(dialog) {
+
+                    // do some basic validationå
+                    var labelName = $('.input-label-name').val();
+                    if (labelName == '' || !labelName.startsWith('/')) {
+                        $('.input-label-name').addClass('error');
+                    } else {
+                        $('.input-label-name').removeClass('error');
+                        // call the API here.
+                        var data = {
+                            a: 'create_label',
+                            label: labelName
+                        };
+                        $.ajax({
+                            type: 'GET',
+                            url: '/bin/brightcove/api.js',
+                            data: data,
+                            async: true,
+                            success: function (data)
+                            {
+                                // do something here?
+                            }
+                        });
+                        dialog.hide();
+                        location.reload();
+                    }
+                },
+                function(dialog) {
+                    // do nothing here
+                    triggerLabelClick('all');
+                })
+        } else {
+            console.log('search videos by label=' + selected);
+            Load(getLabelListingUrl(selected));
+        }
+    });
+
+    // now make the API call to load the folder options
+    var data = {
+        a: 'list_labels',
+        callback: 'loadLabelCallback'
+    };
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: data,
+        async: true,
+        success: function (data)
+        {
+            // do something here?
+        }
+    });
+}
+
+function editLabels(event) {
+    var data = {
+        videoId: document.getElementById('divMeta.previewDiv').value,
+        items: $(document.getElementById('divMeta.labels')).find('a').map(function() {
+            return $(this).text()
+          })
+          .get()
+    };
+    console.log(data.items);
+    var $search = $('<form autocomplete="off" class="label-add-input"><input type="text" placeholder="Search for a label to add" /><ul class="autocomplete list-unstyled"></ul></form>').prop('outerHTML');
+    var $message = $('<ul class="label-listing list-unstyled" data-label-id="'+data.videoId+'" id="edit-labels-sortable">');
+    data.items.forEach(function(item, index) {
+        $message
+            .append($('<li data-id="'+item+'"><span><span class="handle"></span>'+item+'</span><a href="#" data-label-id="'+item+'"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg" /></a></li>'));
+    });
+    showPopup('Edit Labels', $search + $message.prop('outerHTML'), 'Update', 'Cancel', function(event) {
+        var playlistData = {
+            a: 'update_labels',
+            labels: $('#edit-labels-sortable')
+                        .find('li')
+                        .map(function(item) { return $(this).text() }).get(),
+            videoId: data.videoId
+        };
+
+        $.ajax({
+            type: 'GET',
+            url: '/bin/brightcove/api.js',
+            data: $.param(playlistData, true),
+            async: true,
+            success: function (data)
+            {
+                location.reload();
+            }
+        });
+
+        event.hide();
+    }, null);
+    var el = document.getElementById("edit-labels-sortable");
+    $sortable = Sortable.create(el);
+}
+
+function callback(data) {
+    // generic callback
+}
+
+function loadLabelCallback(data) {
+    var $label_select = $('#label_list');
+    $.each(data.items, function (i, n) {
+        $label_select
+            .append($('<option>', { value : n }).html(n));
+    });
+    $label_select.append($('<option>', { value : 'create' }).text('+ Create New Label'))
+}
+
+function triggerLabelClick(selected) {
+    $('#label_list').val(selected).trigger('change');
+}
+
 function editPlaylistHandler(event) {
     event.preventDefault();
     var data = {
@@ -374,15 +635,15 @@ function editPlaylistHandler(event) {
             // do something here?
         }
     });
-    
+
 }
 
 function editPlaylistListingCallback(data) {
     var $search = $('<form autocomplete="off" class="playlist-add-input"><input type="text" placeholder="Search for a video to add" /><ul class="autocomplete"></ul></form>').prop('outerHTML');
-    var $message = $('<ul class="playlist-listing" data-playlist-id="'+data.playlist+'" id="edit-playlist-sortable">');
+    var $message = $('<ul class="playlist-listing list-unstyled" data-playlist-id="'+data.playlist+'" id="edit-playlist-sortable">');
     data.items.forEach(function(item, index) {
         $message
-            .append($('<li data-id="'+item.id+'"><span><span class="handle"></span>'+item.name+'</span><a href="#" data-video-id="'+item.id+'"><img src="/etc/designs/cs/brightcove/shared/img/delete.svg" /></a></li>'));
+            .append($('<li data-id="'+item.id+'"><span><span class="handle"></span>'+item.name+'</span><a href="#" data-video-id="'+item.id+'"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg" /></a></li>'));
     });
     showPopup('Edit Playlist', $search + $message.prop('outerHTML'), 'Update', 'Cancel', function(event) {
         var playlistData = {
@@ -390,7 +651,7 @@ function editPlaylistListingCallback(data) {
             videos: $sortable.toArray(),
             playlistId: data.playlist
         };
-    
+
         $.ajax({
             type: 'GET',
             url: '/bin/brightcove/api.js',
@@ -401,6 +662,8 @@ function editPlaylistListingCallback(data) {
                 // do we need to do something here?
             }
         });
+
+        event.hide();
     }, null);
     var el = document.getElementById("edit-playlist-sortable");
     $sortable = Sortable.create(el);
@@ -477,7 +740,7 @@ function buildMainVideoList(title) {
     $.each(oCurrentVideoList, function (i, n) {
         modDate = new Date(n.updated_at);
         $("#tbData").append(
-            "<tr style=\"cursor:pointer;\" class=\"state-" + n.state.toLowerCase() + "\" id=\"" + (i) + "\"> \
+            "<tr style=\"cursor:pointer;\" class=\"" + (n.clip_source_video_id ? 'state-clip' : '') + " state-" + n.state.toLowerCase() + "\" id=\"" + (i) + "\"> \
             <td>\
                 <input type=\"checkbox\" value=\"" + (n.id) + "\" id=\"" + (i) + "\" data-folder-id=\"" + ((n.folder_id) ? n.folder_id : '') + "\" onclick=\"checkCheck()\">\
             </td><td>"
@@ -548,7 +811,7 @@ function buildPlaylistList() {
             + ((n.reference_id) ? n.reference_id : '') +
             "</td><td>"
             + n.id +
-            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/etc/designs/cs/brightcove/shared/img/delete.svg\" /></span>" +
+            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
             "</td></tr>"
         );
     });
@@ -651,6 +914,28 @@ function showPlaylist() {
 
 }
 
+function showVariants(v, idx) {
+    if (v) {
+
+        var elVariants = document.getElementById('divMeta.variants');
+
+        // immediately update the text if there are no variants present
+        if (!v.variants) {
+            elVariants.textContent = "No variants.";
+            return;
+        }
+
+        // now we show the variants
+        elVariants.innerHTML = '';
+        for (var x = 0; x < v.variants.length; x++) {
+            var link = '<a href="#" class="variant" data-variant-id="'
+                        + x + '" data-video-idx="' + idx + '">'
+                        + v.variants[x].language + '</a>';
+            elVariants.innerHTML += link;
+        }
+    }
+}
+
 function showMetaData(idx) {
 
 
@@ -663,7 +948,9 @@ function showMetaData(idx) {
     //CURRENTLY
     var v = oCurrentVideoList[idx];
 
+    console.log(v);
 
+    showVariants(v, idx);
 
     // Populate the metadata panel
     document.getElementById('divMeta.name').innerHTML = v.name;
@@ -679,7 +966,7 @@ function showMetaData(idx) {
     document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
     document.getElementById('divMeta.id').innerHTML = v.id;
-    document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null ? v.description : "") + "</pre>";
+    document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
 
     //Construct the tag section:
     var tagsObject = "";
@@ -694,6 +981,19 @@ function showMetaData(idx) {
         }
     }
     document.getElementById('divMeta.tags').innerHTML = tagsObject;
+
+    var labelsObject = "";
+    if (v.labels) {
+        var labels = v.labels.toString().split(',');
+        for (var k = 0; k < labels.length; k++) {
+            if (k > 0) {
+                labelsObject += ', ';
+            }
+            labelsObject += '<a href="#" style="cursor:pointer;color:blue;text-decoration:underline"' +
+                'onclick="triggerLabelClick(\'' + labels[k] + '\'); return false;" >' + labels[k] + '</a>';
+        }
+    }
+    document.getElementById('divMeta.labels').innerHTML = labelsObject;
 
     //if there's no link text use the linkURL as the text
     var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";
@@ -853,24 +1153,15 @@ function openBox(id) {
         .css("top", ($(window).height() / 6))
         .draggable();
 
-    //TODO: replace jquery ui with extjs for consistency
-
-    if (!$.browser.msie) {
-        $("#screen, #" + id).fadeIn("fast");
-    } else {
-        $("#screen, #" + id).show();
-    }
+    $("#screen, #" + id).fadeIn("fast");
 }
 
 //close an open overlay and hide the screen, if a form is passed, reset it.
 function closeBox(id, form) {
     //Don't close the screen if another window is open
     var strSelect = '#' + id + (($("div.overlay:visible").length > 1) ? "" : ",#screen");
-    if (!$.browser.msie) {
-        $(strSelect).fadeOut("fast");
-    } else {
-        $(strSelect).hide();
-    }
+    $(strSelect).fadeOut("fast");
+
     if (null != form) {
         form.reset();
     }
@@ -921,7 +1212,7 @@ function uploadPoster()
         content: {
           innerHTML: '<form class="coral-Form coral-Form--vertical">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
           'value="' + document.getElementById('divMeta.videoStillURL').src + '"' +
           '></div></form>'
@@ -960,7 +1251,7 @@ function uploadPoster()
         } else {
             alert('Please provide a valid poster image source URL.');
         }
-        
+
     });
     document.body.appendChild(dialog);
     dialog.show();
@@ -983,7 +1274,7 @@ function uploadThumbnail()
         content: {
           innerHTML: '<form class="coral-Form coral-Form--vertical">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
           'value="' + document.getElementById('divMeta.thumbnailURL').src + '"' +
           '></div></form>'
@@ -1022,7 +1313,7 @@ function uploadThumbnail()
         } else {
             alert('Please provide a valid thumbnail source URL.');
         }
-        
+
     });
     document.body.appendChild(dialog);
     dialog.show();
@@ -1246,23 +1537,23 @@ function uploadtrack()
         content: {
           innerHTML: '<div class="coral-Form coral-Form--vertical" id="upload_text_track_form">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' +
           '<coral-select name="text_track_language_field" placeholder="Language" id="text_track_language_field"></coral-select>' +
-          '</div>' + 
+          '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_label_field" labelledby="label-vertical-textfield-1" value="">' +
           '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' +
           '<coral-select name="text_track_type_field" placeholder="Text Type" id="text_track_type_field"></coral-select>' +
-          '</div>' + 
+          '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
           '<coral-checkbox value="true" id="text_track_default_field">Make Default Track</coral-checkbox>' +
-          '</div>' + 
-          '<div class="or_field_split">' + 
+          '</div>' +
+          '<div class="or_field_split">' +
           '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' + 
+          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_source_url_field" labelledby="label-vertical-3" value="">' +
           '</div>' +
           '<div class="coral-Form-fieldwrapper">' +
@@ -1335,7 +1626,7 @@ function uploadtrack()
         } else {
             alert('Please provide values for all fields.');
         }
-        
+
     });
 
     document.body.appendChild(dialog);
@@ -1551,11 +1842,7 @@ function metaEdit() {
 //where loading times might be a little long.
 function loadStart()
 {
-    if (!$.browser.msie) {
-        $("#loading").slideDown("fast");
-    } else {
-        $("#loading").show();
-    }
+    $("#loading").slideDown("fast");
     $(".loading").show();
 }
 
@@ -1565,11 +1852,7 @@ function loadEnd()
     $("#syncdbutton").css("color", "#333333");
     $("#syncdbutton").html('SYNC DATABASE');
     $("#syncdbutton").prop('disabled', false);
-    if (!$.browser.msie) {
-        $("#loading").slideUp("fast");
-    } else {
-        $("#loading").hide();
-    }
+    $("#loading").slideUp("fast");
     $(".loading").hide();
 }
 
@@ -1578,15 +1861,8 @@ function syncStart()
     $("#syncdbutton").css("color", "#6D8CAE");
     $("#syncdbutton").html('LOADING SYNC');
     $("#syncdbutton").prop('disabled', true);
-    if (!$.browser.msie)
-    {
-        $("#loading").slideDown("fast");
-        $(".loading").show();
-    }
-    else
-    {
-        $("#loading").show();
-    }
+    $("#loading").slideDown("fast");
+    $(".loading").show();
 
     $(".loadingMsg").hide();
     $(".syncingMsg").show();
@@ -1614,19 +1890,19 @@ function createPlaylistBox() {
     for (var i = 3; i < l; i++) {
         if (inputTags[i].checked) {
             $("#createPlstVideoTable").append(
-                '<tr ><td>' + oCurrentVideoList[i - 3].name +
-                '</td><td>' + oCurrentVideoList[i - 3].id + '</td></tr>'
+                '<tr ><td>' + oCurrentVideoList[i - 4].name +
+                '</td><td style="width: 25%;" >' + oCurrentVideoList[i - 4].id + '</td></tr>'
             );
 
             if (1 != idx) {
-                form.playlist.value += ','; 
+                form.playlist.value += ',';
             }
-            form.playlist.value += oCurrentVideoList[i - 3].id;
+            form.playlist.value += oCurrentVideoList[i - 4].id;
             idx++;
         }
     }
     if (1 == idx) {
-        alert("Cannot Create Empty Playlist, Please Select Some Videos");
+        alert("Please select at least one video to create a playlist.");
         return;
     }
     openBox("createPlaylistDiv");

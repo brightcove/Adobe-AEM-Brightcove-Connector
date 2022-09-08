@@ -34,7 +34,7 @@ import com.day.cq.dam.api.DamConstants;
 
 import org.apache.sling.api.resource.*;
 import org.apache.sling.settings.SlingSettingsService;
- 
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +54,7 @@ public class BrightcovePublishListener implements EventHandler {
 
     @ObjectClassDefinition(name = "Brightcove Distribution Listener")
     public @interface EventListenerPageActivationListenerConfiguration {
- 
+
         @AttributeDefinition(
                 name = "Enabled",
                 description = "Enable Distribution Event Listener",
@@ -62,13 +62,13 @@ public class BrightcovePublishListener implements EventHandler {
         )
         boolean isEnabled() default false;
     }
- 
+
     @Reference
     private ResourceResolverFactory resourceResolverFactory;
 
     @Reference
     SlingSettingsService slingSettings;
- 
+
     private static final Logger LOG = LoggerFactory.getLogger(BrightcovePublishListener.class);
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
 
@@ -83,7 +83,7 @@ public class BrightcovePublishListener implements EventHandler {
     }
 
     private void activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
-        
+
         LOG.trace("brc_lastsync was null or zero : asset should be initialized");
 
         try {
@@ -105,7 +105,7 @@ public class BrightcovePublishListener implements EventHandler {
 
 
                 LOG.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
-                
+
                 // update the metadata to show the last sync time
                 brc_lastsync_map.put(DamConstants.DC_TITLE, video.name);
                 brc_lastsync_map.put(Constants.BRC_LASTSYNC, JcrUtil.now2calendar());
@@ -122,7 +122,7 @@ public class BrightcovePublishListener implements EventHandler {
             LOG.error("Error: {}", e.getMessage());
 
         }
-        
+
     }
 
     private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
@@ -150,7 +150,7 @@ public class BrightcovePublishListener implements EventHandler {
 
                 // log the error
                 LOG.error("Error sending data to Brightcove: {}" , _asset.getName());
-                
+
             }
         } catch (Exception e) {
 
@@ -206,7 +206,7 @@ public class BrightcovePublishListener implements EventHandler {
     }
 
     private void deactivateAsset(ResourceResolver rr, Asset _asset, String accountId) {
-        
+
         // need to deactivate (delete) an existing asset
         Resource assetRes = _asset.adaptTo(Resource.class);
         ServiceUtil serviceUtil = new ServiceUtil(accountId);
@@ -254,7 +254,7 @@ public class BrightcovePublishListener implements EventHandler {
         }
 
     }
- 
+
     @Override
     public void handleEvent(Event event) {
 
@@ -277,7 +277,7 @@ public class BrightcovePublishListener implements EventHandler {
 
                 // set up a variable to store the paths
                 paths = new LinkedHashMap<>();
-                
+
                 // for each service, check to see the integration path
                 for ( String service : services ) {
 
@@ -323,7 +323,7 @@ public class BrightcovePublishListener implements EventHandler {
                                 deactivateAsset(rr, _asset, brightcoveAccountId);
 
                             }
-                            
+
                         }
 
                     }
@@ -345,5 +345,5 @@ public class BrightcovePublishListener implements EventHandler {
         }
 
     }
-    
+
 }

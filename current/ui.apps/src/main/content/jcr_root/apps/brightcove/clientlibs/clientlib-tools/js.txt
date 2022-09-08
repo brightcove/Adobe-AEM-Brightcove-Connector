@@ -4,6 +4,7 @@ jquery.js
 bootstrap.js
 bootstrap-tab.js
 
+vendor/browser.js
 vendor/com.iskitz.ajile.1.2.1.flat.js
 vendor/jquery-ui-personalized-1.5.2.packed.js
 

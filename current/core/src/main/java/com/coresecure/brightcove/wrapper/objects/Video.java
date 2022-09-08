@@ -55,8 +55,10 @@ public class Video {
     public final String reference_id;
     public final String description;
     public final String long_description;
+    public final String folderId;
     public final String state;
     public final Collection<String> tags;
+    public final Collection<String> labels;
     public final Map<String, Object> custom_fields;
     public final Geo geo;
     public final RelatedLink link;
@@ -64,6 +66,7 @@ public class Video {
     public final boolean complete;
     public final EconomicsEnum economics;
     public final JSONArray text_tracks;
+    public final JSONArray variants;
     public final Images images;
 
 
@@ -93,10 +96,18 @@ public class Video {
     }
 
     public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages) {
-        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, null, null);
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, null, null, null);
     }
 
-    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, Collection<String> aLabels) {
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, aLabels, null, null);
+    }
+
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, Collection<String> aLabels, JSONArray aVariants) {
+        this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, aLabels, aVariants, null);
+    }
+
+    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels, JSONArray aVariants, String aFolderId) {
         id = aId;
         account_id = aAccountId;
         name = aName;
@@ -113,7 +124,10 @@ public class Video {
         economics = aEconomics;
         projection = new Projection(aProjection);
         text_tracks = aText_tracks;
+        variants = aVariants;
         images = aImages;
+        labels = aLabels;
+        folderId = aFolderId;
     }
 
     private Object getNotNull(JSONObject video, String key) throws JSONException{
@@ -127,9 +141,11 @@ public class Video {
         Projection localprojection = null;
         String localreference_id = null;
         String localdescription = null;
+        String localfolderid = null;
         String locallong_description = null;
         String localstate = null;
         Collection<String> localtags = null;
+        Collection<String> localLabels = null;
         Map<String, Object> localcustom_fields = null;
         Geo localgeo = null;
         RelatedLink locallink = null;
@@ -137,6 +153,7 @@ public class Video {
         boolean localcomplete = false;
         EconomicsEnum localeconomics = null;
         JSONArray localtext_tracks = null;
+        JSONArray localvariants = null;
         Images localimages = null;
         try {
             localid = (String) getNotNull(video, Constants.ID);
@@ -144,6 +161,7 @@ public class Video {
             localname = (String) getNotNull(video, Constants.NAME);
             localreference_id = (String) getNotNull(video, Constants.REFERENCE_ID);
             localdescription = (String) getNotNull(video, Constants.DESCRIPTION);
+            localfolderid = (String) getNotNull(video, Constants.FOLDER_ID);
             locallong_description = (String) getNotNull(video, Constants.LONG_DESCRIPTION);
             localstate = (String) getNotNull(video, Constants.STATE);
             localprojection = (Projection) getNotNull(video, Constants.PROJECTION);
@@ -151,6 +169,7 @@ public class Video {
             localschedule = (Schedule) getNotNull(video, Constants.SCHEDULE);
             locallink = (RelatedLink) getNotNull(video, Constants.LINK);
             localtext_tracks = (JSONArray) getNotNull(video, Constants.TEXT_TRACKS);
+            localvariants = (JSONArray) getNotNull(video, Constants.VARIANTS);
             localcomplete = (Boolean) getNotNull(video, Constants.COMPLETE);
             if (!video.isNull(Constants.TAGS))
             {
@@ -158,6 +177,14 @@ public class Video {
                 for (int i = 0; i < video.getJSONArray(Constants.TAGS).length(); i++)
                 {
                     localtags.add(video.getJSONArray(Constants.TAGS).getString(i));
+                }
+            }
+            if (!video.isNull(Constants.LABELS))
+            {
+                localLabels = new ArrayList<String>();
+                for (int i = 0; i < video.getJSONArray(Constants.LABELS).length(); i++)
+                {
+                    localLabels.add(video.getJSONArray(Constants.LABELS).getString(i));
                 }
             }
         }
@@ -173,9 +200,11 @@ public class Video {
             this.projection = localprojection;
             this.reference_id = localreference_id;
             this.description = localdescription;
+            this.folderId = localfolderid;
             this.long_description = locallong_description;
             this.state = localstate;
             this.tags = localtags;
+            this.labels = localLabels;
             this.custom_fields = localcustom_fields;
             this.geo = localgeo;
             this.link = locallink;
@@ -183,12 +212,13 @@ public class Video {
             this.complete = localcomplete;
             this.economics = localeconomics;
             this.text_tracks = localtext_tracks;
+            this.variants = localvariants;
             this.images = localimages;
         }
     }
 
     public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS});
+        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS, Constants.LABELS});
         return json;
     }
 

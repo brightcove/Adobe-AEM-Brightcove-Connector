@@ -111,7 +111,7 @@ public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle 
         this.scheduler.unschedule(jobName1);
         log.info("Deactivated, goodbye!");
     }
-    
-    
-    
+
+
+
 }

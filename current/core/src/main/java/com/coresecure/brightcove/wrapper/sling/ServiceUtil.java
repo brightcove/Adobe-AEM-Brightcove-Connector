@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION};
+    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS, Constants.VARIANTS};
 
     private String account_id;
     public static final int DEFAULT_LIMIT = 100;
@@ -196,9 +196,12 @@ public class ServiceUtil {
         return brAPI.cms.getVideoSources(videoID);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
-        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false);
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false, false);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, dam_only, false);
+    }
+    public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only, boolean clips_only) {
         LOGGER.debug("getList: " + query);
 
 
@@ -214,7 +217,7 @@ public class ServiceUtil {
                 totalItems = brAPI.cms.getVideosCount(query).getLong("count");
 
                 while (offset < totalItems && full_scroll) {
-                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort, dam_only));
+                    JSONArray videos_page = brAPI.cms.addThumbnail(brAPI.cms.getVideos(query, limit, offset, sort, dam_only, clips_only));
                     for (int i = 0; i < videos_page.length(); i++) {
                         JSONObject video = videos_page.getJSONObject(i);
                         videos.put(video);
@@ -370,6 +373,16 @@ public class ServiceUtil {
         return result;
     }
 
+    public JSONObject createPlaylist(String title) {
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.createBlankPlaylist(title);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
     public String getVideosInFolder(String folder, int offset) {
         JSONObject items = new JSONObject();
         String result = "";
@@ -378,6 +391,7 @@ public class ServiceUtil {
 
             if (videos.length() > 0 ) {
                 items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
             }
 
             result = items.toString(1);
@@ -385,6 +399,33 @@ public class ServiceUtil {
             LOGGER.error(e.getClass().getName(), e);
         }
         return result;
+    }
+
+    public String getVideosWithLabel(String label, int offset) {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONArray videos = brAPI.cms.getVideosWithLabel(label, offset);
+
+            if (videos.length() > 0 ) {
+                items.put("items", videos);
+                items.put(Constants.TOTALS, videos.length());
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public JSONArray getFoldersAsJsonArray() {
+        try {
+            return brAPI.cms.getFolders(100, 0);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+            return null;
+        }
     }
 
     public String getFolders() {
@@ -395,6 +436,26 @@ public class ServiceUtil {
 
             if (folders.length() > 0 ) {
                 items.put("items", folders);
+                items.put(Constants.TOTALS, folders.length());
+            }
+
+            result = items.toString(1);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return result;
+    }
+
+    public String getLabels() {
+        JSONObject items = new JSONObject();
+        String result = "";
+        try {
+            JSONObject labels = brAPI.cms.getLabels();
+            LOGGER.debug("getLabels(): " + labels.toString());
+
+            if (labels.getJSONArray("labels").length() > 0 ) {
+                items.put("items", labels.getJSONArray("labels"));
+                items.put(Constants.TOTALS, labels.getJSONArray("labels").length());
             }
 
             result = items.toString(1);
@@ -677,6 +738,10 @@ public class ServiceUtil {
         {
             key = NameConstants.PN_TAGS;
         }
+        // else if (x.equals(Constants.LABELS))
+        // {
+        //     key = Constants.LABELS;
+        // }
         else if (Constants.NAME.equals(x))
         {
             key = DamConstants.DC_TITLE;      //NAME -> ASSET TITLE
@@ -689,6 +754,49 @@ public class ServiceUtil {
     }
 
     private void setMapJSONArray(String key, JSONArray objArray, ResourceResolver resourceResolver, ModifiableValueMap map) {
+        TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
+        if (tagManager == null) return;
+        try {
+            if (key.equals(NameConstants.PN_TAGS)) {
+                List<String> tags = new ArrayList<String>();
+                for (int cnt = 0; cnt < objArray.length(); cnt++) {
+                    String tagValue = objArray.getString(cnt);
+
+                    String tagKey = tagValue.replaceAll(": ", ":").trim();
+
+
+                    try {
+                        if (tagManager.canCreateTag(tagKey)) {
+
+                            Tag tag = tagManager.createTag(tagKey, tagValue, "");
+
+                            //Tag tag = tagManager.createTagByTitle(tagValue, Locale.US);
+                            resourceResolver.commit();
+                            LOGGER.trace("tag created > {}", tagValue);
+                            //tagManager.setTags(assetRes, new Tag[]{tag}, true);
+                        } else {
+                            //Tag[] tags = tagManager.findTagsByTitle(tagValue, Locale.US);
+                            //tagManager.setTags(assetRes, tags, true);
+                            LOGGER.warn("tag create failed [exists] > added >  {}", tagValue);
+
+                        }
+                        tags.add(tagKey);
+                    } catch (InvalidTagFormatException e) {
+                        LOGGER.error(e.getClass().getName(), e);
+                    }
+                }
+                resourceResolver.commit();
+                map.put(key, tags.toArray());
+            } else {
+                LOGGER.trace("setMapJSONArray() is using a generic array for " + key);
+                map.put(key, objArray.join("#@#").split("#@#"));
+            }
+        }catch (Exception e) {
+            LOGGER.error(e.getClass().getName(),e);
+        }
+    }
+
+    private void setLabelsJSONArray(String key, JSONArray objArray, ResourceResolver resourceResolver, ModifiableValueMap map) {
         TagManager tagManager = resourceResolver.adaptTo(TagManager.class);
         if (tagManager == null) return;
         try {
@@ -873,6 +981,7 @@ public class ServiceUtil {
 
                 // LOGGER.trace(innerObj.toString(1));
                 LOGGER.trace("UPDATING ASSET>>: " + newAsset.getPath());
+                LOGGER.trace("ASSET JSON>>: " + innerObj.toString());
 
                 Resource assetRes = newAsset.adaptTo(Resource.class);                        //INITIALIZE THE ASSET RESOURCE
                 ModifiableValueMap assetmap = assetRes.getChild(NameConstants.NN_CONTENT).adaptTo(ModifiableValueMap.class);
@@ -899,6 +1008,8 @@ public class ServiceUtil {
                         break;
                     }
 
+                    // set the sync time
+                    map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
 
                     String key = getKey(x);
 
@@ -908,8 +1019,14 @@ public class ServiceUtil {
 
                     //IF THE CURRENT METADATA IS AN ARRAY
                     if (obj instanceof JSONArray) {
+                        LOGGER.trace("FOUND ARRAY>>: " + key);
                         JSONArray objArray = (JSONArray) obj;
-                        setMapJSONArray(key, objArray, resourceResolver, map);
+                        if (key.equals(NameConstants.PN_TAGS)) {
+                            setMapJSONArray(key, objArray, resourceResolver, map);
+                        }
+                        else {
+                            setMapJSONArray(key, objArray, resourceResolver, map);
+                        }
                     } else if (obj instanceof JSONObject) {
 
                         JSONObject objObject = (JSONObject) obj;
@@ -933,9 +1050,6 @@ public class ServiceUtil {
                     }
                 }
 
-                //AFTER SETTING ALL THE METADATA - SET THE LAST UPDATE TIME
-                //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-                map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
                 resourceResolver.commit();
                 LOGGER.trace(">>UPDATED METADATA FOR VIDEO : [{}]",map.get(Constants.BRC_ID));
 
@@ -1149,6 +1263,13 @@ public class ServiceUtil {
         //REMOVE BRIGHTCOVE TAG BEFORE PUSH
         Collection<String> tags = JcrUtil.tagsToCollection(tagsList);
         list = null;
+
+        String[] rawList = metadataRes.getValueMap().get(getKey(Constants.LABELS),new String[]{});
+        List<String> labelList = new ArrayList<String>(Arrays.asList(rawList));
+        rawList = labelList.toArray(new String[0]);
+        //REMOVE BRIGHTCOVE TAG BEFORE PUSH
+        Collection<String> labels = JcrUtil.tagsToCollection(rawList);
+        labelList = null;
 
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP

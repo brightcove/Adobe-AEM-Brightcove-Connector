@@ -160,7 +160,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
                 folderId + "/videos/" + videoId;
             try {
@@ -183,7 +183,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" +
                 folderId + "/videos/" + videoId;
             try {
@@ -206,7 +206,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = 
+            String targetURL =
                 Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists/" +
                 playlistId;
             try {
@@ -219,6 +219,28 @@ public class CmsAPI {
             }
         }
         LOGGER.trace("createVideo: {} Response: {}", json);
+        return json;
+    }
+
+    //postAPI
+    public JSONObject createBlankPlaylist(String title) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
+            try {
+                String payload = "{ \"name\": \"" + title + "\"";
+                String response = account.platform.postAPI(targetURL, payload, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createBlankPlaylist: {} Response: {}", title);
         return json;
     }
 
@@ -290,6 +312,34 @@ public class CmsAPI {
                 }
                 request.put("video_ids", new JSONArray(videoArray));
                 LOGGER.info("updatePlaylistParams: {}", request.toString(1));
+                String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    public JSONObject updateLabels(String videoId, String[] labels) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos"
+                + "/" + videoId;
+            try {
+                LOGGER.debug("targetURL: {}", targetURL);
+                JSONObject request = new JSONObject();
+                ArrayList<String> labelArray = new ArrayList<String>();
+                for (String item : labels) {
+                    labelArray.add(item);
+                }
+                request.put("labels", new JSONArray(labelArray));
+                LOGGER.info("updateVideoParams: {}", request.toString(1));
                 String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
@@ -385,6 +435,29 @@ public class CmsAPI {
         return json;
     }
 
+    public JSONObject createLabel(String label) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null)
+        {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/labels";
+            try {
+                LOGGER.debug("Label {}", label.toString());
+                String response = account.platform.postAPI(targetURL, "{ \"path\": \"" + label + "\" }", headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e)
+            {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createLabel: {} Response: {}", label, json);
+        return json;
+    }
+
     public JSONObject getVideosCount(String q) {
         return getVideosCount(q, true);
     }
@@ -399,7 +472,7 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/counts/videos";
             try {
                 //String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
-                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : 
+                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
                 "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
                 json = getJSONObjectResponse(targetURL, urlParameters, headers);
             }
@@ -513,12 +586,12 @@ public class CmsAPI {
 
 
     public JSONArray getVideos(String q, int limit, int offset, String sort) {
-        return getVideos(q, limit, offset, sort, true);
+        return getVideos(q, limit, offset, sort, true, false);
     }
 
     //ACTUAL GET VIDEOS FUNCTION
     //DO NOT TOUCH  - getAPI Adaptation - IGNORES NON ACTIVE - IGNORES VIDEOS WITH "AEM_NO_DAM" TAG
-    public JSONArray getVideos(String q, int limit, int offset, String sort, boolean dam_only) {
+    public JSONArray getVideos(String q, int limit, int offset, String sort, boolean dam_only, boolean clips_only) {
         JSONArray json = new JSONArray();
         LOGGER.debug("account: {}" , account.getAccount_ID());
         TokenObj authToken = account.getLoginToken();
@@ -528,7 +601,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
             // String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "")
-            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"");
+            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -659,6 +732,14 @@ public class CmsAPI {
         return json;
     }
 
+    public JSONArray getVideosWithLabel(String label, int offset) {
+        return getVideos("labels:" + label);
+    }
+
+    public JSONArray getOnlyClipVideos(String q, int limit, int offset, String sort) {
+        return getVideos(q, limit, offset, sort, true, true);
+    }
+
     public JSONArray getFolders(int limit, int offset) {
         JSONArray json = new JSONArray();
         TokenObj authToken = account.getLoginToken();
@@ -669,6 +750,23 @@ public class CmsAPI {
             try {
                 String urlParameters = "offset=" + offset;
                 json = getJSONArrayResponse(targetURL, urlParameters, headers);
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    public JSONObject getLabels() {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/labels";
+            try {
+                String urlParameters = "";
+                json = getJSONObjectResponse(targetURL, urlParameters, headers);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
             }

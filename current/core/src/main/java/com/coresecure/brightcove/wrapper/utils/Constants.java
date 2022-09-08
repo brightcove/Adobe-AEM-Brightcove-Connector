@@ -29,8 +29,10 @@ public class Constants {
     public static final String LONG_DESCRIPTION = "long_description";
     public static final String STATE = "state";
     public static final String PROJECTION = "projection";
+    public static final String VARIANTS = "variants";
 
     public static final String TAGS = "tags";
+    public static final String LABELS = "labels";
     public static final String GEO = "geo";
     public static final String SCHEDULE = "schedule";
     public static final String LINK = "link";
@@ -139,7 +141,7 @@ public class Constants {
 
     public static final String ORIGINAL_FILENAME = "original_filename";
     public static final String THUMBNAIL_URL = "thumbnailURL";
-    public static final String DEFAULT_THUMBNAIL_LOCATION = "/etc/designs/cs/brightcove/shared/img/noThumbnail.jpg";
+    public static final String DEFAULT_THUMBNAIL_LOCATION = "/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/noThumbnail.jpg";
     public static final String THUMBNAIL_SOURCE = "thumbnail_source";
     public static final String POSTER_SOURCE = "poster_source";
 

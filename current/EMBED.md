@@ -20,7 +20,7 @@
 <dependency>
     <groupId>com.brightcove</groupId>
     <artifactId>com.brightcove.connector</artifactId>
-    <version>5.7.0</version>
+    <version>2.0.0</version>
     <type>zip</type>
 </dependency>
 ```

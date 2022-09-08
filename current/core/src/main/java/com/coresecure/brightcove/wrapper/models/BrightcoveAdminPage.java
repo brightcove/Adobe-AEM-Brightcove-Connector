@@ -23,7 +23,7 @@ import java.util.Set;
 public class BrightcoveAdminPage {
 
     protected final static Logger LOGGER = LoggerFactory.getLogger(BrightcoveAdminPage.class);
-    public static final String FAVICONPATH = "/etc/designs/cs/brightcove/favicon.ico";
+    public static final String FAVICONPATH = "/apps/brightcove/clientlibs/clientlib-tools/img/shared/imgfavicon.ico";
 
     @Self
     private SlingHttpServletRequest slingHttpServletRequest;

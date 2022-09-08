@@ -71,7 +71,7 @@ Brightcove.ComboBox = CQ.Ext.extend(CQ.Ext.form.ComboBox, {
         var template = '<tpl for=".">' +
             '<div class="search-item" qtip="{id}">' +
             '<div class="search-thumb"' +
-            ' style="background-image:url({[values.thumbnailURL ? values.thumbnailURL : "/etc/designs/cs/brightcove/shared/img/noThumbnailP.png"]});">' +
+            ' style="background-image:url({[values.thumbnailURL ? values.thumbnailURL : "/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/noThumbnailP.png"]});">' +
             '</div>' +
             '<div class="search-text-wrapper">' +
             '<div class="search-title">{name}</div>' +

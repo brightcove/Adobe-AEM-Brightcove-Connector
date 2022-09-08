@@ -50,8 +50,8 @@ function createPlayers() {
         var dataPlayer= selected_element.getAttribute("data-player");
         var dataEmbed= selected_element.getAttribute("data-embed");
         var dataVideoId= selected_element.getAttribute("data-video-id");
-        var dataWidth= selected_element.getAttribute("data-width");
-        var dataHeight= selected_element.getAttribute("data-height");
+        var dataWidth= (selected_element.hasAttribute("data-width") ? selected_element.getAttribute("data-width") : '')
+        var dataHeight= (selected_element.hasAttribute("data-height") ? selected_element.getAttribute("data-height") : '');
         var dataUsage = selected_element.getAttribute("data-usage");
         var s = document.createElement('script');
         s.src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
