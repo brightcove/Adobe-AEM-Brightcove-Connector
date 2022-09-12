@@ -55,8 +55,12 @@ import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.commons.mime.MimeTypeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.jcr.query.Query;
+import javax.jcr.query.QueryManager;
+import javax.jcr.query.QueryResult;
 
 import javax.jcr.Node;
+import javax.jcr.NodeIterator;
 import javax.jcr.Session;
 import javax.servlet.ServletException;
 import java.io.IOException;
@@ -131,6 +135,52 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                     accountFolder.setProperty("jcr:title", cs.getAccountAlias());
                     session.save();
                     final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+
+                    JSONArray folders = serviceUtil.getFoldersAsJsonArray();
+                LOGGER.trace("<<< " + basePath + " USED AS BASE PATH!");
+                LOGGER.trace("<<< " + folders.length() + " FOLDERS FOUND IN ACCOUNT: " + requestedAccount);
+
+                if (folders.length() > 0) {
+                    for (int x = 0; x < folders.length(); x++) {
+                        JSONObject folder = folders.getJSONObject(x);
+                        String folderId = folder.getString("id");
+                        String folderName = folder.getString("name");
+
+                        // check if folder (1) already exists or (2) has been renamed
+                        QueryManager qm = session.getWorkspace().getQueryManager();
+                        String query = "SELECT * FROM [sling:OrderedFolder] AS node "
+                                + "WHERE ISDESCENDANTNODE(node, \"" + basePath +"\") "
+                                + "AND CONTAINS([brc_folder_id], \"" + folderId + "\")";
+                        Query q = qm.createQuery(query, Query.JCR_SQL2);
+                        QueryResult result = q.execute();
+                        NodeIterator results = result.getNodes();
+
+                        if (results.hasNext()) {
+
+                            // folder exists so update the title if it has been renamed
+                            Node existingFolder = results.nextNode();
+                            existingFolder.setProperty("jcr:title", folderName);
+                            LOGGER.trace("<<< " + existingFolder.getPath() + " EXISTING FOLDER FOUND!");
+                            session.save();
+
+                        } else {
+
+                            // folder does not exist so we need to create it
+                            Node folderNode = JcrUtil.createPath(basePath + folderId,
+                                            "sling:OrderedFolder", session);
+                            LOGGER.trace("<<< " + folderId + " NEW FOLDER TITLE SET!");
+                            folderNode.setProperty("brc_folder_id", folderId);
+                            folderNode.setProperty("jcr:title", folderName);
+                            session.save();
+
+                            LOGGER.trace("<<< " + folderNode.getPath() + " NEW FOLDER CREATED!");
+
+                        }
+
+                        // save everything to the repository
+                        session.save();
+                    }
+                }
 
                     //GET VIDEOS
                     int startOffset = 0;

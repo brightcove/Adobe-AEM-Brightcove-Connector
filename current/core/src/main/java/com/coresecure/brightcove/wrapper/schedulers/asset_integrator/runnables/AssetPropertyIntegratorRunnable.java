@@ -41,6 +41,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.commons.jcr.JcrUtil;
+import com.day.crx.JcrConstants;
 
 import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -124,6 +125,8 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 session.save();
                 final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
+                LOGGER.trace("<<< GETTING FOLDER DATA");
+
                 JSONArray folders = serviceUtil.getFoldersAsJsonArray();
                 LOGGER.trace("<<< " + basePath + " USED AS BASE PATH!");
                 LOGGER.trace("<<< " + folders.length() + " FOLDERS FOUND IN ACCOUNT: " + requestedAccount);
@@ -133,8 +136,6 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                         JSONObject folder = folders.getJSONObject(x);
                         String folderId = folder.getString("id");
                         String folderName = folder.getString("name");
-
-                        String localFolderName = folderName.replaceAll(" ", "_").toLowerCase();
 
                         // check if folder (1) already exists or (2) has been renamed
                         QueryManager qm = session.getWorkspace().getQueryManager();
@@ -151,22 +152,17 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                             Node existingFolder = results.nextNode();
                             existingFolder.setProperty("jcr:title", folderName);
                             LOGGER.trace("<<< " + existingFolder.getPath() + " EXISTING FOLDER FOUND!");
-
-                            // we don't need to move if we use the folderId as the node path!
-                            // if (!existingFolder.getPath().endsWith(localFolderName)) {
-                            //     // the folder has been renamed
-                            //     LOGGER.trace("<<< " + existingFolder + " compared to " + localFolderName);
-                            //     LOGGER.trace("<<< " + folderName + " HAS BEEN RENAMED AND MUST BE MOVED!");
-                            //     session.move(existingFolder.getPath(), basePath + localFolderName);
-                            // }
+                            session.save();
 
                         } else {
 
                             // folder does not exist so we need to create it
                             Node folderNode = JcrUtil.createPath(basePath + folderId,
                                             "sling:OrderedFolder", session);
-                            folderNode.setProperty("jcr:title", folderName);
+                            LOGGER.trace("<<< " + folderId + " NEW FOLDER TITLE SET!");
                             folderNode.setProperty("brc_folder_id", folderId);
+                            folderNode.setProperty("jcr:title", folderName);
+                            session.save();
 
                             LOGGER.trace("<<< " + folderNode.getPath() + " NEW FOLDER CREATED!");
 
