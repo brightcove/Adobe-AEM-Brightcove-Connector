@@ -44,7 +44,15 @@
     ValueMap parentProps = asset_res.getParent().getValueMap();
 
     if ( parentProps != null && parentProps.get("jcr:createdBy").equals("brightcove_admin") ) {
-        String requestedAccount = asset_res.getParent().getName();
+
+        String requestedAccount;
+        Node parentNode = asset_res.getParent().adaptTo(Node.class);
+        if (parentNode.hasProperty("brc_folder_id")) {
+            // this is not the actual account folder, so let's go up one more
+            requestedAccount = parentNode.getParent().getName();
+        } else {
+            requestedAccount = parentNode.getName();
+        }
 
         Resource metadataRes = asset_res.getChild("jcr:content/metadata");
         ValueMap map = metadataRes.adaptTo(ValueMap.class);
@@ -91,52 +99,6 @@
                 <coral-select-item <%="".equals(map.get("brc_projection","")) ? "selected='selected'" : ""%> value="">Standard</coral-select-item>
                 <coral-select-item <%="equirectangular".equals(map.get("brc_projection","EMPTY")) ? "selected='selected'" : ""%> value="equirectangular">360 Degree</coral-select-item>
             </coral-select>
-        </div>
-
-        <div class="coral-Form-fieldwrapper foundation-field-edit">
-            <label class="coral-Form-fieldlabel">Labels</label>
-            <coral-multifield class="coral-Form-field coral3-Multifield" data-metatype="mvtext"data-foundation-validation=""
-                data-validation="" data-granite-coral-multifield-name="./jcr:content/metadata/brc_labels" role="list">
-                <coral-multifield-item class="coral3-Multifield-item" role="listitem">
-                    <%
-                        String[] labels = map.get("brc_labels", String[].class);
-                        if (labels != null) {
-                            for (int i = 0; i < labels.length; i++) {
-                    %>
-                    <coral-multifield-item-content><input type="text"
-                            name="./jcr:content/metadata/brc_labels" value=<%=labels[i]%>
-                            data-foundation-validation="" data-validation="" is="coral-textfield"
-                            class="coral3-Textfield" aria-invalid="false"></coral-multifield-item-content><button
-                        is="coral-button" class="coral3-Button coral3-Button--quiet coral3-Multifield-remove" size="M"
-                        variant="quiet" type="button" handle="remove" icon="delete" iconsize="S" tracking="off">
-                        <coral-icon class="coral3-Icon coral3-Icon--sizeS coral3-Icon--delete" icon="delete" size="S"
-                            role="img" aria-label="delete"></coral-icon>
-                        <coral-button-label></coral-button-label>
-                    </button>
-                    <button is="coral-button"
-                        class="coral3-Button coral3-Button--quiet coral3-Multifield-move u-coral-openHand" size="M"
-                        variant="quiet" type="button" handle="move" icon="moveUpDown" iconsize="S" tracking="off">
-                        <coral-icon class="coral3-Icon coral3-Icon--sizeS coral3-Icon--moveUpDown" icon="moveUpDown"
-                            size="S" role="img" aria-label="move up down"></coral-icon>
-                        <coral-button-label></coral-button-label>
-                    </button>
-                </coral-multifield-item>
-                <%
-                        }
-                    }
-                %>
-                <button type="button" is="coral-button" coral-multifield-add=""
-                    class="coral3-Button coral3-Button--secondary" size="M" variant="secondary">
-                    <coral-button-label>Add</coral-button-label>
-                </button>
-                <input class="foundation-field-related" type="hidden"
-                    name="./jcr:content/metadata/brc_labels">
-                    <template coral-multifield-template="">
-                        <input type="text"
-                            name="./jcr:content/metadata/brc_labels" value="" data-foundation-validation=""
-                            data-validation="" is="coral-textfield">
-                    </template>
-            </coral-multifield>
         </div>
 
     </div>

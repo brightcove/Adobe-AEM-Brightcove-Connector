@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS};
+    private static final String[] fields = {Constants.NAME, Constants.CREATED_AT  , Constants.DURATION, Constants.COMPLETE, Constants.ID, Constants.ACCOUNT_ID ,Constants.DESCRIPTION , Constants.LINK, Constants.TAGS, Constants.LONG_DESCRIPTION, Constants.REFERENCE_ID, Constants.ECONOMICS, Constants.UPDATED_AT , Constants.SCHEDULE, Constants.STATE, Constants.GEO , Constants.CUSTOM_FIELDS, Constants.TEXT_TRACKS , Constants.IMAGES ,Constants.PROJECTION, Constants.LABELS, Constants.VARIANTS};
 
     private String account_id;
     public static final int DEFAULT_LIMIT = 100;
@@ -417,6 +417,15 @@ public class ServiceUtil {
             LOGGER.error(e.getClass().getName(), e);
         }
         return result;
+    }
+
+    public JSONArray getFoldersAsJsonArray() {
+        try {
+            return brAPI.cms.getFolders(100, 0);
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+            return null;
+        }
     }
 
     public String getFolders() {
@@ -999,6 +1008,8 @@ public class ServiceUtil {
                         break;
                     }
 
+                    // set the sync time
+                    map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
 
                     String key = getKey(x);
 
@@ -1039,9 +1050,6 @@ public class ServiceUtil {
                     }
                 }
 
-                //AFTER SETTING ALL THE METADATA - SET THE LAST UPDATE TIME
-                //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-                map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
                 resourceResolver.commit();
                 LOGGER.trace(">>UPDATED METADATA FOR VIDEO : [{}]",map.get(Constants.BRC_ID));
 
@@ -1255,6 +1263,13 @@ public class ServiceUtil {
         //REMOVE BRIGHTCOVE TAG BEFORE PUSH
         Collection<String> tags = JcrUtil.tagsToCollection(tagsList);
         list = null;
+
+        String[] rawList = metadataRes.getValueMap().get(getKey(Constants.LABELS),new String[]{});
+        List<String> labelList = new ArrayList<String>(Arrays.asList(rawList));
+        rawList = labelList.toArray(new String[0]);
+        //REMOVE BRIGHTCOVE TAG BEFORE PUSH
+        Collection<String> labels = JcrUtil.tagsToCollection(rawList);
+        labelList = null;
 
 
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
