@@ -383,6 +383,16 @@ public class BrcReplicationHandler implements TransportHandler {
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
 
+                Node assetNode = _asset.adaptTo(Node.class);
+                LOGGER.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
+                if (assetNode.getParent().hasProperty("brc_folder_id")) {
+                    // this is in a subfolder so we need to formally move the asset to this folder
+                    String brc_folder_id = assetNode.getParent().getProperty("brc_folder_id").getString();
+                    LOGGER.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                    serviceUtil.moveVideoToFolder(
+                        brc_folder_id,
+                        api_resp.getString(Constants.VIDEOID));
+                }
 
                 replicationLog.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
                 result = ReplicationResult.OK;
@@ -410,6 +420,17 @@ public class BrcReplicationHandler implements TransportHandler {
                 //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
+
+                Node assetNode = _asset.adaptTo(Node.class);
+                LOGGER.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
+                if (assetNode.getParent().hasProperty("brc_folder_id")) {
+                    // this is in a subfolder so we need to formally move the asset to this folder
+                    String brc_folder_id = assetNode.getParent().getProperty("brc_folder_id").getString();
+                    LOGGER.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                    serviceUtil.moveVideoToFolder(
+                        brc_folder_id,
+                        api_resp.getString(Constants.VIDEOID));
+                }
 
                 replicationLog.info(Constants.REP_ACTIVATION_SUCCESS_TMPL, _asset.getPath());
                 long current_time_millisec = new Date().getTime();
