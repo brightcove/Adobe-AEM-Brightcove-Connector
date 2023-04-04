@@ -131,7 +131,6 @@ public class APITest {
 
         TestStaticStructures();
 
-        //TEST INTEGRATION TEST//TODO: Not ready
         TestModelsAEM();
 
         BundleActivatorTest();
@@ -572,7 +571,6 @@ public class APITest {
             String q = "";
             JSONArray input = new JSONArray();
 
-            //TODO: Implemment this the right way - with a integration test video (requires research)
             JSONObject uploadInjestResponse = api.uploadInjest(payloadVideoID, payload);
             JSONObject requestIngestURLResponse = api.requestIngestURL(payloadVideoID, profile, master, false);
             JSONObject getIngestURLResponse = api.getIngestURL(payloadVideoID, filename);
@@ -1279,8 +1277,8 @@ public class APITest {
     }
 
 
-    
-    
+
+
 }
 
 

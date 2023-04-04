@@ -29,6 +29,7 @@ public class Constants {
     public static final String LONG_DESCRIPTION = "long_description";
     public static final String STATE = "state";
     public static final String PROJECTION = "projection";
+    public static final String VARIANTS = "variants";
 
     public static final String TAGS = "tags";
     public static final String LABELS = "labels";

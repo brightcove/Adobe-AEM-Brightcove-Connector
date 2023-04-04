@@ -35,8 +35,8 @@
             data-embed="${player.playerDataEmbed}"
             data-usage="cms:aem:${player.version}:${player.bundleVersion}:javascript"
             data-video-id="${player.videoID}"
-            data-width="${player.width}"
-            data-height="${player.height}">
+            data-sly-attribute.data-width="${player.width ? player.width : ''}"
+            data-sly-attribute.data-height="${player.height ? player.height : ''}">
         </div>
         <sly data-sly-call="${clientLib.js @ categories='brc.html5-player'}"></sly>
     </sly>

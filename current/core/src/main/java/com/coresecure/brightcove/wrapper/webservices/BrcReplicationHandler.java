@@ -52,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
 import java.util.*;
@@ -180,7 +181,15 @@ public class BrcReplicationHandler implements TransportHandler {
         if (parent == null) {
             return result;
         }
-        String account_id = parent.getName();
+        // update this to make sure we grab the right parent now that we have subfolders
+        String account_id;
+        Node parentNode = parent.adaptTo(Node.class);
+        if (parentNode.hasProperty("brc_folder_id")) {
+            // this is not the actual account folder, so let's go up one more
+            account_id = parent.getParent().getName();
+        } else {
+            account_id = parent.getName();
+        }
         Asset _asset = asset_res.adaptTo(Asset.class);
         if (_asset == null){
             LOGGER.warn("Asset removed or not existing");
@@ -374,6 +383,16 @@ public class BrcReplicationHandler implements TransportHandler {
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
 
+                Node assetNode = _asset.adaptTo(Node.class);
+                LOGGER.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
+                if (assetNode.getParent().hasProperty("brc_folder_id")) {
+                    // this is in a subfolder so we need to formally move the asset to this folder
+                    String brc_folder_id = assetNode.getParent().getProperty("brc_folder_id").getString();
+                    LOGGER.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                    serviceUtil.moveVideoToFolder(
+                        brc_folder_id,
+                        api_resp.getString(Constants.VIDEOID));
+                }
 
                 replicationLog.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
                 result = ReplicationResult.OK;
@@ -401,6 +420,17 @@ public class BrcReplicationHandler implements TransportHandler {
                 //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
+
+                Node assetNode = _asset.adaptTo(Node.class);
+                LOGGER.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
+                if (assetNode.getParent().hasProperty("brc_folder_id")) {
+                    // this is in a subfolder so we need to formally move the asset to this folder
+                    String brc_folder_id = assetNode.getParent().getProperty("brc_folder_id").getString();
+                    LOGGER.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                    serviceUtil.moveVideoToFolder(
+                        brc_folder_id,
+                        api_resp.getString(Constants.VIDEOID));
+                }
 
                 replicationLog.info(Constants.REP_ACTIVATION_SUCCESS_TMPL, _asset.getPath());
                 long current_time_millisec = new Date().getTime();
