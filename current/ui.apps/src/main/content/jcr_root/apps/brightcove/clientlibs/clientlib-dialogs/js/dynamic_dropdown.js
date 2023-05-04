@@ -85,7 +85,7 @@
             });
 
             accountSelector.addEventListener('coral-select:showitems', function(event) {
-                accountSelector.items.clear();
+                //accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
                     $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
                         var accounts = data.accounts;
