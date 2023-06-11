@@ -347,7 +347,7 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
 
-    $popup.show();
+    $popup.css('display', 'flex');
 }
 
 function suggestLabelsForVideo(data) {
@@ -395,9 +395,10 @@ function suggestVideosForPlaylist(data) {
                     var $item = $(event.target);
 
                     // make sure we have the autocomplete item and not the SVG icon
-                    if ($item.localName == 'img') {
+                    if ($item.get(0).nodeName == 'IMG') {
                         $item = $item.parent();
                     }
+                    console.log($item);
                     var videoId = $item.attr('data-id');
                     var videoName = $item.attr('data-name');
 
