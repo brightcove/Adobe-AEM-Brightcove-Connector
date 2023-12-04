@@ -196,7 +196,7 @@ public class ServiceUtil {
         return brAPI.cms.getVideoSources(videoID);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
-        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false, false);
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, true, false);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
         return getList(exportCSV,  offset,  limit, full_scroll, query, sort, dam_only, false);

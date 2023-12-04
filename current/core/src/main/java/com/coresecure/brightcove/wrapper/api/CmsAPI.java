@@ -604,6 +604,7 @@ public class CmsAPI {
             String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
+            LOGGER.debug("dam_only: {}" , dam_only);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
             if (!response.isEmpty()) {
                 json = JsonReader.readJsonArrayFromString(response);
