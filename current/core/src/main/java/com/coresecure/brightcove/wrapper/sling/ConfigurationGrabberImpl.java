@@ -32,7 +32,6 @@
  */
 package com.coresecure.brightcove.wrapper.sling;
 
-
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -54,21 +53,9 @@ import javax.jcr.Session;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component(
-    service = ConfigurationGrabber.class,
-    immediate = true,
-    reference = {
-            @Reference(
-                    name = "configurationService",
-                    service = com.coresecure.brightcove.wrapper.sling.ConfigurationService.class,
-                    policy = ReferencePolicy.DYNAMIC,
-                    policyOption = ReferencePolicyOption.GREEDY,
-                    cardinality = ReferenceCardinality.MULTIPLE,
-                    bind = "bindConfigurationService",
-                    unbind = "unbindConfigurationService"
-            )
-    }
-)
+@Component(service = ConfigurationGrabber.class, immediate = true, reference = {
+        @Reference(name = "configurationService", service = com.coresecure.brightcove.wrapper.sling.ConfigurationService.class, policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MULTIPLE, bind = "bindConfigurationService", unbind = "unbindConfigurationService")
+})
 public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationGrabberImpl.class);
 
@@ -78,15 +65,21 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
     private ComponentContext componentContext;
 
     protected final void bindConfigurationService(final ConfigurationService config,
-                                                    final Map<Object, Object> props) {
+            final Map<Object, Object> props) {
 
         LOGGER.info("ConfigurationService bind() called");
-
+        if (config != null) {
+            LOGGER.info("I am here");
+        } else {
+            LOGGER.info("null pointer");
+        }
+        LOGGER.info("accountid: " + config.getAccountID());
+        LOGGER.info("Config: " + config);
         myConfigurationServices.put(config.getAccountID(), config);
     }
 
     protected final void unbindConfigurationService(final ConfigurationService config,
-                                                    final Map<Object, Object> props) {
+            final Map<Object, Object> props) {
         myConfigurationServices.remove(config.getAccountID());
     }
 
@@ -107,36 +100,45 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
 
             Session session = resourceResolver.adaptTo(Session.class);
             UserManager userManager = resourceResolver.adaptTo(UserManager.class);
-
+            LOGGER.info("getAvailableServices");
             if (session == null || userManager == null) {
+                LOGGER.info("Session or userManager null");
                 return null;
             }
+            LOGGER.info("session not null and user manager not null");
             Authorizable auth = userManager.getAuthorizable(session.getUserID());
             if (auth == null) {
+                LOGGER.info("auth null");
                 return null;
             }
-
+            LOGGER.info("auth not null");
             List<String> memberOf = new ArrayList<String>();
             Iterator<Group> groups = auth.memberOf();
             while (groups.hasNext() && !is_authorized) {
                 Group group = groups.next();
                 memberOf.add(group.getID());
             }
+            LOGGER.info("memberof: " + memberOf.toString());
             int i = 0;
+            LOGGER.info("groups work");
+            LOGGER.info("key set: " + myConfigurationServices.keySet().toString());
             for (String account : getAvailableServices()) {
                 ConfigurationService cs = getConfigurationService(account);
+                LOGGER.info("allowedgroupslist" + cs.getAllowedGroupsList());
                 List<String> allowedGroups = new ArrayList<String>(cs.getAllowedGroupsList());
+                LOGGER.info("allowedgroups: " + allowedGroups.toString());
                 allowedGroups.retainAll(memberOf);
                 if (allowedGroups.size() > 0) {
                     result.add(account);
                     i++;
                 }
             }
-
-
-        } catch(RepositoryException e){
+            LOGGER.info("result size: " + result.size());
+        } catch (Exception e) {
             LOGGER.error("RepositoryException", e);
         }
+
+        LOGGER.info(result.toString());
         return result;
     }
 
@@ -146,4 +148,3 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
         LOGGER.info("Brightcove ConfigurationGrabber is active. ");
     }
 }
-

@@ -1,9 +1,7 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
 import com.day.cq.replication.ReplicationAction;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceResolverFactory;
+
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
@@ -42,24 +40,17 @@ import java.util.Set;
 import java.util.Collections;
 import java.util.Date;
 
-@Component(service = EventHandler.class,
-    immediate = true,
-    property = {
-            "service.description" + "=Brightcove Distribution Event Listener ",
-            EventConstants.EVENT_TOPIC + "=" + ReplicationAction.EVENT_TOPIC
-    }
-)
+@Component(service = EventHandler.class, immediate = true, property = {
+        "service.description" + "=Brightcove Distribution Event Listener ",
+        EventConstants.EVENT_TOPIC + "= org/apache/sling/distribution/agent/package/distributed"
+})
 @Designate(ocd = BrightcovePublishListener.EventListenerPageActivationListenerConfiguration.class)
 public class BrightcovePublishListener implements EventHandler {
 
     @ObjectClassDefinition(name = "Brightcove Distribution Listener")
     public @interface EventListenerPageActivationListenerConfiguration {
 
-        @AttributeDefinition(
-                name = "Enabled",
-                description = "Enable Distribution Event Listener",
-                type = AttributeType.BOOLEAN
-        )
+        @AttributeDefinition(name = "Enabled", description = "Enable Distribution Event Listener", type = AttributeType.BOOLEAN)
         boolean isEnabled() default false;
     }
 
@@ -85,16 +76,16 @@ public class BrightcovePublishListener implements EventHandler {
     private void activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
 
         LOG.trace("brc_lastsync was null or zero : asset should be initialized");
-
+        LOG.info("activate new asset");
         try {
 
             // get the binary
             InputStream is = _asset.getOriginal().getStream();
 
-            // make the actual video upload call
+            // // make the actual video upload call
             JSONObject api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
-            //LOGGER.trace("API-RESP >>" + api_resp.toString(1));
+            // LOGGER.trace("API-RESP >>" + api_resp.toString(1));
             boolean sent = api_resp.getBoolean(Constants.SENT);
             if (sent) {
 
@@ -103,8 +94,7 @@ public class BrightcovePublishListener implements EventHandler {
                 LOG.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
 
-
-                LOG.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
+                LOG.info("BC: ACTIVATION SUCCESSFUL >> {}", _asset.getPath());
 
                 // update the metadata to show the last sync time
                 brc_lastsync_map.put(DamConstants.DC_TITLE, video.name);
@@ -125,7 +115,8 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
+            ModifiableValueMap brc_lastsync_map) {
 
         LOG.info("Entering activateModified()");
 
@@ -149,7 +140,7 @@ public class BrightcovePublishListener implements EventHandler {
             } else {
 
                 // log the error
-                LOG.error("Error sending data to Brightcove: {}" , _asset.getName());
+                LOG.error("Error sending data to Brightcove: {}", _asset.getName());
 
             }
         } catch (Exception e) {
@@ -170,17 +161,17 @@ public class BrightcovePublishListener implements EventHandler {
         Video video = serviceUtil.createVideo(path, _asset, "ACTIVE");
         Resource assetRes = _asset.adaptTo(Resource.class);
 
-        if ( assetRes == null ) {
+        if (assetRes == null) {
             return;
         }
 
         Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
-        if ( metadataRes == null ) {
+        if (metadataRes == null) {
             return;
         }
 
         ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
-        if ( brc_lastsync_map == null ) {
+        if (brc_lastsync_map == null) {
             return;
         }
 
@@ -211,14 +202,14 @@ public class BrightcovePublishListener implements EventHandler {
         Resource assetRes = _asset.adaptTo(Resource.class);
         ServiceUtil serviceUtil = new ServiceUtil(accountId);
 
-        if ( assetRes != null ) {
+        if (assetRes != null) {
 
             Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
-            if ( metadataRes != null ) {
+            if (metadataRes != null) {
 
                 ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
 
-                if ( brc_lastsync_map != null ) {
+                if (brc_lastsync_map != null) {
 
                     brc_lastsync_map.put(Constants.BRC_STATE, "INACTIVE");
 
@@ -227,7 +218,7 @@ public class BrightcovePublishListener implements EventHandler {
 
                     Video video = serviceUtil.createVideo(path, _asset, "INACTIVE");
 
-                    LOG.trace("Sending Brightcove Video to API Call: {}" , video.toString());
+                    LOG.trace("Sending Brightcove Video to API Call: {}", video.toString());
 
                     try {
 
@@ -236,17 +227,17 @@ public class BrightcovePublishListener implements EventHandler {
 
                         if (sent) {
 
-                            LOG.info("Brightcove update successful for: {}" , _asset.getPath());
+                            LOG.info("Brightcove update successful for: {}", _asset.getPath());
 
                         } else {
 
-                            LOG.error("Brightcove update unsuccessful for: {}" , _asset.getName());
+                            LOG.error("Brightcove update unsuccessful for: {}", _asset.getName());
 
                         }
 
                     } catch (Exception e) {
 
-                        LOG.error("Error!: {}"  , e.getMessage());
+                        LOG.error("Error!: {}", e.getMessage());
 
                     }
                 }
@@ -257,16 +248,16 @@ public class BrightcovePublishListener implements EventHandler {
 
     @Override
     public void handleEvent(Event event) {
-
+        LOG.error("********************* Event info:" + event.toString());
         // check that the service is enabled and that we are running on Author
-        if ( enabled && slingSettings.getRunModes().contains("author") )  {
+        if (enabled && slingSettings.getRunModes().contains("author")) {
 
             try {
 
                 // grab a resource resolver to pass to all the activation methods
                 final Map<String, Object> authInfo = Collections.singletonMap(
-                    ResourceResolverFactory.SUBSERVICE,
-                    (Object) SERVICE_ACCOUNT_IDENTIFIER);
+                        ResourceResolverFactory.SUBSERVICE,
+                        (Object) SERVICE_ACCOUNT_IDENTIFIER);
 
                 // Get the Service resource resolver
                 ResourceResolver rr = resourceResolverFactory.getServiceResourceResolver(authInfo);
@@ -279,7 +270,7 @@ public class BrightcovePublishListener implements EventHandler {
                 paths = new LinkedHashMap<>();
 
                 // for each service, check to see the integration path
-                for ( String service : services ) {
+                for (String service : services) {
 
                     // get the service from that account ID
                     ConfigurationService brcService = cg.getConfigurationService(service);
@@ -301,7 +292,7 @@ public class BrightcovePublishListener implements EventHandler {
                     for (String key : keys) {
 
                         // check if this asset lives underneath a Brightcove managed folder
-                        if ( asset.contains(key) ) {
+                        if (asset.contains(key)) {
 
                             // get the account ID
                             String brightcoveAccountId = paths.get(key);
@@ -312,12 +303,12 @@ public class BrightcovePublishListener implements EventHandler {
                             Asset _asset = assetResource.adaptTo(Asset.class);
 
                             // check the activation type
-                            if ( "ACTIVATE".equals(event.getProperty("type")) ) {
+                            if ("ACTIVATE".equals(event.getProperty("type"))) {
 
                                 // upload or modify the asset
                                 activateAsset(rr, _asset, brightcoveAccountId);
 
-                            } else if ( "DEACTIVATE".equals(event.getProperty("type")) ) {
+                            } else if ("DEACTIVATE".equals(event.getProperty("type"))) {
 
                                 // delete the asset
                                 deactivateAsset(rr, _asset, brightcoveAccountId);
