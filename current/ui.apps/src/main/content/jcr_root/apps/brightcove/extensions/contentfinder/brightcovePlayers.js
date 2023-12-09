@@ -101,7 +101,7 @@
                 CQ.wcm.ContentFinderTab.REFRESH_BUTTON
             ]
         },{
-            "url": "/bin/brightcove/api.json?a=local_players"
+            "url": CQ.shared.HTTP.getContextPath() +"/bin/brightcove/api.json?a=local_players"
         },{
             "autoLoad":false,
             "reader": new CQ.Ext.data.JsonReader({

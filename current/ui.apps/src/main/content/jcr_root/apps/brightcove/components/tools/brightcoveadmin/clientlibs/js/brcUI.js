@@ -158,7 +158,7 @@ $(function () {
                         };
                         $.ajax({
                             type: 'GET',
-                            url: '/bin/brightcove/api.js',
+                            url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                             data: data,
                             async: true,
                             success: function (data)
@@ -188,7 +188,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -213,7 +213,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -240,7 +240,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -257,7 +257,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -464,7 +464,7 @@ function loadFolders() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -520,7 +520,7 @@ function loadLabels() {
                         };
                         $.ajax({
                             type: 'GET',
-                            url: '/bin/brightcove/api.js',
+                            url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
                             data: data,
                             async: true,
                             success: function (data)
@@ -549,7 +549,7 @@ function loadLabels() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -585,7 +585,7 @@ function editLabels(event) {
 
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
             data: $.param(playlistData, true),
             async: true,
             success: function (data)
@@ -627,7 +627,7 @@ function editPlaylistHandler(event) {
 
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -654,7 +654,7 @@ function editPlaylistListingCallback(data) {
 
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: Granite.HTTP.externalize('/bin/brightcove/api.js'),
             data: $.param(playlistData, true),
             async: true,
             success: function (data)
@@ -1180,7 +1180,7 @@ CQ.Ext.brightcove.economics = new CQ.Ext.data.JsonStore({
 function syncDB()
 {
     syncStart();
-    var url = window.location.origin + "/bin/brightcove/dataload";
+    var url = window.location.origin + CQ.shared.HTTP.getContextPath()+ "/bin/brightcove/dataload";
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',

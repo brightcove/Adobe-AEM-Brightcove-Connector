@@ -33,7 +33,7 @@
 //CONFIG
 
 var brc_admin = brc_admin || {},
-    apiLocation = brc_admin.apiProxy; //This should be set to point to proxy.jsp on your server
+    apiLocation = Granite.HTTP.externalize(brc_admin.apiProxy); //This should be set to point to proxy.jsp on your server
 
 
 //Default Fields
