@@ -1,6 +1,8 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
 import com.day.cq.replication.ReplicationAction;
+import com.google.gson.JsonObject;
+
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -32,6 +34,7 @@ import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.DamConstants;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.*;
 import org.apache.sling.settings.SlingSettingsService;
 
@@ -82,7 +85,7 @@ public class BrightcovePublishListener implements EventHandler {
         LOG.info("Brightcove Distribution Event Listener is enabled: " + enabled);
     }
 
-    private void activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    private void activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map, String assetFolderId) {
 
         LOG.trace("brc_lastsync was null or zero : asset should be initialized");
 
@@ -109,7 +112,11 @@ public class BrightcovePublishListener implements EventHandler {
                 // update the metadata to show the last sync time
                 brc_lastsync_map.put(DamConstants.DC_TITLE, video.name);
                 brc_lastsync_map.put(Constants.BRC_LASTSYNC, JcrUtil.now2calendar());
-
+                
+                // Move video to same folder as in AEM
+                if(StringUtils.isNotBlank(assetFolderId)) {
+                    serviceUtil.moveVideoToFolder(assetFolderId, api_resp.getString(Constants.VIDEOID));
+                }
             } else {
 
                 // log the error
@@ -125,7 +132,7 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map, String assetFolderId) {
 
         LOG.info("Entering activateModified()");
 
@@ -145,7 +152,11 @@ public class BrightcovePublishListener implements EventHandler {
 
                 long current_time_millisec = new Date().getTime();
                 brc_lastsync_map.put(Constants.BRC_LASTSYNC, current_time_millisec);
-
+                
+                // Move video to same folder as in AEM
+                if(StringUtils.isNotBlank(assetFolderId)) {
+                    serviceUtil.moveVideoToFolder(assetFolderId, api_resp.getString(Constants.VIDEOID));
+                }
             } else {
 
                 // log the error
@@ -161,7 +172,7 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateAsset(ResourceResolver rr, Asset _asset, String accountId) {
+    private void activateAsset(ResourceResolver rr, Asset _asset, String accountId, String assetFolderId) {
 
         // need to either activate a new asset or an updated existing
         ServiceUtil serviceUtil = new ServiceUtil(accountId);
@@ -193,13 +204,13 @@ public class BrightcovePublishListener implements EventHandler {
 
             // we need to activate a new asset here
             LOG.info("Activating New Brightcove Asset: {}", _asset.getPath());
-            activateNew(_asset, serviceUtil, video, brc_lastsync_map);
+            activateNew(_asset, serviceUtil, video, brc_lastsync_map, assetFolderId);
 
         } else if (jcr_lastmod > brc_lastsync_time) {
 
             // we need to modify an existing asset here
             LOG.info("Activating Modified Brightcove Asset: {}", _asset.getPath());
-            activateModified(_asset, serviceUtil, video, brc_lastsync_map);
+            activateModified(_asset, serviceUtil, video, brc_lastsync_map, assetFolderId);
 
         }
 
@@ -305,19 +316,35 @@ public class BrightcovePublishListener implements EventHandler {
 
                             // get the account ID
                             String brightcoveAccountId = paths.get(key);
+                            /** 
+                             * 
+                             * Get asset path substring after the account ID 
+                             * e.g. For /content/dam/brightcove_assets/accountID/folderID/video.mp4
+                             * brightcoveAccountFolderPath => /content/dam/brightcove_assets/accountID
+                             * assetFolders => folderID/video.mp4
+                             * assetFolderId => folderID
+                             */
+                            String brightcoveAccountFolderPath = new StringBuilder(key)
+                                    .append(Constants.DELIMITER_SLASH).append(brightcoveAccountId).toString();
                             LOG.info("Found Brightcove Account ID #{} for {}", brightcoveAccountId, asset);
-
+                            String assetFolders = asset.substring(brightcoveAccountFolderPath.length() + 1);
+                            LOG.info("Asset Folder {}", assetFolders);
+                            String[] assetFolderArray = assetFolders.split("/");
+                            String assetFolderId = StringUtils.EMPTY;
+                            if (assetFolderArray.length > 1) {
+                                assetFolderId = assetFolderArray[0];
+                            }
+                            LOG.info("Asset Folder ID {}", assetFolderId);
                             // get a proper Asset object from the path
                             Resource assetResource = rr.getResource(asset);
                             Asset _asset = assetResource.adaptTo(Asset.class);
 
                             // check the activation type
-                            if ( "ACTIVATE".equals(event.getProperty("type")) ) {
+                            if ("ACTIVATE".equals(event.getProperty("type"))) {
 
                                 // upload or modify the asset
-                                activateAsset(rr, _asset, brightcoveAccountId);
-
-                            } else if ( "DEACTIVATE".equals(event.getProperty("type")) ) {
+                                activateAsset(rr, _asset, brightcoveAccountId, assetFolderId);
+                            } else if ("DEACTIVATE".equals(event.getProperty("type"))) {
 
                                 // delete the asset
                                 deactivateAsset(rr, _asset, brightcoveAccountId);

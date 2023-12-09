@@ -12,6 +12,7 @@ public class Constants {
     public static final String EMPTY_URLPARAMS = "";
     public static final String EMPTY_Q_PARAM = "";
     public static final String EMPTY_SORT_PARAM = "";
+    public static final String DELIMITER_SLASH = "/";
 
     public static final String AUTHENTICATION_HEADER = "Authorization";
     public static final String ACCOUNTS_API_PATH = "/accounts/";
