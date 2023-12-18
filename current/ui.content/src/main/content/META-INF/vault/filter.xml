@@ -3,4 +3,6 @@
     <filter root="/conf/brightcove" mode="merge"/>
     <filter root="/conf/global" mode="merge"/>
     <filter root="/content/brightcovetools" mode="merge"/>
+    <filter root="/conf/global/settings/workflow/models/bc-sync-new-asset" mode="merge"/>
+    <filter root="/var/workflow/models/bc-sync-new-asset" mode="merge"/>
 </workspaceFilter>

@@ -352,6 +352,20 @@ public class ServiceUtil {
         }
         return result;
     }
+    
+    public String createFolder(String folderName) {
+    	String folderId = "";
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.createFolder(folderName);
+            if (result.has("id")) {
+            	folderId = result.getString("id");
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return folderId;
+    }
 
     public JSONObject removeVideoFromFolder(String folderId, String videoId) {
         JSONObject result = new JSONObject();
@@ -1001,53 +1015,50 @@ public class ServiceUtil {
 
                 for (String x : fields) {
 
-                    //ADAPT NAME OF METADATA COMPING IN -> AEM PROPERTIES TO BE STORED
-                    if (!innerObj.has(x)) {
-                        LOGGER.trace("##HAS KEY BUT OBJECT IT LEADS TO IS NULL!");
-                        LOGGER.trace("## HAS OBJECT WITH KEY : " + x +" ? "+innerObj.has(x) + " isnull? : "+ (innerObj.get(x)==null));
-                        break;
-                    }
-
-                    // set the sync time
-                    map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
-
-                    String key = getKey(x);
-
-                    Object obj = innerObj.get(x);
-
-                    LOGGER.trace("[X] {} {}", obj, key);
-
-                    //IF THE CURRENT METADATA IS AN ARRAY
-                    if (obj instanceof JSONArray) {
-                        LOGGER.trace("FOUND ARRAY>>: " + key);
-                        JSONArray objArray = (JSONArray) obj;
-                        if (key.equals(NameConstants.PN_TAGS)) {
-                            setMapJSONArray(key, objArray, resourceResolver, map);
-                        }
-                        else {
-                            setMapJSONArray(key, objArray, resourceResolver, map);
-                        }
-                    } else if (obj instanceof JSONObject) {
-
-                        JSONObject objObject = (JSONObject) obj;
-                        //CASE IMAGES
-                        if (x.equals(Constants.IMAGES)) {
-                            setImages(objObject, newAsset);
-                        } //CASE SCHEDULE
-                        else if (x.equals(Constants.SCHEDULE)) {
-                            setSchedule(objObject, assetmap);
-                        } //ELSE - LINK
-                        else if (x.equals(Constants.LINK)) {
-                            setLink(objObject, map);
-                        } else {
-                            setObject(objObject, metadataRes, key);
-                        }
-                    } else //NOT ARRAY NOR OBJECT
-                    {
-
-                        //THIS HANDLES REST OF NULL SET KEYS WHICH MAP TO PROPERTY VALUES
-                        setObject(obj, key, x, map, newAsset, assetmap);
-                    }
+                	if (innerObj.has(x)) {
+	                    // set the sync time
+	                    map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
+	
+	                    String key = getKey(x);
+	
+	                    Object obj = innerObj.get(x);
+	
+	                    LOGGER.trace("[X] {} {}", obj, key);
+	
+	                    //IF THE CURRENT METADATA IS AN ARRAY
+	                    if (obj instanceof JSONArray) {
+	                        LOGGER.trace("FOUND ARRAY>>: " + key);
+	                        JSONArray objArray = (JSONArray) obj;
+	                        if (key.equals(NameConstants.PN_TAGS)) {
+	                            setMapJSONArray(key, objArray, resourceResolver, map);
+	                        }
+	                        else {
+	                            setMapJSONArray(key, objArray, resourceResolver, map);
+	                        }
+	                    } else if (obj instanceof JSONObject) {
+	
+	                        JSONObject objObject = (JSONObject) obj;
+	                        //CASE IMAGES
+	                        if (x.equals(Constants.IMAGES)) {
+	                            setImages(objObject, newAsset);
+	                        } //CASE SCHEDULE
+	                        else if (x.equals(Constants.SCHEDULE)) {
+	                            setSchedule(objObject, assetmap);
+	                        } //ELSE - LINK
+	                        else if (x.equals(Constants.LINK)) {
+	                            setLink(objObject, map);
+	                        } else {
+	                            setObject(objObject, metadataRes, key);
+	                        }
+	                    } else //NOT ARRAY NOR OBJECT
+	                    {
+	
+	                        //THIS HANDLES REST OF NULL SET KEYS WHICH MAP TO PROPERTY VALUES
+	                        setObject(obj, key, x, map, newAsset, assetmap);
+	                    }
+                	} else {
+                		LOGGER.trace("##HAS KEY BUT OBJECT IT LEADS TO IS NULL!");
+                	}
                 }
 
                 resourceResolver.commit();

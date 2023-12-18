@@ -152,6 +152,28 @@ public class CmsAPI {
         }
         return json;
     }
+    
+    //postAPI
+    public JSONObject createFolder(String title) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/";
+            try {
+                String payload = "{ \"name\": \"" + title + "\" }";
+                String response = account.platform.postAPI(targetURL, payload, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createBlankPlaylist: {} Response: {}", title);
+        return json;
+    }
 
     //putAPI
     public JSONObject moveVideoToFolder(String videoId, String folderId) {
@@ -221,7 +243,7 @@ public class CmsAPI {
         LOGGER.trace("createVideo: {} Response: {}", json);
         return json;
     }
-
+    
     //postAPI
     public JSONObject createBlankPlaylist(String title) {
         JSONObject json = new JSONObject();
