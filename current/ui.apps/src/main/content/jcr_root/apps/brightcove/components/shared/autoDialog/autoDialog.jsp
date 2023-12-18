@@ -42,11 +42,12 @@
     Resource asset_res = slingRequest.getParameter("item") != null ? resourceResolver.resolve(slingRequest.getParameter("item")) : resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
 
     ValueMap parentProps = asset_res.getParent().getValueMap();
-
-    if ( parentProps != null && parentProps.get("jcr:createdBy").equals("brightcove_admin") ) {
+    Node parentNode = asset_res.getParent().adaptTo(Node.class);
+    
+    if ( parentProps != null && parentNode.hasProperty("brc_folder_id")) {
 
         String requestedAccount;
-        Node parentNode = asset_res.getParent().adaptTo(Node.class);
+        
         if (parentNode.hasProperty("brc_folder_id")) {
             // this is not the actual account folder, so let's go up one more
             requestedAccount = parentNode.getParent().getName();

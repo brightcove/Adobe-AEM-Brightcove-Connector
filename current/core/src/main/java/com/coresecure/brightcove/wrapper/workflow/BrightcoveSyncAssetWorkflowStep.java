@@ -256,7 +256,10 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 			if (!parentNode.hasProperty("brc_folder_id")) {
 				String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
 				if (folderId != null && !folderId.isEmpty()) {
+					parentNode.getSession().move(parentNode.getPath(), parentNode.getParent().getPath() + "/" + folderId);
+					parentNode.getSession().save();
 					parentNode.setProperty("brc_folder_id", folderId);
+					
 				    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
 				    serviceUtil.moveVideoToFolder(folderId, api_resp.getString(Constants.VIDEOID));
 				}
@@ -266,6 +269,8 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 			    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
 			    serviceUtil.moveVideoToFolder(brc_folder_id, api_resp.getString(Constants.VIDEOID));
 			}
+			
+			
 		} catch (Exception e) {
 
             // log the error
