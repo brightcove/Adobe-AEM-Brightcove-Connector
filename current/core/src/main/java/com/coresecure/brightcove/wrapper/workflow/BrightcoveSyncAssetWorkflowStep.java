@@ -69,8 +69,6 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         String payloadPath = workItem.getWorkflowData().getPayload().toString();
         LOG.error("********************* payloadpath:" + payloadPath);
 
-        Map<String, String> map = new HashMap<String, String> ();
-        // map.put("path", payloadPath + "/" + attachmentsPath);
         ResourceResolver rr = null;
 
         try {
