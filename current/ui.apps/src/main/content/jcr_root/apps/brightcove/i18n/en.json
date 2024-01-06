@@ -1,0 +1,9 @@
+{
+  "bc_workflow_title_for_request_for_video_sync": "Brightcove Sync Asset",
+  "bc_workflow_title_for_request_for_asset_deletion": "Brightcove Delete Asset",
+  "bc_workflow_request_for_video_sync": "Sync to Brightcove",
+  "bc_workflow_asset_deleted": "DELETED",
+  "bc_workflow_notification_request_for_video_sync": "Sync to Brightcove",
+  "bc_workflow_notification_request_for_deletion": "Delete Video",
+  "bc_workflow_request_for_deletion": "Delete Video"
+}

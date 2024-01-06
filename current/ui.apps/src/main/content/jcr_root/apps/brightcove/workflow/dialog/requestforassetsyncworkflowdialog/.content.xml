@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:granite="http://www.adobe.com/jcr/granite/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0" xmlns:rep="internal"
+    granite:class="cq-common-admin-timeline-toolbar-actions-workflow-dialog"
+    granite:rel="cq-common-admin-timeline-toolbar-actions-workflow"
+    jcr:mixinTypes="[rep:AccessControllable]"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="brightcove_workflow_request_for_video-sync_configuration"
+    sling:resourceType="granite/ui/components/coral/foundation/dialog">
+    <items jcr:primaryType="nt:unstructured">
+        <form
+            granite:rel="cq-common-admin-timeline-toolbar-actions-workflow-form"
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="granite/ui/components/coral/foundation/form"
+            action="/etc/workflow/instances"
+            style="vertical">
+            <granite:data
+                jcr:primaryType="nt:unstructured"
+                errormessage="Cannot start workflow on this page."/>
+            <items jcr:primaryType="nt:unstructured">
+                <charset
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/foundation/form/hidden"
+                    name="_charset_"
+                    value="utf-8"/>
+                <status
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/coral/foundation/form/hidden"
+                    ignoreData="{Boolean}true"
+                    name=":status"
+                    value="browser"/>
+                <payloadtype
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/coral/foundation/form/hidden"
+                    ignoreData="{Boolean}true"
+                    name="payloadType"
+                    value="JCR_PATH"/>
+                <model
+                    granite:rel="cq-common-admin-timeline-toolbar-actions-workflow-select"
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                    ignoreData="{Boolean}true"
+                    emptyText="Select a Workflow Model"
+                    name="model"
+                    workflowtags="[workflow:bc-sync-new-asset]">
+                    <datasource
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="brightcove-dam/workflow/datasource/modelsfilter"/>
+                </model>
+                <workflowtitle
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                    emptyText="Enter title of workflow"
+                    ignoreData="{Boolean}true"
+                    name="workflowTitle"/>
+            </items>
+        </form>
+    </items>
+    <footer jcr:primaryType="nt:unstructured">
+        <cancel
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="granite/ui/components/coral/foundation/button"
+            text="Cancel">
+            <parentConfig
+                jcr:primaryType="nt:unstructured"
+                close="{Boolean}true"/>
+        </cancel>
+        <save
+            granite:class="foundation-toggleable-control"
+            granite:rel="cq-common-admin-timeline-toolbar-actions-workflow-action-ok"
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="granite/ui/components/coral/foundation/button"
+            disabled="{Boolean}false"
+            text="Start"
+            trackingFeature="aem:assets:workflow:run"
+            variant="primary"/>
+    </footer>
+</jcr:root>
