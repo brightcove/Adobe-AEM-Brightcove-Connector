@@ -11,7 +11,8 @@
         cq:lastModified="{Long}1702956340389"
         cq:lastModifiedBy="admin"
         jcr:primaryType="nt:unstructured"
-        lastSynced="{Date}2023-12-18T21:25:40.387-06:00"/>
+        lastSynced="{Date}2023-12-18T21:25:40.387-06:00"
+        tags="workflow:brightcove/brightcove-delete-asset"/>
     <nodes jcr:primaryType="nt:unstructured">
         <node0
             jcr:primaryType="cq:WorkflowNode"

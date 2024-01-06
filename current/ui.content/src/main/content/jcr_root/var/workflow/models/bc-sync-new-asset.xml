@@ -11,7 +11,8 @@
         cq:lastModified="{Long}1702763793378"
         cq:lastModifiedBy="admin"
         jcr:primaryType="nt:unstructured"
-        lastSynced="{Date}2023-12-16T15:56:33.375-06:00"/>
+        lastSynced="{Date}2023-12-16T15:56:33.375-06:00"
+        tags="workflow:brightcove/bc-sync-new-asset"/>
     <nodes jcr:primaryType="nt:unstructured">
         <node0
             jcr:primaryType="cq:WorkflowNode"

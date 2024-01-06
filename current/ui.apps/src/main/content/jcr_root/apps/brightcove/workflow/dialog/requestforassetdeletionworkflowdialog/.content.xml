@@ -41,7 +41,7 @@
                     ignoreData="{Boolean}true"
                     emptyText="Select a Workflow Model"
                     name="model"
-                    workflowtags="[workflow:brightcove-delete-asset]">
+                    workflowtags="[workflow:brightcove/brightcove-delete-asset]">
                     <datasource
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="brightcove-dam/workflow/datasource/modelsfilter"/>

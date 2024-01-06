@@ -5,5 +5,7 @@
   "bc_workflow_asset_deleted": "DELETED",
   "bc_workflow_notification_request_for_video_sync": "Sync to Brightcove",
   "bc_workflow_notification_request_for_deletion": "Delete Video",
-  "bc_workflow_request_for_deletion": "Delete Video"
+  "bc_workflow_request_for_deletion": "Delete Video",
+  "brightcove_workflow_request_for_video-sync_configuration": "Request for Video Sync Configurations",
+  "brightcove_workflow_request_for_deletion_configuration": "Request for Video Deletion Configurations"
 }

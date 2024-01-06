@@ -41,7 +41,7 @@
                     ignoreData="{Boolean}true"
                     emptyText="Select a Workflow Model"
                     name="model"
-                    workflowtags="[workflow:bc-sync-new-asset]">
+                    workflowtags="[workflow:brightcove/bc-sync-new-asset]">
                     <datasource
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="brightcove-dam/workflow/datasource/modelsfilter"/>

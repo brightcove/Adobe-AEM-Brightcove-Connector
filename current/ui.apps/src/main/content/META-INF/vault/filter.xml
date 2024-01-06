@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
     <filter root="/apps/brightcove/clientlibs"/>
+    <filter root="/apps/brightcove/i18n"/>
+    <filter root="/apps/brightcove/workflow"/>
     <filter root="/apps/brightcove/components"/>
     <filter root="/apps/brightcove/extensions"/>
     <filter root="/apps/brightcove/templates"/>
     <filter root="/apps/cq"/>
+    <filter root="/apps/dam/gui" mode="merge"/>
 </workspaceFilter>
