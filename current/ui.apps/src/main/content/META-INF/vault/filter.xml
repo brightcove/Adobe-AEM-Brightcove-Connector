@@ -7,5 +7,5 @@
     <filter root="/apps/brightcove/extensions"/>
     <filter root="/apps/brightcove/templates"/>
     <filter root="/apps/cq"/>
-    <filter root="/apps/dam/gui" mode="merge"/>
+    <filter root="/apps/dam/gui" mode="update"/>
 </workspaceFilter>

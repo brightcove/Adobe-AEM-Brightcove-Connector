@@ -7,10 +7,10 @@
         cq:lastModifiedBy="admin"
         cq:template="/libs/cq/workflow/templates/model"
         jcr:primaryType="cq:PageContent"
-        jcr:title="Brightcove Sync Asset"
+        jcr:title="Brightcove Sync New Asset"
         sling:resourceType="cq/workflow/components/pages/model"
         lastSynced="{Date}2023-12-16T15:56:33.375-06:00"
-        tags="workflow:brightcove/bc-sync-new-asset">
+        tags="workflow:bc/request-for-asset-sync">
         <flow
             jcr:primaryType="nt:unstructured"
             sling:resourceType="foundation/components/parsys">
@@ -20,7 +20,7 @@
                 jcr:lastModified="{Date}2023-12-16T15:56:31.245-06:00"
                 jcr:lastModifiedBy="admin"
                 jcr:primaryType="nt:unstructured"
-                jcr:title="Sync Asset"
+                jcr:title="Sync New Asset"
                 sling:resourceType="cq/workflow/components/model/process">
                 <metaData
                     jcr:primaryType="nt:unstructured"

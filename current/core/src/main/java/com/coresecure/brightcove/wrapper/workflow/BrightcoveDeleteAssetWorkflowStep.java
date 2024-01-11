@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.jcr.Node;
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
@@ -99,32 +101,41 @@ public class BrightcoveDeleteAssetWorkflowStep  implements WorkflowProcess{
                     Resource assetResource = rr.getResource(asset);
                     Asset _asset = assetResource.adaptTo(Asset.class);
                     ServiceUtil serviceUtil = new ServiceUtil(brightcoveAccountId);
-                    // upload or modify the asset
+                    
                     boolean bcDeleteComplete = deleteBrightcoveAsset(rr, payloadPath, serviceUtil);
                     
                     if (bcDeleteComplete) {
-                    	Node assetNode = _asset.adaptTo(Node.class);
-                    	assetNode.remove();
+                    	Session session = null;
+                        try {
+                            session = rr.adaptTo(Session.class);
+                            if (null != session) {
+                                Node assetNode = session.getNode(asset);
+                                if (null != assetNode) {
+                                    LOG.debug("Deleting asset node {}", assetNode.getPath());
+                                    assetNode.remove();
+                                    session.save();
+                                }
+                            }
+                        } catch (RepositoryException e) {
+                            LOG.error("RepositoryException occurred while deleting the asset", e);
+                        } finally {
+                            if (null != session) {
+                                session.logout();
+                            }
+                        }
                     } else {
                     	LOG.error("Error when deleting the Brightcove video: {" + payloadPath + "}");
                     }
                     
-                    
                     rr.commit();
-                    
-
                 }
 
             }
         	
         } catch (LoginException e) {
-
-            // there is some issue with the system user used
             LOG.error("There was an error using the Brightcove system user.");
 
         } catch (Exception e) {
-
-            // a general error
             LOG.error("Error when deleting the Brightcove video: {}", e.getMessage());
 
         } finally {

@@ -4,7 +4,7 @@
     granite:rel="cq-common-admin-timeline-toolbar-actions-workflow"
     jcr:mixinTypes="[rep:AccessControllable]"
     jcr:primaryType="nt:unstructured"
-    jcr:title="brightcove_workflow_request_for_deletion_configuration"
+    jcr:title="Custom Menu Configuration"
     sling:resourceType="granite/ui/components/coral/foundation/dialog">
     <items jcr:primaryType="nt:unstructured">
         <form
@@ -41,10 +41,10 @@
                     ignoreData="{Boolean}true"
                     emptyText="Select a Workflow Model"
                     name="model"
-                    workflowtags="[workflow:brightcove/brightcove-delete-asset]">
+                    workflowtags="[workflow:bc/request-for-asset-delete]">
                     <datasource
                         jcr:primaryType="nt:unstructured"
-                        sling:resourceType="brightcove-dam/workflow/datasource/modelsfilter"/>
+                        sling:resourceType="brightcove/workflow/datasource/modelsfilter"/>
                 </model>
                 <workflowtitle
                     jcr:primaryType="nt:unstructured"

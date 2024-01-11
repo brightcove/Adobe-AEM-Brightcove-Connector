@@ -10,7 +10,7 @@
         jcr:title="Brightcove Delete Asset"
         sling:resourceType="cq/workflow/components/pages/model"
         lastSynced="{Date}2023-12-18T21:25:40.387-06:00"
-        tags="workflow:brightcove/brightcove-delete-asset">
+        tags="workflow:bc/request-for-asset-delete">
         <flow
             jcr:primaryType="nt:unstructured"
             sling:resourceType="foundation/components/parsys">

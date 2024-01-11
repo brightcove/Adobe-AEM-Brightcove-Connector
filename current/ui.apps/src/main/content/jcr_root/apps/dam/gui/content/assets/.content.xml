@@ -4,7 +4,7 @@
     <jcr:content jcr:primaryType="nt:unstructured">
         <actions jcr:primaryType="nt:unstructured">
             <selection jcr:primaryType="nt:unstructured">
-                <startworkflow
+                <assetSync
                     granite:rel="cq-damadmin-admin-actions-createworkflow"
                     granite:class="brightcove-request-for-video-sync-option"
                     jcr:primaryType="nt:unstructured"
@@ -12,16 +12,16 @@
                     sling:resourceType="granite/ui/components/coral/foundation/collection/action"
                     action="foundation.dialog"
                     activeSelectionCount="multiple"
-                    icon="globeClock"
+                    icon="delete"
                     target=".cq-damadmin-admin-childpages"
-                    text="bc_workflow_request_for_video_sync"
+                    text="Brightcove Sync Video"
                     variant="actionBar">
                     <data
                         jcr:primaryType="nt:unstructured"
                         nesting="hide"
-                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/requestforassetsyncworkflowdialog.html"/>
-                </startworkflow>
-                <assetDeletionApproval
+                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/brightcovesync.html"/>
+                </assetSync>
+                <assetDeletion
                     granite:rel="cq-damadmin-admin-actions-createworkflow"
                     granite:class="brightcove-request-for-asset-deletion-option"
                     jcr:primaryType="nt:unstructured"
@@ -31,13 +31,13 @@
                     activeSelectionCount="multiple"
                     icon="delete"
                     target=".cq-damadmin-admin-childpages"
-                    text="bc_workflow_request_for_deletion"
+                    text="Delete Brightcove Video"
                     variant="actionBar">
                     <data
                         jcr:primaryType="nt:unstructured"
                         nesting="hide"
-                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/requestforassetdeletionworkflowdialog.html"/>
-                </assetDeletionApproval>
+                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/brightcovedelete.html"/>
+                </assetDeletion>
             </selection>
         </actions>
     </jcr:content>

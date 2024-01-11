@@ -1173,6 +1173,26 @@ public class ServiceUtil {
         Rendition thumb_rendition = _asset.getRendition(Constants.BRC_THUMBNAIL_PNG);
         Rendition original_rendition = _asset.getRendition(DamConstants.ORIGINAL_FILE);
 
+        if (_asset.getRendition("cq5dam.thumbnail.140.100.png") != null) {
+        	_asset.removeRendition("cq5dam.thumbnail.140.100.png");
+        }
+        
+        if (_asset.getRendition("cq5dam.thumbnail.319.319.png") != null) {
+        	_asset.removeRendition("cq5dam.thumbnail.319.319.png");
+        }
+        
+        if (_asset.getRendition("cq5dam.thumbnail.48.48.png") != null) {
+        	_asset.removeRendition("cq5dam.thumbnail.48.48.png");
+        }
+        
+        if (_asset.getRendition("cq5dam.web.1280.1280.jpeg") != null) {
+        	_asset.removeRendition("cq5dam.web.1280.1280.jpeg");
+        }
+        
+        if (_asset.getRendition("cq5dam.zoom.2048.2048.jpeg") != null) {
+        	_asset.removeRendition("cq5dam.zoom.2048.2048.jpeg");
+        }
+        
         JSONObject master = new JSONObject();
 
         if (currentVideo.id == null) return false;
