@@ -25,6 +25,9 @@ import org.osgi.framework.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.jcr.Node;
@@ -166,6 +169,14 @@ public class ExperiencePlayer {
             LOGGER.info("current AEM Version : " + version);
 
             experienceID = properties.get("experience", "").trim();
+
+            Pattern p = Pattern.compile("\\[(.*?)\\]");
+            Matcher m = p.matcher(experienceID);
+
+            if (m.find()) {
+                experienceID = m.group(1);
+            }
+
             account = properties.get("account", "").trim();
             embedType = properties.get("embedType", "").trim();
             inlineCSS = properties.get("inlineCSS","");
@@ -199,5 +210,5 @@ public class ExperiencePlayer {
         }
 
     }
-    
+
 }

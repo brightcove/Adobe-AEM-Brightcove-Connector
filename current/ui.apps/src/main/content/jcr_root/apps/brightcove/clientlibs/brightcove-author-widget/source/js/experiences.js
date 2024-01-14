@@ -29,6 +29,8 @@
             var accountSelector =  $("[name='" + ACCOUNTID +"']").get(0);
             var contentSelector =  $("[name='" + EXPERIENCES +"']").parent().parent().find('[data-granite-autocomplete-src]');
 
+            console.log($('.cq-Dialog form').attr("action"));
+
             $.getJSON($('.cq-Dialog form').attr("action") + ".json").done(function(data) {
                 existingValues = data;
                 accountSelector.trigger('coral-select:showitems');
