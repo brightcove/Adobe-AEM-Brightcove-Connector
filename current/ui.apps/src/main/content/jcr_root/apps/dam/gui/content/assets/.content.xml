@@ -12,7 +12,7 @@
                     sling:resourceType="granite/ui/components/coral/foundation/collection/action"
                     action="foundation.dialog"
                     activeSelectionCount="multiple"
-                    icon="delete"
+                    icon="upload"
                     target=".cq-damadmin-admin-childpages"
                     text="Brightcove Sync Video"
                     variant="actionBar">
