@@ -37,7 +37,7 @@
             var ACTION = 'playlists';
             var CONDITION = ( $(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0 ) ? existingValues.videoPlayerPL : existingValues.videoPlayer;
 
-            $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+            $.getJSON(Granite.HTTP.externalize("/bin/brightcove/getLocalVideoList.json"), {
                 source: ACTION,
                 account_id: account_id
             }).done(function(data) {
@@ -87,7 +87,7 @@
             accountSelector.addEventListener('coral-select:showitems', function(event) {
                 accountSelector.items.clear();
                 if (accountSelector.items.length == 0) {
-                    $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
+                    $.getJSON(Granite.HTTP.externalize("/bin/brightcove/accounts.json")).done(function(data) {
                         var accounts = data.accounts;
                         event.preventDefault();
                         accounts.forEach(function(value, index) {
@@ -126,7 +126,7 @@
                             ? accountSelector.selectedItem.value : "";
 
                 if (playerSelector.items.length == 0) {
-                    $.getJSON("/bin/brightcove/getLocalVideoList.json", {
+                    $.getJSON(Granite.HTTP.externalize("/bin/brightcove/getLocalVideoList.json"), {
                         source: 'players',
                         account_id: account_id
                     }).done(function(data) {

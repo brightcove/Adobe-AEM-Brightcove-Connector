@@ -113,7 +113,7 @@
                 }
             ]
         },{
-            "url": "/bin/brightcove/api?a=list_playlists"
+            "url": CQ.shared.HTTP.getContextPath() +"/bin/brightcove/api?a=list_playlists"
         },{
             "autoLoad":false,
             "reader": new CQ.Ext.data.JsonReader({
