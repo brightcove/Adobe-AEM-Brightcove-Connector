@@ -1181,7 +1181,7 @@ CQ.Ext.brightcove.economics = new CQ.Ext.data.JsonStore({
 function syncDB()
 {
     syncStart();
-    var url = window.location.origin + CQ.shared.HTTP.getContextPath()+ "/bin/brightcove/dataload";
+    var url = window.location.origin + (CQ.shared.HTTP.getContextPath() || '')+ "/bin/brightcove/dataload";
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
