@@ -6,6 +6,6 @@
     <filter root="/apps/brightcove/components"/>
     <filter root="/apps/brightcove/extensions"/>
     <filter root="/apps/brightcove/templates"/>
-    <filter root="/apps/cq/core/content/nav/brightcove"/>
+    <filter root="/apps/cq/core/content/nav"/>
     <filter root="/apps/dam/gui" mode="update"/>
 </workspaceFilter>

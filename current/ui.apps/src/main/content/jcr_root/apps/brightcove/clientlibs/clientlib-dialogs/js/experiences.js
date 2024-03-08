@@ -3,6 +3,7 @@
 
     var ACCOUNTID = "./account", EXPERIENCES = "./experience";
     var existingValues = {};
+    var account_id = "";
 
     const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-experiences-account-dropdown';
 
@@ -73,6 +74,20 @@
                         //contentSelector.trigger('coral-autocomplete:showsuggestions');
                     });
                 }
+            });
+            
+            accountSelector.addEventListener("change", function(event) {
+                var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
+                account_id = (accountSelector.selectedItem != null)
+                                    ? accountSelector.selectedItem.value : "";
+
+                contentSelector.attr('data-granite-autocomplete-src',
+                    updateQueryStringParameter(
+                        contentSelector.attr('data-granite-autocomplete-src'),
+                        'account_id',
+                        account_id
+                    )
+                );
             });
 
         }
