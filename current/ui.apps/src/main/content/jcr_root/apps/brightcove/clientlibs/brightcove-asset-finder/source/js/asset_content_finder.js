@@ -4,7 +4,7 @@
         CONTENT_FINDER_NAME = 'Brightcove Videos';
     
     // Get Brightcove Videos Asset Path from OSGI Config
-    $.getJSON("/bin/brightcove/getBrightcoveAssetPath.json").done(function(data){
+    $.getJSON(Granite.HTTP.externalize("/bin/brightcove/getBrightcoveAssetPath.json")).done(function(data){
         assetPath = data["brightcoveAssetPath"];
         
         getBrightcoveAssetsPath(assetPath);

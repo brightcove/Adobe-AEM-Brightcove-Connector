@@ -37,7 +37,7 @@
 
             accountSelector.addEventListener('coral-select:showitems', function(event) {
                 if (accountSelector.items.length == 0) {
-                    $.getJSON("/bin/brightcove/accounts.json").done(function(data) {
+                    $.getJSON(Granite.HTTP.externalize("/bin/brightcove/accounts.json")).done(function(data) {
                         var accounts = data.accounts;
                         var selected;
                         event.preventDefault();
