@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>6.1.2</version>
+        <version>6.1.3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 

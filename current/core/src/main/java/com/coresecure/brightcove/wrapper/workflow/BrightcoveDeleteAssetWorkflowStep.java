@@ -42,7 +42,7 @@ public class BrightcoveDeleteAssetWorkflowStep  implements WorkflowProcess{
 	@Reference
     private ResourceResolverFactory resourceResolverFactory;
 
-    private static final Logger LOG = LoggerFactory.getLogger(BrightcoveSyncAssetWorkflowStep.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BrightcoveDeleteAssetWorkflowStep.class);
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
     private Map<String, String> paths = null;
     private String brightcoveAssetId;
