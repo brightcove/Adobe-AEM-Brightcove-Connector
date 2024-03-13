@@ -353,6 +353,20 @@ public class ServiceUtil {
         return result;
     }
 
+    public String createFolder(String folderName) {
+    	String folderId = "";
+        JSONObject result = new JSONObject();
+        try {
+            result = brAPI.cms.createFolder(folderName);
+            if (result.has("id")) {
+            	folderId = result.getString("id");
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
+        }
+        return folderId;
+    }
+    
     public JSONObject removeVideoFromFolder(String folderId, String videoId) {
         JSONObject result = new JSONObject();
         try {

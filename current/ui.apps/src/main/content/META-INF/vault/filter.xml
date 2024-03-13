@@ -14,6 +14,11 @@
     </filter> -->
 
     <filter root="/apps/cq/core/content/nav/brightcove"/>
+    <filter root="/apps/dam/gui" mode="update"/>
+    <filter root="/conf/global/settings/workflow/models/brightcove-sync-asset-workflow" mode="update"/>
+    <filter root="/conf/global/settings/workflow/models/brightcove-delete-asset-workflow" mode="update"/>
+    <filter root="/var/workflow/models/brightcove-sync-asset-workflow" mode="update"/>
+    <filter root="/var/workflow/models/brightcove-delete-asset-workflow" mode="update"/>
 
     <filter root="/etc/clientlibs/brightcove"/>
 

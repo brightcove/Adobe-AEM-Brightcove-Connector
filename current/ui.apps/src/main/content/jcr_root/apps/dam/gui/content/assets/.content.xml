@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:granite="http://www.adobe.com/jcr/granite/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:unstructured">
+    <jcr:content jcr:primaryType="nt:unstructured">
+        <actions jcr:primaryType="nt:unstructured">
+            <selection jcr:primaryType="nt:unstructured">
+                <assetSync
+                    granite:rel="cq-damadmin-admin-actions-createworkflow"
+                    granite:class="brightcove-request-for-video-sync-option"
+                    jcr:primaryType="nt:unstructured"
+                    sling:orderBefore="quickpublish"
+                    sling:resourceType="granite/ui/components/coral/foundation/collection/action"
+                    action="foundation.dialog"
+                    activeSelectionCount="multiple"
+                    icon="upload"
+                    target=".cq-damadmin-admin-childpages"
+                    text="Brightcove Sync Video"
+                    variant="actionBar">
+                    <data
+                        jcr:primaryType="nt:unstructured"
+                        nesting="hide"
+                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/brightcovesync.html"/>
+                </assetSync>
+                <assetDeletion
+                    granite:rel="cq-damadmin-admin-actions-createworkflow"
+                    granite:class="brightcove-request-for-asset-deletion-option"
+                    jcr:primaryType="nt:unstructured"
+                    sling:orderBefore="quickpublish"
+                    sling:resourceType="granite/ui/components/coral/foundation/collection/action"
+                    action="foundation.dialog"
+                    activeSelectionCount="multiple"
+                    icon="delete"
+                    target=".cq-damadmin-admin-childpages"
+                    text="Delete Brightcove Video"
+                    variant="actionBar">
+                    <data
+                        jcr:primaryType="nt:unstructured"
+                        nesting="hide"
+                        src.uritemplate="/mnt/overlay/brightcove/workflow/dialog/brightcovedelete.html"/>
+                </assetDeletion>
+            </selection>
+        </actions>
+    </jcr:content>
+</jcr:root>
