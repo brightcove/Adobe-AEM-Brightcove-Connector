@@ -31,10 +31,8 @@
 
 //setVideoTrackingEvents();
 
-function r(f){/in/.test(document.readyState)?setTimeout('r('+f+')',9):f()}
-// use like
-r(function(){
-    createPlayers();
+document.addEventListener("DOMContentLoaded", (event) => {
+  createPlayers();
 });
 function createPlayers() {
     var all = document.getElementsByClassName("brightcove-container");
