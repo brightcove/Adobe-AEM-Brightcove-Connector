@@ -119,8 +119,6 @@
             });
 
             playerSelector.addEventListener('coral-select:showitems', function(event) {
-                playerSelector.items.clear();
-
                 var accountSelector =  $(DIALOG_ACCOUNT_FIELD_SELECTOR).get(0);
                 var account_id = (accountSelector.selectedItem != null)
                             ? accountSelector.selectedItem.value : "";
