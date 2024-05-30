@@ -745,7 +745,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" + folder + "/videos";
             try {
-                String urlParameters = "offset=" + offset;
+            	String urlParameters = "limit=100&offset=" + offset;
                 json = getJSONArrayResponse(targetURL, urlParameters, headers);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
