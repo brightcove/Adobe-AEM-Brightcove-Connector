@@ -53,6 +53,7 @@
                 </items>
             </tab-video>
             <tab-styles
+            	granite:hide="${cqDesign.hideAdvanced}"
                 jcr:primaryType="nt:unstructured"
                 jcr:title="Advanced"
                 sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns">

@@ -1,6 +1,6 @@
 {
     "service.ranking": "0",
     "user.mapping": [
-        "brightcove.core:brightcoveWrite=brightcove_admin"
+        "brightcove.core:brightcoveWrite=[brightcove_admin]"
     ]
 }
