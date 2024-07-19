@@ -494,7 +494,7 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/counts/videos";
             try {
                 //String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
-                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
+                String urlParameters = "q=" + "tags:BDB_AEM_VIDEOS" + (dam_only ? "&%20%2Dtags:AEM_NO_DAM" :
                 "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
                 json = getJSONObjectResponse(targetURL, urlParameters, headers);
             }
@@ -623,7 +623,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
             // String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "")
-            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
+            String urlParameters = "q=" + "tags:BDB_AEM_VIDEOS" + (dam_only ? "&%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
