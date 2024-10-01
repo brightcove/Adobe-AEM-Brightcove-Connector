@@ -67,7 +67,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
     public void execute(WorkItem workItem, WorkflowSession workflowSession, MetaDataMap processArguments) throws WorkflowException {
 
         String payloadPath = workItem.getWorkflowData().getPayload().toString();
-        LOG.error("********************* payloadpath:" + payloadPath);
+        LOG.info("********************* payloadpath:" + payloadPath);
 
         ResourceResolver rr = null;
 
@@ -254,10 +254,9 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 			if (!parentNode.hasProperty("brc_folder_id")) {
 				String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
 				if (folderId != null && !folderId.isEmpty()) {
-					parentNode.getSession().move(parentNode.getPath(), parentNode.getParent().getPath() + "/" + folderId);
-					parentNode.getSession().save();
+
 					parentNode.setProperty("brc_folder_id", folderId);
-					
+					parentNode.getSession().save();
 				    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
 				    serviceUtil.moveVideoToFolder(folderId, api_resp.getString(Constants.VIDEOID));
 				}
