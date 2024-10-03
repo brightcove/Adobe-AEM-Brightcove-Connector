@@ -55,7 +55,7 @@ public class BrightcoveDeleteAssetWorkflowStep  implements WorkflowProcess{
 	public void execute(WorkItem workItem, WorkflowSession workflowSession, MetaDataMap processArguments) throws WorkflowException {
 		// TODO Auto-generated method stub
 		String payloadPath = workItem.getWorkflowData().getPayload().toString();
-        LOG.error("********************* payloadpath:" + payloadPath);
+        LOG.info("********************* payloadpath:" + payloadPath);
 
         ResourceResolver rr = null;
         try {
