@@ -875,7 +875,9 @@ public class ServiceUtil {
                 //Map<String,Object> rendition_map = new HashMap<String,Object>();
                 newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
             } else {
-                newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
+            	if (newAsset.getRendition(Constants.BRC_THUMBNAIL_PNG) != null) {
+            		newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
+            	}
             }
         }
         catch (Exception e)

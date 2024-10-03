@@ -106,9 +106,13 @@ public class S3UploadUtil {
 
             if (responseCode == 200) {
                 LOGGER.info("Successfully uploaded.");
+            } else {
+            	LOGGER.error("***************************S3UploadUtil: Error uploading asset: " + responseCode);
             }
         } catch (IOException e) {
             LOGGER.error("IOException",e);
+        } catch (Exception e) {
+        	LOGGER.error("***************************S3UploadUtil: Error uploading asset");
         }
         return responseCode == 200;
 
@@ -172,9 +176,13 @@ public class S3UploadUtil {
 
             if (responseCode == 200) {
                 LOGGER.info("Successfully uploaded.");
+            } else {
+            	LOGGER.error("***************************S3UploadUtil: Error uploading asset: " + responseCode);
             }
         } catch (IOException e) {
             LOGGER.error("IOException",e);
+        } catch (Exception e) {
+        	LOGGER.error("***************************S3UploadUtil: Error uploading asset");
         }
         return responseCode == 200;
 
@@ -224,9 +232,13 @@ public class S3UploadUtil {
 
             if (responseCode == 200) {
                 LOGGER.info("Successfully uploaded.");
+            } else {
+            	LOGGER.error("***************************S3UploadUtil: Error uploading asset: " + responseCode);
             }
         } catch (IOException e) {
             LOGGER.error("IOException",e);
+        } catch (Exception e) {
+        	LOGGER.error("***************************S3UploadUtil: Error uploading asset");
         }
         return responseCode == 200;
 

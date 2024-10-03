@@ -34,11 +34,18 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.jcr.AccessDeniedException;
+import javax.jcr.InvalidItemStateException;
+import javax.jcr.ItemExistsException;
 import javax.jcr.ItemNotFoundException;
 import javax.jcr.Node;
 import javax.jcr.PathNotFoundException;
+import javax.jcr.ReferentialIntegrityException;
 import javax.jcr.RepositoryException;
 import javax.jcr.ValueFormatException;
+import javax.jcr.lock.LockException;
+import javax.jcr.nodetype.ConstraintViolationException;
+import javax.jcr.nodetype.NoSuchNodeTypeException;
+import javax.jcr.version.VersionException;
 
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
@@ -60,7 +67,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
     private static final Logger LOG = LoggerFactory.getLogger(BrightcoveSyncAssetWorkflowStep.class);
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
-    private String brightcoveAssetId;
+
     private Map<String, String> paths = null;
 
     @Override
@@ -70,6 +77,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         LOG.info("********************* payloadpath:" + payloadPath);
 
         ResourceResolver rr = null;
+        String brightcoveAssetId = null;
 
         try {
 
@@ -119,10 +127,10 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
                     Asset _asset = assetResource.adaptTo(Asset.class);
                     ServiceUtil serviceUtil = new ServiceUtil(brightcoveAccountId);
                     // upload or modify the asset
-                    activateAsset(rr, _asset, serviceUtil);
+                    brightcoveAssetId = activateAsset(rr, _asset, serviceUtil);
                     TimeUnit.SECONDS.sleep(15);
                     if (brightcoveAssetId != null && !brightcoveAssetId.isEmpty()) {
-                        syncBrightcoveData(serviceUtil, _asset, rr, brightcoveAccountId);
+                        syncBrightcoveData(brightcoveAssetId, serviceUtil, _asset, rr, brightcoveAccountId);
                     }
                     rr.commit();
                     
@@ -135,12 +143,12 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         } catch (LoginException e) {
 
             // there is some issue with the system user used
-            LOG.error("There was an error using the Brightcove system user.");
+            LOG.error("*************************** There was an error using the Brightcove system user.");
 
         } catch (Exception e) {
 
             // a general error
-            LOG.error("Error when handling the Brightcove video sync: {}", e.getMessage());
+            LOG.error("*************************** Error when handling the Brightcove video sync: {}", e.getMessage());
 
         } finally {
             if (rr != null && rr.isLive()) {
@@ -149,7 +157,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         }
     }
     
-    private void syncBrightcoveData(ServiceUtil serviceUtil, Asset _asset, ResourceResolver rr, String brightcoveAccountId) {
+    private void syncBrightcoveData(String brightcoveAssetId, ServiceUtil serviceUtil, Asset _asset, ResourceResolver rr, String brightcoveAccountId) {
         
         try {
             JSONObject result = serviceUtil.getSelectedVideo(brightcoveAssetId);
@@ -161,10 +169,12 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         }
     }
 
-    private void activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    private String activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
 
         LOG.trace("brc_lastsync was null or zero : asset should be initialized");
         LOG.info("activate new asset");
+        String brightcoveAssetId = null;
+        
         try {
 
             // get the binary
@@ -195,7 +205,8 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
                 // log the error
                 LOG.error(Constants.REP_ACTIVATION_SUCCESS_TMPL, _asset.getName());
-
+                LOG.error("*************************** Error sending data to Brightcove: {}", _asset.getName());
+                
             }
 
         } catch (Exception e) {
@@ -203,13 +214,16 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             LOG.error("Error: {}", e.getMessage());
 
         }
+        
+        return brightcoveAssetId;
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
+    private String activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
             ModifiableValueMap brc_lastsync_map) {
 
         LOG.info("Entering activateModified()");
+        String brightcoveAssetId = null;
 
         try {
 
@@ -220,7 +234,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
             boolean sent = api_resp.getBoolean(Constants.SENT);
             if (sent) {
-
+            	brightcoveAssetId = api_resp.getString(Constants.VIDEOID);
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());
                 serviceUtil.updateRenditions(_asset, video);
                 LOG.info("Updated renditions for Brightcove video: {}", _asset.getPath());
@@ -235,15 +249,18 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             } else {
 
                 // log the error
-                LOG.error("Error sending data to Brightcove: {}", _asset.getName());
-
+                LOG.error("*************************** Error sending data to Brightcove: {}", _asset.getName());
+                
             }
         } catch (Exception e) {
 
             // log the error
             LOG.error("General Error: {}", _asset.getName());
+            LOG.error("*************************** Error sending data to Brightcove: {}", _asset.getName());
 
         }
+        
+        return brightcoveAssetId;
 
     }
 
@@ -251,20 +268,35 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 		try {
 			LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
 			Node parentNode = assetNode.getParent();
+			String videoId = api_resp.getString(Constants.VIDEOID);
+			
 			if (!parentNode.hasProperty("brc_folder_id")) {
 				String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
 				if (folderId != null && !folderId.isEmpty()) {
-
-					parentNode.setProperty("brc_folder_id", folderId);
-					parentNode.getSession().save();
-				    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
-				    serviceUtil.moveVideoToFolder(folderId, api_resp.getString(Constants.VIDEOID));
+					setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
+				} else {
+					LOG.error("*************************** No folder created ***************************");
+					TimeUnit.SECONDS.sleep(15);
+					parentNode.refresh(false);
+					if (!parentNode.hasProperty("brc_folder_id")) {
+						folderId = serviceUtil.createFolder(assetNode.getParent().getName());
+						if (folderId != null && !folderId.isEmpty()) {
+							setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
+						} else {
+							LOG.error("*************************** No folder created attempt 2 ***************************");
+						}
+					} else {
+						// this is in a subfolder so we need to formally move the asset to this folder
+					    String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
+					    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+					    serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
+					}
 				}
 			} else {
 				// this is in a subfolder so we need to formally move the asset to this folder
-			    String brc_folder_id = assetNode.getParent().getProperty("brc_folder_id").getString();
+			    String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
 			    LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
-			    serviceUtil.moveVideoToFolder(brc_folder_id, api_resp.getString(Constants.VIDEOID));
+			    serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
 			}
 			
 			
@@ -276,27 +308,35 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         }
 	}
 
-    private void activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
+	private void setFolderIdMoveAssetInBC(ServiceUtil serviceUtil, Node parentNode, String videoId, String folderId) throws Exception {
+		parentNode.setProperty("brc_folder_id", folderId);
+		parentNode.getSession().save();
+		
+		LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
+		serviceUtil.moveVideoToFolder(folderId, videoId);
+	}
+
+    private String activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
 
         // need to either activate a new asset or an updated existing
         // ServiceUtil serviceUtil = new ServiceUtil(accountId);
         String path = _asset.getPath();
-
+        String brightcoveAssetId = null;
         Video video = serviceUtil.createVideo(path, _asset, "ACTIVE");
         Resource assetRes = _asset.adaptTo(Resource.class);
 
         if (assetRes == null) {
-            return;
+            return "";
         }
 
         Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
         if (metadataRes == null) {
-            return;
+            return "";
         }
 
         ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
         if (brc_lastsync_map == null) {
-            return;
+            return "";
         }
 
         Long jcr_lastmod = _asset.getLastModified();
@@ -308,13 +348,15 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
             // we need to activate a new asset here
             LOG.info("Activating New Brightcove Asset: {}", _asset.getPath());
-            activateNew(_asset, serviceUtil, video, brc_lastsync_map);
+            brightcoveAssetId = activateNew(_asset, serviceUtil, video, brc_lastsync_map);
 
         } else {
         	// we need to modify an existing asset here
             LOG.info("Activating Modified Brightcove Asset: {}", _asset.getPath());
-            activateModified(_asset, serviceUtil, video, brc_lastsync_map);
+            brightcoveAssetId = activateModified(_asset, serviceUtil, video, brc_lastsync_map);
         }
+        
+        return brightcoveAssetId;
 
     }    
 }
