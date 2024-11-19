@@ -189,7 +189,7 @@ public class GetLocalAssetList extends SlingAllMethodsServlet {
 
             serviceUtil = new ServiceUtil(brcAccountId);
 
-            outWriter.write(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), 0, 100, false, false).toString());
+            outWriter.write(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), 0, 100, false, true).toString());
 
         } catch (Exception e) {
             LOGGER.error("JSONException", e);

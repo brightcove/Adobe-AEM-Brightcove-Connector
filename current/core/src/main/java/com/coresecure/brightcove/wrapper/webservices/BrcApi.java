@@ -282,7 +282,7 @@ public class BrcApi extends SlingAllMethodsServlet {
                 LOGGER.error("search_playlists", je);
             }
         } else {
-            result = new JSONObject(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), false, false));
+            result = new JSONObject(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), false, true));
         }
         return result;
     }
