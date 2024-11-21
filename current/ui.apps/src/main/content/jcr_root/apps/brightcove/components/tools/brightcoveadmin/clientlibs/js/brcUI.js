@@ -795,6 +795,7 @@ function buildPlaylistList() {
     document.getElementById('searchDiv').style.display = "none";
     document.getElementById('searchDiv_pl').style.display = "inline";
     document.getElementById('checkToggle').style.display = "none";
+	document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
 
@@ -1969,6 +1970,7 @@ function stopPreview() {
 
 //type should be playlists or videos
 function doPageList(total, type) {
+	if (type !== "Playlists") {
     if (total > paging.size) {
         var numOpt = Math.ceil(total / paging.size);
         var select = document.getElementsByName("selPageN");
@@ -2001,6 +2003,7 @@ function doPageList(total, type) {
         //If there's no page selector, move the search bar down so it doesn't stick out ofplace
         document.getElementById('tdTwo').appendChild(document.getElementById('searchDiv'));
     }
+	}
 }
 
 function changePage(num) {
