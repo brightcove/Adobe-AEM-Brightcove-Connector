@@ -34,6 +34,7 @@
 <%@ page import="org.apache.sling.commons.json.JSONObject" %>
 <%@ page import="com.coresecure.brightcove.wrapper.sling.ServiceUtil" %>
 <%@ page import="org.apache.sling.commons.json.JSONArray" %>
+<%@ page import="org.apache.commons.lang3.StringUtils" %>
 <%@ page trimDirectiveWhitespaces="true" %>
 <%@include file="/libs/foundation/global.jsp" %>
 <%
@@ -41,10 +42,13 @@
 
     Resource asset_res = slingRequest.getParameter("item") != null ? resourceResolver.resolve(slingRequest.getParameter("item")) : resourceResolver.resolve(slingRequest.getRequestPathInfo().getSuffix());
 
-    ValueMap parentProps = asset_res.getParent().getValueMap();
+	Resource metadataRes = asset_res.getChild("jcr:content/metadata");
+	ValueMap map = metadataRes.adaptTo(ValueMap.class);
+	String brcid = map.get("brc_id","");
+   
     Node parentNode = asset_res.getParent().adaptTo(Node.class);
-    
-    if ( parentProps != null && parentNode.hasProperty("brc_folder_id")) {
+
+    if ( StringUtils.isNotBlank("brc_id")) {
 
         String requestedAccount;
         
@@ -55,8 +59,6 @@
             requestedAccount = parentNode.getName();
         }
 
-        Resource metadataRes = asset_res.getChild("jcr:content/metadata");
-        ValueMap map = metadataRes.adaptTo(ValueMap.class);
 
         ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
