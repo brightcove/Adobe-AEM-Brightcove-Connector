@@ -794,6 +794,7 @@ function buildPlaylistList() {
     document.getElementById('searchDiv').style.display = "none";
     document.getElementById('searchDiv_pl').style.display = "inline";
     document.getElementById('checkToggle').style.display = "none";
+	document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
 
@@ -1968,38 +1969,40 @@ function stopPreview() {
 
 //type should be playlists or videos
 function doPageList(total, type) {
-    if (total > paging.size) {
-        var numOpt = Math.ceil(total / paging.size);
-        var select = document.getElementsByName("selPageN");
-        var options = "";
-        for (var i = 0; i < numOpt; i++) {
-            options += '<option style="width:100%" id="' + i + '">';
-            if (paging.generic == i) {
-                num = (numOpt - 1 == i) ? (total - i * paging.size) : paging.size;
-                document.getElementById('divVideoCount').innerHTML = num + ' ' + type + ' (of ' + total + ')';
-            }
-            if (numOpt - 1 == i) {
-                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + total + ' )</option>';
-            } else {
-                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + ((i + 1) * paging.size) + ' )</option>';
-            }
-        }
-        //remove previous options, add the new ones and select the current page in the option list
-        $("select[name=selPageN]").empty().append(options).children("[id=" + paging.generic/paging.size + "]").each(function () {
-            //need to try/catch for IE6
-            try {
-                this.selected = true;
-            } catch (e) {
-            }
-        });
-        $("div[name=pageDiv]").show();
-        document.getElementById('tdOne').appendChild(document.getElementById('searchDiv'));
-    } else {
-        document.getElementById('divVideoCount').innerHTML = total + ' ' + type + ' (of ' + total + ' )';
-        $("div[name=pageDiv]").hide();
-        //If there's no page selector, move the search bar down so it doesn't stick out ofplace
-        document.getElementById('tdTwo').appendChild(document.getElementById('searchDiv'));
-    }
+	if (type !== "Playlists") {
+	    if (total > paging.size) {
+	        var numOpt = Math.ceil(total / paging.size);
+	        var select = document.getElementsByName("selPageN");
+	        var options = "";
+	        for (var i = 0; i < numOpt; i++) {
+	            options += '<option style="width:100%" id="' + i + '">';
+	            if (paging.generic == i) {
+	                num = (numOpt - 1 == i) ? (total - i * paging.size) : paging.size;
+	                document.getElementById('divVideoCount').innerHTML = num + ' ' + type + ' (of ' + total + ')';
+	            }
+	            if (numOpt - 1 == i) {
+	                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + total + ' )</option>';
+	            } else {
+	                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + ((i + 1) * paging.size) + ' )</option>';
+	            }
+	        }
+	        //remove previous options, add the new ones and select the current page in the option list
+	        $("select[name=selPageN]").empty().append(options).children("[id=" + paging.generic/paging.size + "]").each(function () {
+	            //need to try/catch for IE6
+	            try {
+	                this.selected = true;
+	            } catch (e) {
+	            }
+	        });
+	        $("div[name=pageDiv]").show();
+	        document.getElementById('tdOne').appendChild(document.getElementById('searchDiv'));
+	    } else {
+	        document.getElementById('divVideoCount').innerHTML = total + ' ' + type + ' (of ' + total + ' )';
+	        $("div[name=pageDiv]").hide();
+	        //If there's no page selector, move the search bar down so it doesn't stick out ofplace
+	        document.getElementById('tdTwo').appendChild(document.getElementById('searchDiv'));
+	    }
+	}
 }
 
 function changePage(num) {
