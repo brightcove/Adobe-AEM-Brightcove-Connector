@@ -907,18 +907,22 @@ public class ServiceUtil {
 
     private void setLink(JSONObject objObject, ModifiableValueMap map) {
         try {
-            String link_url = objObject.getString(Constants.URL);
-            if (link_url != null && !link_url.toString().equals(Constants.NULLSTRING)) {
-                map.put(Constants.BRC_LINK_URL, link_url);
-            } else {
-                if (map.containsKey(Constants.BRC_LINK_URL)) map.remove(Constants.BRC_LINK_URL);
-            }
-            String link_text = objObject.getString(Constants.TEXT);
-            if (link_text != null && !link_text.toString().equals(Constants.NULLSTRING)) {
-                map.put(Constants.BRC_LINK_TEXT, link_text);
-            } else {
-                if (map.containsKey(Constants.BRC_LINK_TEXT)) map.remove(Constants.BRC_LINK_TEXT);
-            }
+        	if (objObject.has(Constants.URL)) {
+	            String link_url = objObject.getString(Constants.URL);
+	            if (link_url != null && !link_url.toString().equals(Constants.NULLSTRING)) {
+	                map.put(Constants.BRC_LINK_URL, link_url);
+	            } else {
+	                if (map.containsKey(Constants.BRC_LINK_URL)) map.remove(Constants.BRC_LINK_URL);
+	            }
+	            if (objObject.has(Constants.TEXT)) {
+		            String link_text = objObject.getString(Constants.TEXT);
+		            if (link_text != null && !link_text.toString().equals(Constants.NULLSTRING)) {
+		                map.put(Constants.BRC_LINK_TEXT, link_text);
+		            } else {
+		                if (map.containsKey(Constants.BRC_LINK_TEXT)) map.remove(Constants.BRC_LINK_TEXT);
+		            }
+	            }
+        	}
         } catch (JSONException e) {
             LOGGER.error(e.getClass().getName(), e);
         }
