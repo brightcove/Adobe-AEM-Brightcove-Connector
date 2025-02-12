@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
-    <filter root="/conf/brightcove" mode="merge"/>
+    <filter root="/conf/brightcove" mode="update"/>
     <filter root="/conf/global" mode="merge"/>
-    <filter root="/content/brightcovetools" mode="merge"/>
+    <filter root="/content/brightcovetools" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/bc-sync-new-asset" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/brightcove-delete-asset" mode="update"/>
     <filter root="/var/workflow/models/bc-sync-new-asset" mode="update"/>

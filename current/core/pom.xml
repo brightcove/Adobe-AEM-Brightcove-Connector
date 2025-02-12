@@ -44,10 +44,10 @@
                         <configuration>
                             <bnd><![CDATA[
 Import-Package: javax.annotation;version=0.0.0,*
-Include-Resource: jcodec-javase-0.2.1.jar,jcodec-0.2.1.jar
+Include-Resource: jcodec-javase-0.2.1.jar,jcodec-0.2.1.jar,cq-commerce-core-5.13.18.jar,cq-personalization-5.6.8.jar
 Export-Package: !*.impl.*,!*.internal.*,\
     com.coresecure.*
-Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
+Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar,cq-commerce-core-5.13.18.jar,cq-personalization-5.6.8.jar
                                 ]]></bnd>
                         </configuration>
                     </execution>
@@ -89,6 +89,10 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <groupId>uk.org.lidalia</groupId>
             <artifactId>slf4j-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.adobe.aem</groupId>
+            <artifactId>uber-jar</artifactId>
         </dependency>
         <dependency>
             <groupId>com.adobe.aem</groupId>
@@ -157,6 +161,20 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <artifactId>org.apache.sling.models.impl</artifactId>
             <version>1.4.4</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.adobe.cq.commerce</groupId>
+            <artifactId>cq-commerce-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.day.cq</groupId>
+            <artifactId>cq-personalization</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.adobe.cq</groupId>
+            <artifactId>core.wcm.components.core</artifactId>
         </dependency>
     </dependencies>
 </project>
