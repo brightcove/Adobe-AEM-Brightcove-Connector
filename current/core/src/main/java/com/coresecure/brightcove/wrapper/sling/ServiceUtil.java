@@ -62,10 +62,15 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
+import javax.net.ssl.HttpsURLConnection;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.Proxy;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -854,12 +859,26 @@ public class ServiceUtil {
 
     private void setImages(JSONObject objObject, Asset newAsset) {
         try {
+        	ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+            ConfigurationService brcService = cg.getConfigurationService(account_id);
+            String proxy_address = brcService.getProxy();
+            
+            String _host = "";
+            int _port =  0;
+            boolean hasProxy = false;
+            if(!proxy_address.isEmpty() && proxy_address.contains(":"))
+            {
+                _host = proxy_address.split(":")[0];
+                _port =  Integer.parseInt(proxy_address.split(":")[1]);
+                hasProxy = true;
+            }
+            
             if (objObject.has(Constants.POSTER)) {
                 JSONObject images_poster_obj = objObject.getJSONObject(Constants.POSTER);
                 String src = images_poster_obj.getString(Constants.SRC);
                 //DO GET FOR RENDITION -> TO ASSET "brc_poster"
-                URL srcURL = new URL(src);
-                InputStream ris = srcURL.openStream();
+                
+                InputStream ris = getRenditionInputStream(_host, _port, hasProxy, src);
                 //Map<String,Object> rendition_map = new HashMap<String,Object>();
                 newAsset.addRendition(Constants.BRC_POSTER_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
             } else {
@@ -870,8 +889,9 @@ public class ServiceUtil {
                 JSONObject images_poster_obj = objObject.getJSONObject(Constants.THUMBNAIL);
                 String src = images_poster_obj.getString(Constants.SRC);
                 //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
-
-                InputStream ris = new URL(src).openStream();
+                InputStream ris;
+				
+                ris = getRenditionInputStream(_host, _port, hasProxy, src);
                 //Map<String,Object> rendition_map = new HashMap<String,Object>();
                 newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
             } else {
@@ -883,6 +903,24 @@ public class ServiceUtil {
             LOGGER.error("Failure to initialize remote source for {0}", newAsset.getPath(), e);
         }
     }
+
+	private InputStream getRenditionInputStream(String _host, int _port, boolean hasProxy, String src)
+			throws MalformedURLException, IOException {
+		InputStream ris = null;
+		URL srcURL = new URL(src);
+		
+		if (hasProxy) {
+			HttpURLConnection connection;
+			Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(_host, _port));
+		    connection = proxy!=null ? (HttpsURLConnection) srcURL.openConnection(proxy) : (HttpURLConnection) srcURL.openConnection();
+		    ris = connection.getInputStream();
+		    
+		} else {
+			ris = srcURL.openStream();
+		}
+		
+		return ris;
+	}
     private void setSchedule(JSONObject objObject, ModifiableValueMap assetmap){
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
@@ -1018,13 +1056,6 @@ public class ServiceUtil {
                 map.put(TagConstants.PN_TAGS, tags.toArray());
 
                 for (String x : fields) {
-
-                    //ADAPT NAME OF METADATA COMPING IN -> AEM PROPERTIES TO BE STORED
-                    if (!innerObj.has(x)) {
-                        LOGGER.trace("##HAS KEY BUT OBJECT IT LEADS TO IS NULL!");
-                        LOGGER.trace("## HAS OBJECT WITH KEY : " + x +" ? "+innerObj.has(x) + " isnull? : "+ (innerObj.get(x)==null));
-                        break;
-                    }
 
                     // set the sync time
                     map.put(Constants.BRC_LASTSYNC, com.coresecure.brightcove.wrapper.utils.JcrUtil.now2calendar());
