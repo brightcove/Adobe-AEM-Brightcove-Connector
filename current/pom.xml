@@ -52,6 +52,8 @@
         <aem.sdk.api>2021.4.5181.20210416T172032Z-210325</aem.sdk.api>
         <aemanalyser.version>0.9.2</aemanalyser.version>
         <componentGroupName>Brightcove Connector</componentGroupName>
+        <!-- AEM Core Components Version -->
+        <core.wcm.components.version>2.27.0</core.wcm.components.version>
     </properties>
 
     <build>
@@ -564,6 +566,12 @@ Bundle-DocURL:
         <dependencies>
             <dependency>
                 <groupId>com.adobe.aem</groupId>
+                <artifactId>uber-jar</artifactId>
+                <version>6.5.22</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.adobe.aem</groupId>
                 <artifactId>aem-sdk-api</artifactId>
                 <version>${aem.sdk.api}</version>
                 <scope>provided</scope>
@@ -620,6 +628,35 @@ Bundle-DocURL:
                 <artifactId>slf4j-test</artifactId>
                 <version>1.0.1</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.adobe.cq.commerce</groupId>
+                <artifactId>cq-commerce-core</artifactId>
+                <version>5.13.18</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.day.cq</groupId>
+                <artifactId>cq-personalization</artifactId>
+                <version>5.6.8</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.adobe.cq</groupId>
+                <artifactId>core.wcm.components.core</artifactId>
+                <version>${core.wcm.components.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.adobe.cq</groupId>
+                <artifactId>core.wcm.components.content</artifactId>
+                <type>zip</type>
+                <version>${core.wcm.components.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.adobe.cq</groupId>
+                <artifactId>core.wcm.components.config</artifactId>
+                <type>zip</type>
+                <version>${core.wcm.components.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

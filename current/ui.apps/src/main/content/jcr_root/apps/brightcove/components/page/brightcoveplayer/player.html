@@ -1,71 +1,21 @@
-<!--
- Adobe AEM Brightcove Connector
+<sly data-sly-use.clientLib="${'/libs/granite/sightly/templates/clientlib.html'}" 
+ data-sly-use.playerConfig="${'com.coresecure.brightcove.wrapper.models.VideoPlayerConfiguration'}">
 
- Copyright (C) 2018 Coresecure Inc.
+ <script src="/libs/cq/ui/resources/cq-ui.js" type="text/javascript"></script>
 
- Authors:
-   Alessandro Bonfatti
-   Yan Kisen
-   Pablo Kropilnicki
-
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
- - Additional permission under GNU GPL version 3 section 7
- If you modify this Program, or any covered work, by linking or combining
- it with httpclient 4.1.3, httpcore 4.1.4, httpmine 4.1.3, jsoup 1.7.2,
- squeakysand-commons and squeakysand-osgi (or a modified version of those
- libraries), containing parts covered by the terms of APACHE LICENSE 2.0
- or MIT License, the licensors of this Program grant you additional
- permission to convey the resulting work.
--->
-<sly data-sly-use.playerConfig="${'com.coresecure.brightcove.wrapper.models.VideoPlayerConfiguration'}">
-<!DOCTYPE html>
-    <html lang="en">
-
-
-    <head>
-        <title>${playerConfig.title} | Brightcove Player</title>
-
-        <meta http-equiv="Content-Type" content="text/html; utf-8"/>
-
-        <!--/* Include the site client libraries (loading only the CSS in the header, JS will be loaded in the footer) */-->
-        <sly data-sly-use.clientLib="/libs/granite/sightly/templates/clientlib.html" data-sly-call="${clientLib.css @ categories='cq.wcm.edit'}" data-sly-unwrap/>
-        <sly data-sly-use.clientLib="/libs/granite/sightly/templates/clientlib.html" data-sly-call="${clientLib.js @ categories='cq.wcm.edit'}" data-sly-unwrap/>
-
-        <!--/* Initializes the Experience Manager authoring UI */-->
-
-        <script src="/libs/cq/ui/resources/cq-ui.js" type="text/javascript"></script>
-        <script type="text/javascript">
-                CQ.WCM.launchSidekick("${currentPage.path @context='uri'}", {
-                    propsDialog: "${playerConfig.dialogPath @context='uri'}",
-                    locked: ${currentPage.locked @context='unsafe'}
-                });
-        </script>
-
-        <style type="text/css">
+       <style type="text/css">
+            #header {
+            	display: none;
+            }
             .edit-box {
                 width: 75%;
             }
+            
         </style>
 
-    </head>
+<h1>Brightcove Player Config | &quot;${playerConfig.title}&quot;</h1>
 
-
-    <body>
-    <h1>Brightcove Player Config | &quot;${playerConfig.title}&quot;</h1>
-
-    <div class="definition-container">
+<div class="definition-container">
         <p>${playerConfig.playerDescription}</p>
     </div>
 
@@ -138,6 +88,4 @@
                 </sly>
     </div>
 
-    </body>
-</html>
 </sly>

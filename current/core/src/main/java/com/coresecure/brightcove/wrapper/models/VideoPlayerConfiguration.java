@@ -1,6 +1,5 @@
 package com.coresecure.brightcove.wrapper.models;
 
-import com.adobe.granite.license.ProductInfo;
 import com.adobe.granite.license.ProductInfoService;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.day.cq.wcm.api.Page;
@@ -18,14 +17,10 @@ import org.apache.sling.models.annotations.injectorspecific.ScriptVariable;
 import org.apache.sling.models.annotations.injectorspecific.Self;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.day.cq.wcm.api.components.EditContext;
-
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.jcr.Node;
 import org.apache.jackrabbit.util.Text;
-import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 
 @Model(
         adaptables=SlingHttpServletRequest.class
@@ -57,10 +52,6 @@ public class VideoPlayerConfiguration
     @ScriptVariable
     private ComponentContext componentContext;
 
-
-    @ScriptVariable
-    private EditContext editContext;
-
     @ScriptVariable
     private Resource resource;
 
@@ -73,7 +64,6 @@ public class VideoPlayerConfiguration
     VideoPlayer videoPlayer;
 
     //    Had to add
-    String dialogPath = "";
     String description = "";
     String segmentPath = "";
     String title = "";
@@ -98,8 +88,6 @@ public class VideoPlayerConfiguration
         return properties.get("inlineCSS", String.class);
     }
 
-    public String getDialogPath() {return dialogPath;}
-
     public VideoPlayer getVideoPlayer() {
         return videoPlayer;
     }
@@ -118,14 +106,8 @@ public class VideoPlayerConfiguration
             this.segmentPath = Text.getRelativeParent(resource.getPath(), 1);
             this.title = properties.get("jcr:title", Text.getName(segmentPath));
             this.description = properties.get("jcr:description", "");
-            this.dialogPath = "";
 
             ValueMap playerProperties = currentPage.getProperties();
-
-            if (editContext != null && editContext.getComponent() != null)
-            {
-                dialogPath = editContext.getComponent().getDialogPath();
-            }
         }
         catch (Exception e)
         {

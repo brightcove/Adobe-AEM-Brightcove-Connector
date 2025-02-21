@@ -70,6 +70,11 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.HttpsURLConnection;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.Proxy;
 
 public class ServiceUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUtil.class);
@@ -851,15 +856,29 @@ public class ServiceUtil {
             LOGGER.error(e.getClass().getName(),e);
         }
     }
-
+    
     private void setImages(JSONObject objObject, Asset newAsset) {
         try {
+            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+            ConfigurationService brcService = cg.getConfigurationService(account_id);
+            String proxy_address = brcService.getProxy();
+            
+            String _host = "";
+            int _port =  0;
+            boolean hasProxy = false;
+            if(!proxy_address.isEmpty() && proxy_address.contains(":"))
+            {
+                _host = proxy_address.split(":")[0];
+                _port =  Integer.parseInt(proxy_address.split(":")[1]);
+                hasProxy = true;
+            }
+            
             if (objObject.has(Constants.POSTER)) {
                 JSONObject images_poster_obj = objObject.getJSONObject(Constants.POSTER);
                 String src = images_poster_obj.getString(Constants.SRC);
                 //DO GET FOR RENDITION -> TO ASSET "brc_poster"
-                URL srcURL = new URL(src);
-                InputStream ris = srcURL.openStream();
+                
+                InputStream ris = getRenditionInputStream(_host, _port, hasProxy, src);
                 //Map<String,Object> rendition_map = new HashMap<String,Object>();
                 newAsset.addRendition(Constants.BRC_POSTER_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
             } else {
@@ -870,14 +889,13 @@ public class ServiceUtil {
                 JSONObject images_poster_obj = objObject.getJSONObject(Constants.THUMBNAIL);
                 String src = images_poster_obj.getString(Constants.SRC);
                 //DO GET FOR RENDITION -> TO ASSET "brc_thumbnail"
-
-                InputStream ris = new URL(src).openStream();
+                InputStream ris;
+                
+                ris = getRenditionInputStream(_host, _port, hasProxy, src);
                 //Map<String,Object> rendition_map = new HashMap<String,Object>();
                 newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
             } else {
-            	if (newAsset.getRendition(Constants.BRC_THUMBNAIL_PNG) != null) {
-            		newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
-            	}
+                newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
             }
         }
         catch (Exception e)
@@ -885,6 +903,25 @@ public class ServiceUtil {
             LOGGER.error("Failure to initialize remote source for {0}", newAsset.getPath(), e);
         }
     }
+    
+    private InputStream getRenditionInputStream(String _host, int _port, boolean hasProxy, String src)
+            throws MalformedURLException, IOException {
+        InputStream ris = null;
+        URL srcURL = new URL(src);
+        
+        if (hasProxy) {
+            HttpURLConnection connection;
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(_host, _port));
+            connection = proxy!=null ? (HttpsURLConnection) srcURL.openConnection(proxy) : (HttpURLConnection) srcURL.openConnection();
+            ris = connection.getInputStream();
+            
+        } else {
+            ris = srcURL.openStream();
+        }
+        
+        return ris;
+    }
+    
     private void setSchedule(JSONObject objObject, ModifiableValueMap assetmap){
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);

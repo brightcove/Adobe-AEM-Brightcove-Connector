@@ -29,59 +29,69 @@
  or MIT License, the licensors of this Program grant you additional
  permission to convey the resulting work.
 */
-(function (document, $) {
-    "use strict";
 
-    var ACCOUNT = "./account", PLAYERID = "./playerID";
+document.addEventListener("DOMContentLoaded", function() {
 
+	const account = document.querySelector("[name='./account']");
+	const playerID = document.querySelector("[name='./playerID']");
 
-    $(document).on("dialog-ready", function() {
-        init();
-    });
-    $(window).load(function () {
-        init();
-    });
-    function init() {
-        var account = $("[name='" + ACCOUNT +"']").closest(".coral-Select")
-        var playerID = new CUI.Select({
-            element: $("[name='" + PLAYERID +"']").closest(".coral-Select")
-        });
-        if(_.isEmpty(playerID) || _.isEmpty(account)){
-            return;
-        }
-        function fillPlayers(selectedAccount, selectedPlayer){
-            playerID = new CUI.Select({
-                element: $("[name='" + PLAYERID +"']").closest(".coral-Select")
-            });
-            $("[role='option']",playerID._selectList).remove();
+	if (!(playerID) || !(account)) {
+		return;
+	}
 
-            var x = $("[name='./playerID']").closest(".coral-Select").find('option').remove().end();
-            $.getJSON("/bin/brightcove/api?a=players&account_id="+selectedAccount).done(function(data){
-                _.each(data.items, function(value, id) {
-                    var test2 = $("[name='./playerID']")[0];
-                    $("<option "+(selectedPlayer === value.id ? "selected" : "")+" >").appendTo(test2).val(value.id).html(value.name);
-                    $("<li class='coral-SelectList-item coral-SelectList-item--option' data-value='"+value.id+"' aria-selected='"+(selectedPlayer === value.id)+"' role='option'>"+value.name+"</li>").appendTo(playerID._selectList);
-                });
-                if(!_.isEmpty(selectedPlayer)){
+	async function fillPlayers(selectedAccount, selectedPlayer, savedValue) {
+		try {
 
-                    playerID.setValue(selectedPlayer);
+			const response = await fetch("/bin/brightcove/api?a=players&account_id=" + selectedAccount);
+			if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-                }
-            });
+			const options = await response.json();
 
+			const responseData = (typeof options === 'string' ? JSON.parse(options) : options);
 
+			var playersList = [];
+			var allPlayerOptions = playerID.getElementsByTagName('coral-select-item');
 
-        }
-        account.on('selected.select', function(event){
-            console.log(event);
-            fillPlayers(event.selected);
-        });
-        var $form = playerID.$element.closest("form");
-        $.getJSON($form.attr("action") + ".json").done(function(data){
-            if(_.isEmpty(data)){
-                return;
-            }
-            fillPlayers($("[name='" + ACCOUNT +"']").val(),data.playerID);
-        });
-    }
-})(document, Granite.$);
+			for (var i = 0; i < allPlayerOptions.length; i++) {
+				playersList[i] = allPlayerOptions[i].value;
+			}
+
+			for (const key in responseData) {
+				if (responseData.hasOwnProperty(key)) {
+					for (const item in responseData[key]) {
+						if ($.inArray(responseData[key][item].id, playersList) == -1) {
+							let optionElement = new Coral.Select.Item();
+							optionElement.value = responseData[key][item].id;
+							optionElement.textContent = responseData[key][item].name;
+							selectedPlayer.appendChild(optionElement);
+						}
+					}
+				}
+			}
+			if (savedValue) {
+				selectedPlayer.value = savedValue;
+			}
+		} catch (error) {
+			console.error("Error fetching data for", selectedPlayer.name, error);
+		}
+	}
+
+	account.addEventListener("change", function() {
+		const selectedValue = account.value;
+
+		if (selectedValue) {
+			fillPlayers(selectedValue, playerID, "");
+		}
+	});
+
+	var $form = document.querySelector("form");
+	$.getJSON($form.getAttribute("action") + ".json").done(function(data) {
+		if (!(data)) {
+			return;
+		}
+
+		var accountSelected = document.querySelector('[name="./account"]').value;
+		const savedValue = data.playerID;
+		fillPlayers(accountSelected, playerID, savedValue);
+	});
+});
