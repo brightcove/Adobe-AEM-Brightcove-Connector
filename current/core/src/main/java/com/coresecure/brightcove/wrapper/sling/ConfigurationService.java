@@ -69,5 +69,7 @@ public interface ConfigurationService {
     String getProxy();
 
     String getIngestProfile();
+    
+    String getTagInclude();
 
 }

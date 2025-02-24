@@ -1,14 +1,20 @@
 package com.coresecure.brightcove.wrapper.api;
 
 import com.coresecure.brightcove.wrapper.objects.*;
+import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
+import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
+import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.commons.json.io.JSONWriter;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +36,7 @@ public class CmsAPI {
     private static final int DEFAULT_LIMIT = 20;
     private static final int DEFAULT_OFFSET = 0;
     private static final String DEFAULT_ENCODING = "UTF-8";
+    
 
     //    CMS
     public CmsAPI(Account aAccount){ LOGGER.debug("CmsAPI Init aAccount {}" , aAccount.getAccount_ID()); account= aAccount;}
@@ -492,10 +499,9 @@ public class CmsAPI {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/counts/videos";
+            String tagParam = getTagParam(dam_only);
             try {
-                //String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
-                String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" :
-                "") + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
+            	String urlParameters = "q=" + tagParam + (q != null && !q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING):"");
                 json = getJSONObjectResponse(targetURL, urlParameters, headers);
             }
             catch (UnsupportedEncodingException e)
@@ -618,12 +624,13 @@ public class CmsAPI {
         LOGGER.debug("account: {}" , account.getAccount_ID());
         TokenObj authToken = account.getLoginToken();
         LOGGER.debug("authToken: {}" , authToken.getToken());
+        String tagParam = getTagParam(dam_only);
         try {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
             // String urlParameters = "q=%2Bstate:ACTIVE" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "")
-            String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
+            String urlParameters = "q=" + tagParam + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -643,6 +650,35 @@ public class CmsAPI {
         }
         return json;
     }
+
+    // Fetching configured Tag from configuration & adding to query parameter
+	private String getTagParam(boolean damOnlyFlag) {
+		ConfigurationGrabber configGrabber = ServiceUtil.getConfigurationGrabber();
+        ConfigurationService configService = configGrabber.getConfigurationService(account.getAccount_ID());
+        String configuredTag = configService.getTagInclude();
+        String includeTag = StringUtils.isNotBlank(configuredTag) ? ("tags:" + configuredTag) : StringUtils.EMPTY;
+        String tagParam = StringUtils.isNotBlank(includeTag) ? (includeTag + (damOnlyFlag ? "&%20%2Dtags:AEM_NO_DAM" : "")) : (damOnlyFlag ? "%20%2Dtags:AEM_NO_DAM" : "");
+		return tagParam;
+	}
+    
+    public JSONArray getVideosInFolder(String folder, int offset) {
+        JSONArray json = new JSONArray();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" + folder + "/videos";
+            String tagParam = getTagParam(true);
+            try {
+            	String urlParameters = "q=" + tagParam + "&limit=100&offset=" + offset;
+                json = getJSONArrayResponse(targetURL, urlParameters, headers);
+            } catch (Exception e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+    
     //GET VIDEO OVERLOADS
     public JSONArray getVideos() {
         return getVideos(Constants.EMPTY_Q_PARAM);
@@ -731,23 +767,6 @@ public class CmsAPI {
                 String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&sort=" + sort;
                 json = getExperiencesJSONObjectResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            }
-        }
-        return json;
-    }
-
-    public JSONArray getVideosInFolder(String folder, int offset) {
-        JSONArray json = new JSONArray();
-        TokenObj authToken = account.getLoginToken();
-        if (authToken != null) {
-            Map<String, String> headers = new HashMap<String, String>();
-            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
-            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/" + folder + "/videos";
-            try {
-            	String urlParameters = "limit=100&offset=" + offset;
-                json = getJSONArrayResponse(targetURL, urlParameters, headers);
-            } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
