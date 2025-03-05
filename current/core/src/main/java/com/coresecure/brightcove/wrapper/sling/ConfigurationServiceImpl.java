@@ -43,6 +43,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -93,13 +94,16 @@ public class ConfigurationServiceImpl implements ConfigurationService {
 
 		@AttributeDefinition(name = "Default Ingest Profile", description = "Default ingestion profile to use for videos.")
 		String defaultIngestProfile() default "";
+		
+		@AttributeDefinition(name = "Default Include Tag", description = "Default Tag for inclusion.")
+		String defaultTagInclude() default "";
 	}
 
     private static Logger loggerVar = LoggerFactory.getLogger(ConfigurationService.class);
     private static final String ALGO = "AES";
     private Config config;
 
-    @Activate
+	@Activate
     @Modified
     void activate(final Config config) {
         loggerVar.info("activate");
@@ -183,7 +187,10 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     public String getIngestProfile() {
         return this.config.defaultIngestProfile();
     }
-
+    
+	public String getTagInclude() {
+		return this.config.defaultTagInclude();
+	}
 
     private String[] cleanStringArray(String[] input) {
         String[] result = input;
@@ -203,4 +210,5 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         Path path = Paths.get(filePathString);
         return Files.exists(path);
     }
+
 }
