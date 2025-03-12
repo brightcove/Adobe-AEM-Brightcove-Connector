@@ -18,7 +18,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.coresecure</groupId>
+        <!--groupId>com.coresecure</groupId-->
+        <groupId>io.github.abhiforgit</groupId>
         <artifactId>brightcove</artifactId>
         <version>6.1.11</version>
         <relativePath>../pom.xml</relativePath>

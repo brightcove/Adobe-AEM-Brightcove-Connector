@@ -18,7 +18,8 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.coresecure</groupId>
+    <!--groupId>com.coresecure</groupId-->
+    <groupId>io.github.abhiforgit</groupId>
     <artifactId>brightcove</artifactId>
     <packaging>pom</packaging>
     <version>6.1.11</version>
@@ -55,6 +56,41 @@
         <!-- AEM Core Components Version -->
         <core.wcm.components.version>2.27.0</core.wcm.components.version>
     </properties>
+	
+	<developers>
+	  <developer>
+	    <id>abhi</id>
+	    <name>abhiforgit</name>
+	    <email>abhishek.anand@3sharecorp.com</email>
+	  </developer>
+	</developers>
+	
+	<licenses>
+	  <license>
+	    <name>The Apache License, Version 2.0</name>
+	    <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+	    <distribution>repo</distribution>
+	  </license>
+	</licenses>
+	
+	<url>https://github.com/brightcove/Adobe-AEM-Brightcove-Connector</url>
+	
+	<scm>
+	  <connection>scm:git:git://github.com/brightcove/Adobe-AEM-Brightcove-Connector.git</connection>
+	  <developerConnection>scm:git:ssh://github.com:brightcove/Adobe-AEM-Brightcove-Connector.git</developerConnection>
+	  <url>https://github.com/brightcove/Adobe-AEM-Brightcove-Connector/tree/release/6.1.11-cloud</url>	  
+	</scm>
+
+	<!--distributionManagement>
+		<snapshotRepository>
+		    <id>ossrh</id>
+		    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+		    <id>ossrh</id>
+		    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement-->
 
     <build>
         <plugins>
@@ -76,6 +112,14 @@
                 <artifactId>maven-source-plugin</artifactId>
                 <version>3.0.1</version>
                 <inherited>true</inherited>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- Maven Enforcer Plugin -->
             <plugin>
@@ -110,6 +154,60 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+	            <artifactId>central-publishing-maven-plugin</artifactId>
+	            <version>0.7.0</version>
+	            <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <keyname>0x881A36EB</keyname>
+                            <passphraseServerId>0x881A36EB</passphraseServerId>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
+                    </execution>
+                </executions>
+		    </plugin>
+		    <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-javadoc-plugin</artifactId>
+	            <version>3.4.0</version>
+	            <configuration>
+                    <!--additionalparam>-Xdoclint:none</additionalparam-->
+                    <failOnError>false</failOnError>
+                </configuration>
+	            <executions>
+                    <execution>
+                        <goals>
+                            <goal>javadoc</goal>
+                        </goals>
+                    </execution>
+	                <execution>
+                        <id>attach-javadocs</id>
+	                    <goals>
+	                        <goal>jar</goal>
+	                    </goals>
+	                </execution>
+	            </executions>
+	        </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -576,20 +674,6 @@ Bundle-DocURL:
                 <version>${aem.sdk.api}</version>
                 <scope>provided</scope>
             </dependency>
-
-            <!-- <dependency>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>org.apache.felix.scr</artifactId>
-                <version>1.6.0</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>org.apache.felix.scr.annotations</artifactId>
-                <version>1.9.6</version>
-                <scope>provided</scope>
-            </dependency> -->
-
 
             <!-- Testing -->
             <dependency>

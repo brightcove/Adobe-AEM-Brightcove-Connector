@@ -21,7 +21,8 @@
     <!-- P A R E N T  P R O J E C T  D E S C R I P T I O N                      -->
     <!-- ====================================================================== -->
     <parent>
-        <groupId>com.coresecure</groupId>
+        <!--groupId>com.coresecure</groupId-->
+        <groupId>io.github.abhiforgit</groupId>
         <artifactId>brightcove</artifactId>
         <version>6.1.11</version>
         <relativePath>../pom.xml</relativePath>
@@ -56,7 +57,8 @@
                     <packageType>application</packageType>
                     <repositoryStructurePackages>
                         <repositoryStructurePackage>
-                            <groupId>com.coresecure</groupId>
+                            <!--groupId>com.coresecure</groupId-->
+                            <groupId>io.github.abhiforgit</groupId>
                             <artifactId>brightcove.ui.apps.structure</artifactId>
                         </repositoryStructurePackage>
                     </repositoryStructurePackages>
@@ -106,14 +108,16 @@
     <!-- ====================================================================== -->
     <dependencies>
         <dependency>
-            <groupId>com.coresecure</groupId>
+            <!--groupId>com.coresecure</groupId-->
+            <groupId>io.github.abhiforgit</groupId>
             <artifactId>brightcove.core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
 
         <dependency>
-            <groupId>com.coresecure</groupId>
+            <!--groupId>com.coresecure</groupId-->
+            <groupId>io.github.abhiforgit</groupId>
             <artifactId>brightcove.ui.apps.structure</artifactId>
             <version>${project.version}</version>
             <type>zip</type>
