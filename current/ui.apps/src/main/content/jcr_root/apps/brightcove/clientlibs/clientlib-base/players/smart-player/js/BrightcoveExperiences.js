@@ -45,7 +45,7 @@ function onPlayerLoaded(id) {
     // newLog();
 //  log("EVENT: onPlayerLoaded");
     try {
-        experienceID = id;
+        var experienceID = id;
 
         BCLplayer = brightcove.getExperience(id);
         if(BCLplayer)
