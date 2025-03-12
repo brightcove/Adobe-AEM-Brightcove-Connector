@@ -55,11 +55,11 @@ function createPlayers() {
         s.src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
         s.onload = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
             return function() {
-                playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls width=\"' + dataWidth + '\" height=\"' + dataHeight + '\"></video>';
+                var playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls width=\"' + dataWidth + '\" height=\"' + dataHeight + '\"></video>';
                 selected_element.innerHTML = playerHTML;
                 bc(document.getElementById(playerID));
                 videojs(playerID).ready(function () {
-                    myPlayer = this;
+                    var myPlayer = this;
                     if (typeof myPlayer !== "undefined" && typeof ga != "undefined") {
                         myPlayer.on("firstplay", function () {
                             var videoName = myPlayer.mediainfo.name;
