@@ -31,9 +31,9 @@
 
 //setVideoTrackingEvents();
 
-function r(f){/in/.test(document.readyState)?setTimeout('r('+f+')',9):f()}
+function tryPlayers(f){/in/.test(document.readyState)?setTimeout('tryPlayers('+f+')',9):f()}
 // use like
-r(function(){
+tryPlayers(function(){
     createPlayers();
 });
 function createPlayers() {
