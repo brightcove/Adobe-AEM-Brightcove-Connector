@@ -570,12 +570,12 @@ Bundle-DocURL:
                 <version>6.5.22</version>
                 <scope>provided</scope>
             </dependency>
-            <!-- <dependency>
+            <dependency>
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>aem-sdk-api</artifactId>
                 <version>${aem.sdk.api}</version>
                 <scope>provided</scope>
-            </dependency> -->
+            </dependency>
 
             <!-- OSGi APIs & annotations (compile-time only, provided at runtime by AEM) -->
             <dependency>
