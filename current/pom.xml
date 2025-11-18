@@ -21,7 +21,7 @@
     <groupId>com.coresecure</groupId>
     <artifactId>brightcove</artifactId>
     <packaging>pom</packaging>
-    <version>6.1.11</version>
+    <version>7.0.0</version>
     <description>Brightcove Connector</description>
 
     <modules>
@@ -570,10 +570,56 @@ Bundle-DocURL:
                 <version>6.5.22</version>
                 <scope>provided</scope>
             </dependency>
-            <dependency>
+            <!-- <dependency>
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>aem-sdk-api</artifactId>
                 <version>${aem.sdk.api}</version>
+                <scope>provided</scope>
+            </dependency> -->
+
+            <!-- OSGi APIs & annotations (compile-time only, provided at runtime by AEM) -->
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>osgi.core</artifactId>
+                <version>6.0.0</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.component.annotations</artifactId>
+                <version>1.4.0</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.metatype.annotations</artifactId>
+                <version>1.4.0</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- DS API + property types (includes org.osgi.service.component.propertytypes.*) -->
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.component</artifactId>
+                <version>1.4.0</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Package versioning: @Version -->
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.annotation.versioning</artifactId>
+                <version>1.1.2</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Bundle metadata: @Export -->
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.annotation.bundle</artifactId>
+                <version>2.0.0</version>
                 <scope>provided</scope>
             </dependency>
 

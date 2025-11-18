@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>6.1.11</version>
+        <version>7.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -99,7 +99,41 @@
         </dependency>
         <dependency>
             <groupId>com.adobe.aem</groupId>
+            <artifactId>uber-jar</artifactId>
+        </dependency>
+        <!-- <dependency>
+            <groupId>com.adobe.aem</groupId>
             <artifactId>aem-sdk-api</artifactId>
+        </dependency> -->
+        <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.versioning</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.bundle</artifactId>
         </dependency>
     </dependencies>
 </project>
