@@ -90,14 +90,14 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar,cq-commerce-core-5.
             <artifactId>slf4j-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.adobe.aem</groupId>
-            <artifactId>uber-jar</artifactId>
-        </dependency>
         <!-- <dependency>
             <groupId>com.adobe.aem</groupId>
-            <artifactId>aem-sdk-api</artifactId>
+            <artifactId>uber-jar</artifactId>
         </dependency> -->
+        <dependency>
+            <groupId>com.adobe.aem</groupId>
+            <artifactId>aem-sdk-api</artifactId>
+        </dependency>
         <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
         <dependency>
             <groupId>org.osgi</groupId>

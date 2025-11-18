@@ -123,10 +123,10 @@
             <groupId>com.adobe.aem</groupId>
             <artifactId>uber-jar</artifactId>
         </dependency>
-        <!-- <dependency>
+        <dependency>
             <groupId>com.adobe.aem</groupId>
             <artifactId>aem-sdk-api</artifactId>
-        </dependency> -->
+        </dependency>
         <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
         <dependency>
             <groupId>org.osgi</groupId>
