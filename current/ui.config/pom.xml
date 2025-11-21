@@ -59,10 +59,10 @@
                     </repositoryStructurePackages>
                 </configuration>
             </plugin>
-            <plugin>
+            <!-- <plugin>
                 <groupId>com.day.jcr.vault</groupId>
                 <artifactId>content-package-maven-plugin</artifactId>
-            </plugin>
+            </plugin> -->
         </plugins>
     </build>
 
