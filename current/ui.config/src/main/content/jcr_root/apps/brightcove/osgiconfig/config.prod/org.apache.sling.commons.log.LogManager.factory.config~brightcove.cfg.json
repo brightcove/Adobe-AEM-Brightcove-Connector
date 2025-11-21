@@ -2,7 +2,7 @@
   "org.apache.sling.commons.log.names": [
     "com.coresecure"
   ],
-  "org.apache.sling.commons.log.level": "ERROR",
+  "org.apache.sling.commons.log.level": "Error",
   "org.apache.sling.commons.log.file": "logs/brightcove.log",
   "org.apache.sling.commons.log.additiv": "true"
 }
