@@ -50,7 +50,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <aem.sdk.api>2025.9.22450.20250911T131210Z-250800</aem.sdk.api>
-        <aemanalyser.version>0.9.2</aemanalyser.version>
+        <aemanalyser.version>1.6.12</aemanalyser.version>
         <componentGroupName>Brightcove Connector</componentGroupName>
         <!-- AEM Core Components Version -->
         <core.wcm.components.version>2.27.0</core.wcm.components.version>
