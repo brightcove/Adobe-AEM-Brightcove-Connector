@@ -41,33 +41,34 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	async function fillPlayers(selectedAccount, selectedPlayer, savedValue) {
 		try {
+			// Clear existing options & value first
+			selectedPlayer.value = "";
+			const existing = selectedPlayer.querySelectorAll("coral-select-item");
+			existing.forEach(item => item.remove());
 
-			const response = await fetch("/bin/brightcove/api?a=players&account_id=" + selectedAccount);
+			// add a placeholder when list/selection is refreshed
+			const placeholder = new Coral.Select.Item();
+			placeholder.value = "";
+			placeholder.textContent = "Select";
+			selectedPlayer.appendChild(placeholder);
+
+			const response = await fetch("/bin/brightcove/api?a=players&account_id=" + encodeURIComponent(selectedAccount));
 			if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
 			const options = await response.json();
-
-			const responseData = (typeof options === 'string' ? JSON.parse(options) : options);
-
-			var playersList = [];
-			var allPlayerOptions = playerID.getElementsByTagName('coral-select-item');
-
-			for (var i = 0; i < allPlayerOptions.length; i++) {
-				playersList[i] = allPlayerOptions[i].value;
-			}
+			const responseData = (typeof options === "string" ? JSON.parse(options) : options);
 
 			for (const key in responseData) {
-				if (responseData.hasOwnProperty(key)) {
+				if (Object.prototype.hasOwnProperty.call(responseData, key)) {
 					for (const item in responseData[key]) {
-						if ($.inArray(responseData[key][item].id, playersList) == -1) {
-							let optionElement = new Coral.Select.Item();
-							optionElement.value = responseData[key][item].id;
-							optionElement.textContent = responseData[key][item].name;
-							selectedPlayer.appendChild(optionElement);
-						}
+						const opt = new Coral.Select.Item();
+						opt.value = responseData[key][item].id;
+						opt.textContent = responseData[key][item].name;
+						selectedPlayer.appendChild(opt);
 					}
 				}
 			}
+
 			if (savedValue) {
 				selectedPlayer.value = savedValue;
 			}
