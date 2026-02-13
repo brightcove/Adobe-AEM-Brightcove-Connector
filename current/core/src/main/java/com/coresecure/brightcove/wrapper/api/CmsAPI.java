@@ -152,6 +152,28 @@ public class CmsAPI {
         }
         return json;
     }
+    
+  //postAPI
+    public JSONObject createFolder(String title) {
+        JSONObject json = new JSONObject();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/folders/";
+            try {
+                String payload = "{ \"name\": \"" + title + "\" }";
+                String response = account.platform.postAPI(targetURL, payload, headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            } catch (JSONException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        LOGGER.trace("createBlankPlaylist: {} Response: {}", title);
+        return json;
+    }
 
     //putAPI
     public JSONObject moveVideoToFolder(String videoId, String folderId) {
@@ -604,6 +626,7 @@ public class CmsAPI {
             String urlParameters = "q=" + (dam_only ? "%20%2Dtags:AEM_NO_DAM" : "") + (!q.isEmpty()  ? Constants.WHITESPACE_FIX+URLEncoder.encode(q, DEFAULT_ENCODING).replace("%253A", ":").replaceAll("%252F", "/"):"") + "&limit=" + limit + "&offset=" + offset + (sort != null ? "&sort=" + sort:"") + (clips_only ? "&is_clip:true":"");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             LOGGER.debug("urlParameters: {}" , urlParameters);
+            LOGGER.debug("dam_only: {}" , dam_only);
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
             if (!response.isEmpty()) {
                 json = JsonReader.readJsonArrayFromString(response);

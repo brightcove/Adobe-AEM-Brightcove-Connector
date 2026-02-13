@@ -51,7 +51,7 @@
                     triggerAction:"all",
                     lazyInit:true,
                     store: {
-                        "url": CQ.shared.HTTP.getContextPath() +'/bin/brightcove/accounts.json',
+                        "url": (CQ.shared.HTTP.getContextPath() || '') +'/bin/brightcove/accounts.json',
                         "reader": new CQ.Ext.data.JsonReader({
                             "root": "accounts",
                             "fields": [
@@ -86,7 +86,7 @@
             "items": {
                 "tpl":
                     '<tpl for=".">' +
-                '<div class="cq-cft-search-item" title="{thumbnailURL}" ondblclick="window.location= CQ.shared.HTTP.getContextPath() +\'/brightcove/admin\';">' +
+                '<div class="cq-cft-search-item" title="{thumbnailURL}" ondblclick="window.location= (CQ.shared.HTTP.getContextPath() || \'\') +\'/brightcove/admin\';">' +
                                     '<div class="cq-cft-search-thumb-top"' +
                                     ' style="background-image:url(\'/etc/designs/cs/brightcove/shared/img/noThumbnailP.png\');"></div>' +
                                          '<div class="cq-cft-search-text-wrapper">' +
@@ -101,7 +101,7 @@
                 CQ.wcm.ContentFinderTab.REFRESH_BUTTON
             ]
         },{
-            "url": "/bin/brightcove/api.json?a=local_players"
+            "url": (CQ.shared.HTTP.getContextPath() || '') +"/bin/brightcove/api.json?a=local_players"
         },{
             "autoLoad":false,
             "reader": new CQ.Ext.data.JsonReader({

@@ -56,7 +56,7 @@
             $("[role='option']",playerID._selectList).remove();
 
             var x = $("[name='./playerID']").closest(".coral-Select").find('option').remove().end();
-            $.getJSON("/bin/brightcove/api?a=players&account_id="+selectedAccount).done(function(data){
+            $.getJSON(Granite.HTTP.externalize("/bin/brightcove/api?a=players&account_id="+selectedAccount)).done(function(data){
                 _.each(data.items, function(value, id) {
                     var test2 = $("[name='./playerID']")[0];
                     $("<option "+(selectedPlayer === value.id ? "selected" : "")+" >").appendTo(test2).val(value.id).html(value.name);

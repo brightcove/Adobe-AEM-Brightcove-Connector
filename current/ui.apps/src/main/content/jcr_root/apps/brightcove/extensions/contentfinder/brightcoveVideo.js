@@ -44,7 +44,7 @@
        CQ.wcm.ContentFinderTab.getQueryBoxConfig({
             "id": "cfTab-Brightcove-QueryBox",
             "items": [
-                CQ.wcm.ContentFinderTab.getSuggestFieldConfig({"url":  CQ.shared.HTTP.getContextPath() +"/bin/brightcove/suggestions.json?type=videos"}),
+                CQ.wcm.ContentFinderTab.getSuggestFieldConfig({"url":  (CQ.shared.HTTP.getContextPath() || '') +"/bin/brightcove/suggestions.json?type=videos"}),
                 {
                         xtype: "spacer",
                         height: 5
@@ -55,7 +55,7 @@
                     name:"account_id",
                     triggerAction:"all",
                     store: {
-                        "url": CQ.shared.HTTP.getContextPath() +'/bin/brightcove/accounts.json',
+                        "url": (CQ.shared.HTTP.getContextPath() || '') +'/bin/brightcove/accounts.json',
                         "reader": new CQ.Ext.data.JsonReader({
                             "root": "accounts",
                             "fields": [
@@ -90,7 +90,7 @@
             "items": {
                 "tpl":
                     '<tpl for=".">' +
-                '<div class="cq-cft-search-item" title="{thumbnailURL}" ondblclick="window.location= CQ.shared.HTTP.getContextPath() +\'/brightcove/admin\';">' +
+                '<div class="cq-cft-search-item" title="{thumbnailURL}" ondblclick="window.location= (CQ.shared.HTTP.getContextPath() || \'\') +\'/brightcove/admin\';">' +
                                     '<div class="cq-cft-search-thumb-top"' +
                                     ' style="background-image:url(\'{thumbnailURL}\');"></div>' +
                                          '<div class="cq-cft-search-text-wrapper">' +
@@ -106,14 +106,14 @@
                 {
                     text: "Export CSV",
                     handler: function() {
-                        var url= CQ.shared.HTTP.getContextPath() +'/bin/brightcove/api?a=3&query='+$("#cfTab-Brightcove-QueryBox input[name=query]").val();  
+                        var url= (CQ.shared.HTTP.getContextPath() || '') +'/bin/brightcove/api?a=3&query='+$("#cfTab-Brightcove-QueryBox input[name=query]").val();  
                         window.open(url, 'Download');
 
                    }
                 }
             ]
         },{
-            "url": "/bin/brightcove/api?a=list_videos"
+            "url": (CQ.shared.HTTP.getContextPath() || '') +"/bin/brightcove/api?a=list_videos"
         },{
             "autoLoad":false,
             "reader": new CQ.Ext.data.JsonReader({
