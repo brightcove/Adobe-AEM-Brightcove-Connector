@@ -9,6 +9,54 @@
     const DIALOG_PLAYER_FIELD_SELECTOR = '.brightcove-dialog-player-dropdown';
     const DIALOG_ACCOUNT_FIELD_SELECTOR = '.brightcove-dialog-account-dropdown';
 
+    function setFoundationValue($el, value) {
+        var field = $el.adaptTo("foundation-field");
+        if (field) {
+            field.setValue(value);
+            return true;
+        }
+        return false;
+    }
+
+    function clearVideoAndPlayerSelections(contentSelector, playerSelector) {
+        // Clear stored selections so that later "selected=true" logic doesn't re-select old values
+        existingValues.videoPlayer = null;
+        existingValues.videoPlayerPL = null;
+        existingValues.playerPath = null;
+
+        // Clear UI values
+        // Player (coral select)
+        try {
+            playerSelector.value = "";
+        } catch (e) {}
+        setFoundationValue($(DIALOG_PLAYER_FIELD_SELECTOR), "");
+
+        // Video: autocomplete OR playlist select (depending on component)
+        if ($(DIALOG_PLAYLIST_FIELD_SELECTOR).length > 0) {
+            // playlist component: contentSelector is a coral select
+            try {
+                contentSelector.value = "";
+            } catch (e) {}
+            setFoundationValue($(DIALOG_PLAYLIST_FIELD_SELECTOR), "");
+        } else {
+            // player component: granite autocomplete
+            setFoundationValue($(DIALOG_VIDEO_FIELD_SELECTOR), "");
+
+            // clear the visible text input if foundation-field doesn’t
+            $(DIALOG_VIDEO_FIELD_SELECTOR)
+                .find("input[type='text'], input.coral-InputGroup-input")
+                .val("")
+                .trigger("change");
+        }
+
+        // Force player list to reload for the new account:
+        try {
+            playerSelector.items.clear();
+        } catch (e) {}
+
+        // For playlist select, updateAutocompleteWithAcountId() already does items.clear() so no need to repeat here
+    }
+
     function isBrightcoveDialog() {
         return ( $(DIALOG_ACCOUNT_FIELD_SELECTOR).length > 0 );
     }
@@ -115,6 +163,10 @@
             });
 
             accountSelector.addEventListener("change", function(event) {
+                // 1) Clear the dependent fields immediately so UI doesn’t show stale selection
+                clearVideoAndPlayerSelections(contentSelector, playerSelector);
+
+                // 2) Update video datasource URL / playlist items for the new account
                 updateAutocompleteWithAcountId();
             });
 
