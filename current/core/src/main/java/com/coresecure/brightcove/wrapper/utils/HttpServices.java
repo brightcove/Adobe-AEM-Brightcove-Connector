@@ -61,6 +61,14 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
 import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.CertificateListService;
 
@@ -391,6 +399,7 @@ public class HttpServices {
     public static String executePatch(String targetURL, String payload,
                                       Map<String, String> headers) {
         LOGGER.debug("executePatch - START: " + targetURL);
+        LOGGER.info("executePatch code source: {}", HttpServices.class.getProtectionDomain().getCodeSource().getLocation());
         URL url;
         HttpsURLConnection connection = null;
         String exPatchResponse = null;
@@ -410,8 +419,22 @@ public class HttpServices {
             connection = getSSLConnection(url, targetURL);
 
             connection = (HttpsURLConnection) url.openConnection(PROXY);
+            boolean patchConfigured = false;
+            try {
+                setRequestMethod(connection, "PATCH");
+                patchConfigured = "PATCH".equalsIgnoreCase(connection.getRequestMethod());
+            } catch (Exception e) {
+                LOGGER.warn("executePatch: setRequestMethod(PATCH) failed, fallback strategy engaged: {}", e.getMessage());
+            }
+
+            if (!patchConfigured) {
+                LOGGER.info("executePatch: PATCH unsupported with HttpURLConnection; switching to Apache HttpClient patch");
+                return executePatchUsingApacheHttpClient(targetURL, payload, headers);
+            }
+
+            // PATCH configured using HttpsURLConnection path.
             connection.setRequestProperty("X-HTTP-Method-Override", "PATCH");
-            setRequestMethod(connection, "PATCH");
+            LOGGER.debug("executePatch - request method after set: {}", connection.getRequestMethod());
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
@@ -425,13 +448,29 @@ public class HttpServices {
             wr.write(payload.getBytes("UTF-8"));
             //            wr.writeBytes(payload);
 
+            int responseCode = connection.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            String allowHeader = connection.getHeaderField("Allow");
+            LOGGER.info("executePatch - response code: {} {}; Allow: {}", responseCode, responseMessage, allowHeader);
 
-            if (200 == connection.getResponseCode()) {
+            if (responseCode == 200) {
                 isError = false;
-            } else {
-                LOGGER.debug("getResponseCode: {} {}", connection.getResponseCode(), connection.getResponseMessage());
             }
-            InputStream is = connection.getInputStream();
+
+            InputStream is;
+            if (responseCode >= 400) {
+                is = connection.getErrorStream();
+                LOGGER.error("executePatch - HTTP error body available, response code {}", responseCode);
+            } else {
+                is = connection.getInputStream();
+            }
+
+            if (is == null) {
+                String msg = "executePatch - no response stream available (code=" + responseCode + ")";
+                LOGGER.error(msg);
+                throw new IOException(msg);
+            }
+
             rd = new BufferedReader(new InputStreamReader(is));
             String line;
             StringBuffer response = new StringBuffer();
@@ -442,7 +481,7 @@ public class HttpServices {
 
             exPatchResponse = response.toString();
 
-            LOGGER.debug("exPatchResponse[2]: {}", exPatchResponse);
+            LOGGER.info("executePatch - response body: {}", exPatchResponse);
 
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
@@ -475,10 +514,43 @@ public class HttpServices {
         return exPatchResponse;
     }
 
+    private static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
+        LOGGER.debug("executePatchUsingApacheHttpClient - START: {}", targetURL);
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            HttpPatch patch = new HttpPatch(targetURL.replaceAll(" ", "%20"));
+            patch.setHeader(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
+            for (String key : headers.keySet()) {
+                patch.setHeader(key, headers.get(key));
+            }
+            patch.setEntity(new StringEntity(payload, "UTF-8"));
+
+            try (CloseableHttpResponse response = client.execute(patch)) {
+                int responseCode = response.getStatusLine().getStatusCode();
+                String responseReason = response.getStatusLine().getReasonPhrase();
+                String allowHeader = response.getFirstHeader("Allow") != null ? response.getFirstHeader("Allow").getValue() : null;
+                LOGGER.info("executePatchUsingApacheHttpClient - response code: {} {}; Allow: {}", responseCode, responseReason, allowHeader);
+
+                HttpEntity entity = response.getEntity();
+                String body = entity != null ? EntityUtils.toString(entity, "UTF-8") : "";
+                LOGGER.info("executePatchUsingApacheHttpClient - response body: {}", body);
+
+                if (responseCode >= 400) {
+                    throw new IOException(String.format("executePatchUsingApacheHttpClient HTTP %d: %s", responseCode, responseReason));
+                }
+
+                LOGGER.debug("executePatchUsingApacheHttpClient - END");
+                return body;
+            }
+        }
+    }
+
     private static void setRequestMethod(final HttpURLConnection conn, final String method) {
+        LOGGER.debug("setRequestMethod: trying to set {} on {}", method, conn.getClass().getName());
         try {
             conn.setRequestMethod(method);
+            LOGGER.debug("setRequestMethod: set request method to {} successfully", conn.getRequestMethod());
         } catch (ProtocolException e) {
+            LOGGER.warn("setRequestMethod: ProtocolException setting method {} to {}. will attempt reflection. message={}", method, conn.getClass().getName(), e.getMessage());
             Class<?> c = conn.getClass();
             Field methodField = null;
             Field delegateField = null;
@@ -508,10 +580,11 @@ public class HttpServices {
                     HttpURLConnection delegate = (HttpURLConnection) delegateField.get(conn);
                     setRequestMethod(delegate, method);
                 }
+                LOGGER.debug("setRequestMethod: requested method field set to {} for class {}", method, conn.getClass().getName());
             } catch (Exception exception) {
-                LOGGER.info("Error setting request method to PATCH");
+                LOGGER.warn("Error setting request method to {} by reflection: {}", method, exception.getMessage(), exception);
+                throw new RuntimeException("Unable to set request method to " + method, exception);
             }
-            
         }
     }
 
