@@ -61,11 +61,15 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import java.net.InetSocketAddress;
+
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
@@ -399,7 +403,6 @@ public class HttpServices {
     public static String executePatch(String targetURL, String payload,
                                       Map<String, String> headers) {
         LOGGER.debug("executePatch - START: " + targetURL);
-        LOGGER.info("executePatch code source: {}", HttpServices.class.getProtectionDomain().getCodeSource().getLocation());
         URL url;
         HttpsURLConnection connection = null;
         String exPatchResponse = null;
@@ -516,7 +519,12 @@ public class HttpServices {
 
     private static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
         LOGGER.debug("executePatchUsingApacheHttpClient - START: {}", targetURL);
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
+        HttpClientBuilder builder = HttpClients.custom();
+        if (PROXY != Proxy.NO_PROXY && PROXY.address() instanceof InetSocketAddress) {
+            InetSocketAddress addr = (InetSocketAddress) PROXY.address();
+            builder.setProxy(new HttpHost(addr.getHostName(), addr.getPort()));
+        }
+        try (CloseableHttpClient client = builder.build()) {
             HttpPatch patch = new HttpPatch(targetURL.replaceAll(" ", "%20"));
             patch.setHeader(Constants.CONTENT_TYPE_HEADER, JSONResponse.RESPONSE_CONTENT_TYPE);
             for (String key : headers.keySet()) {
@@ -535,7 +543,7 @@ public class HttpServices {
                 LOGGER.info("executePatchUsingApacheHttpClient - response body: {}", body);
 
                 if (responseCode >= 400) {
-                    throw new IOException(String.format("executePatchUsingApacheHttpClient HTTP %d: %s", responseCode, responseReason));
+                    LOGGER.error("executePatchUsingApacheHttpClient - HTTP error {}: {}", responseCode, responseReason);
                 }
 
                 LOGGER.debug("executePatchUsingApacheHttpClient - END");
