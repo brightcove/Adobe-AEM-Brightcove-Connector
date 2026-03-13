@@ -449,7 +449,7 @@ public class HttpServices {
 
             int responseCode = connection.getResponseCode();
             String responseMessage = connection.getResponseMessage();
-            String allowHeader = connection.getHeaderField("Allow");
+            String allowHeader = connection.getHeaderField(Constants.ALLOW_HEADER);
             LOGGER.info("executePatch - response code: {} {}; Allow: {}", responseCode, responseMessage, allowHeader);
 
             if (responseCode == 200) {
@@ -541,7 +541,7 @@ public class HttpServices {
             try (CloseableHttpResponse response = client.execute(patch)) {
                 int responseCode = response.getStatusLine().getStatusCode();
                 String responseReason = response.getStatusLine().getReasonPhrase();
-                String allowHeader = response.getFirstHeader("Allow") != null ? response.getFirstHeader("Allow").getValue() : null;
+                String allowHeader = response.getFirstHeader(Constants.ALLOW_HEADER) != null ? response.getFirstHeader(Constants.ALLOW_HEADER).getValue() : null;
                 LOGGER.info("executePatchUsingApacheHttpClient - response code: {} {}; Allow: {}", responseCode, responseReason, allowHeader);
 
                 HttpEntity entity = response.getEntity();

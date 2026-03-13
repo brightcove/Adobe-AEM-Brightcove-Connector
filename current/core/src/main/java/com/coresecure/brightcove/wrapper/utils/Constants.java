@@ -159,6 +159,7 @@ public class Constants {
     public static final String REP_ACTIVATION_SUCCESS_TMPL = "BC: ACTIVATION SUCCESSFUL >> {} ";
     public static final String REP_ACTIVATION_FAILED_TMPL = "BC: ACTIVATION FAILED >> {} ";
 
+    public static final String ALLOW_HEADER = "Allow";
     public static final String CONTENT_TYPE_HEADER = "Content-Type";
     public static final String CONTENT_LENGTH_HEADER = "Content-Length";
     public static final String CONTENT_LANGUAGE_HEADER = "Content-Language";
