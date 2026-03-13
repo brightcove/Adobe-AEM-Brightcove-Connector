@@ -269,7 +269,26 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 			LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
 			Node parentNode = assetNode.getParent();
 			String videoId = api_resp.getString(Constants.VIDEOID);
-			
+
+			// Skip folder sync if the asset lives directly in the account root folder.
+			// The account root (e.g. /content/dam/brightcove_assets/{accountId}) has no
+			// brc_folder_id, so without this guard syncFolder would create a spurious
+			// Brightcove folder named after the account ID and move the video into it.
+			ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+			for (String accountId : cg.getAvailableServices()) {
+				ConfigurationService cs = cg.getConfigurationService(accountId);
+				if (cs == null) continue;
+				String integrationPath = cs.getAssetIntegrationPath();
+				String normalized = integrationPath.endsWith("/")
+						? integrationPath.substring(0, integrationPath.length() - 1)
+						: integrationPath;
+				String accountRootPath = normalized + "/" + accountId;
+				if (parentNode.getPath().equals(accountRootPath)) {
+					LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", accountRootPath);
+					return;
+				}
+			}
+
 			if (!parentNode.hasProperty("brc_folder_id")) {
 				String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
 				if (folderId != null && !folderId.isEmpty()) {
