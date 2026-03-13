@@ -58,9 +58,16 @@ public class JcrUtil {
 
     public static BinaryObj getLocalBinary(ResourceResolver resourceResolver, String path, MimeTypeService mType) throws RepositoryException{
 
-        Resource thumbRes = resourceResolver.resolve(path); //RESOLVE TO IMAGE
+        Resource thumbRes = resourceResolver.getResource(path); //RESOLVE TO IMAGE
         //READ THUMBNAIL FROM LOCAL ADDRESS
-        BinaryObj binary = new BinaryObj(JcrUtils.readFile(thumbRes.adaptTo(Node.class)), mType.getMimeType(thumbRes.getName()));
+        if (thumbRes == null) {
+            return new BinaryObj();
+        }
+        Node node = thumbRes.adaptTo(Node.class);
+        if (node == null) {
+            return new BinaryObj();
+        }
+        BinaryObj binary = new BinaryObj(JcrUtils.readFile(node), mType.getMimeType(thumbRes.getName()));
         LOGGER.trace("MIME TYPE COMING IN:\t" + binary.mime_type + " NEW THUMBNAIL RESOURCE: " + path);
         return binary;
     }

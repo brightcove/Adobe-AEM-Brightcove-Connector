@@ -284,10 +284,8 @@ public class HttpServices {
             LOGGER.debug("URL :" + targetURL);
             LOGGER.debug("payload :" + payload);
 
-            connection = getSSLConnection(url, targetURL);
-
             LOGGER.debug("is proxy valid? :" + PROXY.toString());
-            connection = (HttpsURLConnection) url.openConnection(PROXY);
+            connection = getSSLConnection(url, targetURL);
 
             connection.setRequestMethod(DavMethods.METHOD_POST);
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
@@ -420,8 +418,6 @@ public class HttpServices {
             LOGGER.debug("payload :" + payload);
 
             connection = getSSLConnection(url, targetURL);
-
-            connection = (HttpsURLConnection) url.openConnection(PROXY);
             boolean patchConfigured = false;
             try {
                 setRequestMethod(connection, "PATCH");
@@ -523,6 +519,12 @@ public class HttpServices {
         if (PROXY != Proxy.NO_PROXY && PROXY.address() instanceof InetSocketAddress) {
             InetSocketAddress addr = (InetSocketAddress) PROXY.address();
             builder.setProxy(new HttpHost(addr.getHostName(), addr.getPort()));
+        }
+        if (PROXY != Proxy.NO_PROXY) {
+            SSLContext sslContext = getSSlContext(getCertificatePath(targetURL));
+            if (sslContext != null) {
+                builder.setSSLContext(sslContext);
+            }
         }
         try (CloseableHttpClient client = builder.build()) {
             HttpPatch patch = new HttpPatch(targetURL.replaceAll(" ", "%20"));
@@ -689,7 +691,7 @@ public class HttpServices {
      * @return
      * @throws IOException
      */
-    private static HttpsURLConnection getSSLConnection(URL url, String targetURL) throws IOException {
+    public static HttpsURLConnection getSSLConnection(URL url, String targetURL) throws IOException {
         return getSSLConnection(url, targetURL, HttpsURLConnection.class);
     }
 
@@ -700,7 +702,7 @@ public class HttpServices {
 
         try {
 
-            if (classType.getClass().isInstance(HttpsURLConnection.class)) {
+            if (HttpsURLConnection.class.isAssignableFrom(classType) && PROXY != Proxy.NO_PROXY) {
                 CertificateListService certificateListService = getServiceReference();
                 if (null != certificateListService) {
                     String enableCert = certificateListService
@@ -834,7 +836,7 @@ public class HttpServices {
     }
 
     public static boolean isLocalPath(String path) {
-        return path.startsWith("/") && !path.startsWith("//");
+        return path.startsWith("/content/") || path.startsWith("/apps/") || path.startsWith("/libs/");
     }
 
     public static BinaryObj getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException {
