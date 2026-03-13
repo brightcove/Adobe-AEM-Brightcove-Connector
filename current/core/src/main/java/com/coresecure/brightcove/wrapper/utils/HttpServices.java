@@ -520,10 +520,14 @@ public class HttpServices {
             InetSocketAddress addr = (InetSocketAddress) PROXY.address();
             builder.setProxy(new HttpHost(addr.getHostName(), addr.getPort()));
         }
-        if (PROXY != Proxy.NO_PROXY) {
-            SSLContext sslContext = getSSlContext(getCertificatePath(targetURL));
-            if (sslContext != null) {
-                builder.setSSLContext(sslContext);
+        CertificateListService certificateListService = getServiceReference();
+        if (null != certificateListService) {
+            String enableCert = certificateListService.getEnableTrustedCertificate();
+            if (null != enableCert && "YES".equalsIgnoreCase(enableCert)) {
+                SSLContext sslContext = getSSlContext(getCertificatePath(targetURL));
+                if (sslContext != null) {
+                    builder.setSSLContext(sslContext);
+                }
             }
         }
         try (CloseableHttpClient client = builder.build()) {
@@ -702,7 +706,7 @@ public class HttpServices {
 
         try {
 
-            if (HttpsURLConnection.class.isAssignableFrom(classType) && PROXY != Proxy.NO_PROXY) {
+            if (HttpsURLConnection.class.isAssignableFrom(classType)) {
                 CertificateListService certificateListService = getServiceReference();
                 if (null != certificateListService) {
                     String enableCert = certificateListService
