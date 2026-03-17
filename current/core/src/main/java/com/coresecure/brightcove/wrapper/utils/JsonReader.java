@@ -32,24 +32,24 @@
  */
 package com.coresecure.brightcove.wrapper.utils;
 
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 
 public class JsonReader {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private JsonReader(){/* default implementation ignored */};
 
-    public static JSONObject readJsonFromString(String jsonText) throws IOException, JSONException {
-        JSONObject json = new JSONObject(jsonText);
-        return json;
+    public static ObjectNode readJsonFromString(String jsonText) throws IOException {
+        return (ObjectNode) MAPPER.readTree(jsonText);
     }
 
-    public static JSONArray readJsonArrayFromString(String jsonText) throws IOException, JSONException {
-        JSONArray json = new JSONArray(jsonText);
-        return json;
+    public static ArrayNode readJsonArrayFromString(String jsonText) throws IOException {
+        return (ArrayNode) MAPPER.readTree(jsonText);
     }
 
 }

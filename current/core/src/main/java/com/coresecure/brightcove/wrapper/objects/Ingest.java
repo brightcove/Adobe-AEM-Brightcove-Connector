@@ -34,11 +34,11 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,8 +60,8 @@ public class Ingest {
         profile = aProfile;
     }
 
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"profile", "master"});
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{"profile", "master"});
         return json;
     }
 
@@ -69,7 +69,7 @@ public class Ingest {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

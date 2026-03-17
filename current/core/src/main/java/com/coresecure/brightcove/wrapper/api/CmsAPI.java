@@ -8,13 +8,11 @@ import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 
-import org.apache.commons.lang.StringUtils;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
-import org.apache.sling.commons.json.io.JSONWriter;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +41,8 @@ public class CmsAPI {
 
 
     //GET PLAYERS API
-    public JSONObject getPlayers() {
-        JSONObject json = new JSONObject();
+    public ObjectNode getPlayers() {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -55,8 +53,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
 
         }
@@ -64,31 +60,24 @@ public class CmsAPI {
     }
 
     //postDIRequest_API
-    public JSONObject uploadInjest(String videoId, JSONObject payload) {
-        JSONObject json = new JSONObject();
+    public ObjectNode uploadInjest(String videoId, ObjectNode payload) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + Constants.INGEST_REQUEST;
-            try
-            {
-                LOGGER.trace("UploadInjestPayload: {}", payload);
-                String response = account.platform.postDIRequest_API(targetURL, payload.toString(), headers);
-                if (response != null && !response.isEmpty()) json.put(Constants.RESPONSE,response);
-            }
-            catch (JSONException e)
-            {
-                LOGGER.error(e.getClass().getName(), e);
-            }
+            LOGGER.trace("UploadInjestPayload: {}", payload);
+            String response = account.platform.postDIRequest_API(targetURL, payload.toString(), headers);
+            if (response != null && !response.isEmpty()) json.put(Constants.RESPONSE, response);
         }
         return json;
     }
 
     //postDIRequest_API
-    public JSONObject requestIngestURL(String videoId, String profile, String master, boolean getImages) {
-        JSONObject json = new JSONObject();
+    public ObjectNode requestIngestURL(String videoId, String profile, String master, boolean getImages) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -99,20 +88,18 @@ public class CmsAPI {
 
             try {
                 //Support for profile changed as per - 12961
-                JSONObject payload  = new JSONObject();
-                JSONObject master_obj = new JSONObject();
+                ObjectNode payload = JsonNodeFactory.instance.objectNode();
+                ObjectNode master_obj = JsonNodeFactory.instance.objectNode();
                 master_obj.put("url", master);
-                payload.put("master", master_obj);
+                payload.set("master", master_obj);
                 payload.put("capture-images", getImages);
                 if(!TextUtil.isEmpty(profile))
                 {
                     payload.put("profile", profile);
                 }
-                String response = account.platform.postDIRequest_API(targetURL, payload.toString(1), headers);
+                String response = account.platform.postDIRequest_API(targetURL, payload.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -120,19 +107,17 @@ public class CmsAPI {
     }
 
     //postDI_API
-    public JSONObject createIngest(Video aVideo, Ingest aIngest) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createIngest(Video aVideo, Ingest aIngest) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + aVideo.id + Constants.INGEST_REQUEST;
             try {
-                String response = account.platform.postDI_API(targetURL, aIngest.toJSON().toString(1), headers);
+                String response = account.platform.postDI_API(targetURL, aIngest.toJSON().toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -140,8 +125,8 @@ public class CmsAPI {
     }
 
     //getDI_API
-    public JSONObject getIngestURL(String videoId, String filename) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getIngestURL(String videoId, String filename) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -153,16 +138,14 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         return json;
     }
     
     //postAPI
-    public JSONObject createFolder(String title) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createFolder(String title) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -174,8 +157,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createBlankPlaylist: {} Response: {}", title);
@@ -183,8 +164,8 @@ public class CmsAPI {
     }
 
     //putAPI
-    public JSONObject moveVideoToFolder(String videoId, String folderId) {
-        JSONObject json = new JSONObject();
+    public ObjectNode moveVideoToFolder(String videoId, String folderId) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -197,8 +178,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createVideo: {} Response: {}", json);
@@ -206,8 +185,8 @@ public class CmsAPI {
     }
 
     //deleteAPI
-    public JSONObject removeVideoFromFolder(String videoId, String folderId) {
-        JSONObject json = new JSONObject();
+    public ObjectNode removeVideoFromFolder(String videoId, String folderId) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -220,8 +199,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createVideo: {} Response: {}", json);
@@ -229,8 +206,8 @@ public class CmsAPI {
     }
 
     //deleteAPI
-    public JSONObject deletePlaylist(String playlistId) {
-        JSONObject json = new JSONObject();
+    public ObjectNode deletePlaylist(String playlistId) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -243,8 +220,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createVideo: {} Response: {}", json);
@@ -252,8 +227,8 @@ public class CmsAPI {
     }
     
     //postAPI
-    public JSONObject createBlankPlaylist(String title) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createBlankPlaylist(String title) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -265,8 +240,6 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createBlankPlaylist: {} Response: {}", title);
@@ -274,22 +247,19 @@ public class CmsAPI {
     }
 
     //postAPI
-    public JSONObject createVideo(Video aVideo) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createVideo(Video aVideo) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/videos";
             try {
-
-                JSONObject videoObj = aVideo.toJSON();
+                ObjectNode videoObj = aVideo.toJSON();
                 videoObj.remove(Constants.ACCOUNT_ID);
-                String response = account.platform.postAPI(targetURL, aVideo.toJSON().toString(1), headers);
+                String response = account.platform.postAPI(targetURL, videoObj.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -298,8 +268,8 @@ public class CmsAPI {
     }
 
     //PatchAPI
-    public JSONObject updateVideo(Video aVideo) {
-        JSONObject json = new JSONObject();
+    public ObjectNode updateVideo(Video aVideo) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -307,16 +277,14 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH+aVideo.id;
             try {
                 LOGGER.debug("targetURL: {}",targetURL);
-                JSONObject video = aVideo.toJSON();
+                ObjectNode video = aVideo.toJSON();
                 LOGGER.trace("UPDATE VIDEO DATA OBJECT: {} ", video);
                 video.remove(Constants.ID);
                 video.remove(Constants.ACCOUNT_ID);
 
-                String response = account.platform.patchAPI(targetURL, video.toString(1), headers);
+                String response = account.platform.patchAPI(targetURL, video.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -324,8 +292,8 @@ public class CmsAPI {
     }
 
     //PatchAPI
-    public JSONObject updatePlaylist(String playlistId, String[] videos) {
-        JSONObject json = new JSONObject();
+    public ObjectNode updatePlaylist(String playlistId, String[] videos) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -334,26 +302,24 @@ public class CmsAPI {
                 + "/" + playlistId;
             try {
                 LOGGER.debug("targetURL: {}", targetURL);
-                JSONObject request = new JSONObject();
-                ArrayList<String> videoArray = new ArrayList<String>();
+                ObjectNode request = JsonNodeFactory.instance.objectNode();
+                ArrayNode videoArray = JsonNodeFactory.instance.arrayNode();
                 for (String item : videos) {
                     videoArray.add(item);
                 }
-                request.put("video_ids", new JSONArray(videoArray));
-                LOGGER.info("updatePlaylistParams: {}", request.toString(1));
-                String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
+                request.set("video_ids", videoArray);
+                LOGGER.info("updatePlaylistParams: {}", request.toPrettyString());
+                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
         return json;
     }
 
-    public JSONObject updateLabels(String videoId, String[] labels) {
-        JSONObject json = new JSONObject();
+    public ObjectNode updateLabels(String videoId, String[] labels) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -362,18 +328,16 @@ public class CmsAPI {
                 + "/" + videoId;
             try {
                 LOGGER.debug("targetURL: {}", targetURL);
-                JSONObject request = new JSONObject();
-                ArrayList<String> labelArray = new ArrayList<String>();
+                ObjectNode request = JsonNodeFactory.instance.objectNode();
+                ArrayNode labelArray = JsonNodeFactory.instance.arrayNode();
                 for (String item : labels) {
                     labelArray.add(item);
                 }
-                request.put("labels", new JSONArray(labelArray));
-                LOGGER.info("updateVideoParams: {}", request.toString(1));
-                String response = account.platform.patchAPI(targetURL, request.toString(1), headers);
+                request.set("labels", labelArray);
+                LOGGER.info("updateVideoParams: {}", request.toPrettyString());
+                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -381,8 +345,8 @@ public class CmsAPI {
     }
 
     //deleteAPI
-    public JSONObject deleteVideo(String videoID) {
-        JSONObject json = new JSONObject();
+    public ObjectNode deleteVideo(String videoID) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -393,20 +357,8 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
                 LOGGER.debug("deleteVideo response json: {}" , json);
             } catch (IOException e) {
-                try {
-                    json.put("error_code", "IOException");
-                    json.put("message", e.getMessage());
-                }catch (JSONException ee) {
-                    LOGGER.error(ee.getClass().getName(), ee);
-                }
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e) {
-                try {
-                    json.put("error_code", "JSONException");
-                    json.put("message", e.getMessage());
-                }catch (JSONException ee) {
-                    LOGGER.error(ee.getClass().getName(), ee);
-                }
+                json.put("error_code", "IOException");
+                json.put("message", e.getMessage());
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -414,8 +366,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getVideo(String id) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getVideo(String id) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -427,8 +379,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getPlaylistsCount() {
-        JSONObject json = new JSONObject();
+    public ObjectNode getPlaylistsCount() {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
@@ -441,8 +393,8 @@ public class CmsAPI {
     }
 
     //postAPI
-    public JSONObject createPlaylist(Playlist aPlaylist) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createPlaylist(Playlist aPlaylist) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
@@ -451,12 +403,9 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
             try {
                 LOGGER.debug("Playlist {}", aPlaylist.toJSON().toString());
-                String response = account.platform.postAPI(targetURL, aPlaylist.toJSON().toString(1), headers);
+                String response = account.platform.postAPI(targetURL, aPlaylist.toJSON().toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
-                LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e)
-            {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
@@ -464,8 +413,8 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONObject createLabel(String label) {
-        JSONObject json = new JSONObject();
+    public ObjectNode createLabel(String label) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
@@ -478,21 +427,18 @@ public class CmsAPI {
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
-            } catch (JSONException e)
-            {
-                LOGGER.error(e.getClass().getName(), e);
             }
         }
         LOGGER.trace("createLabel: {} Response: {}", label, json);
         return json;
     }
 
-    public JSONObject getVideosCount(String q) {
+    public ObjectNode getVideosCount(String q) {
         return getVideosCount(q, true);
     }
     //getAPI
-    public JSONObject getVideosCount(String q, boolean dam_only) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getVideosCount(String q, boolean dam_only) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
@@ -513,8 +459,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONArray  getVideoSources(String id) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getVideoSources(String id) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null)
         {
@@ -527,8 +473,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getVideoImagesByRef(String refID) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getVideoImagesByRef(String refID) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -540,8 +486,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONArray  getVideoSourcesByRef(String refID) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getVideoSourcesByRef(String refID) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -553,8 +499,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getVideoByRef(String refID) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getVideoByRef(String refID) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -566,8 +512,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getCustomFields() {
-        JSONObject json = new JSONObject();
+    public ObjectNode getCustomFields() {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -579,8 +525,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONObject getVideoImages(String id) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getVideoImages(String id) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -592,35 +538,31 @@ public class CmsAPI {
     }
 
     //No network call
-    public JSONArray addThumbnail(JSONArray input) {
-        JSONArray videos = new JSONArray();
-        try {
-            for (int i = 0; i < input.length(); i++) {
-                JSONObject video = input.getJSONObject(i);
-                if (video.has(Constants.ID)) {
-                    if (video.has(Constants.IMAGES) && video.getJSONObject(Constants.IMAGES).has(Constants.THUMBNAIL)) {
-                        video.put(Constants.THUMBNAIL_URL, video.getJSONObject(Constants.IMAGES).getJSONObject(Constants.THUMBNAIL).getString(Constants.SRC));
-                    } else {
-                        video.put(Constants.THUMBNAIL_URL, Constants.DEFAULT_THUMBNAIL_LOCATION);
-                    }
-                    videos.put(video);
+    public ArrayNode addThumbnail(ArrayNode input) {
+        ArrayNode videos = JsonNodeFactory.instance.arrayNode();
+        for (int i = 0; i < input.size(); i++) {
+            ObjectNode video = (ObjectNode) input.get(i);
+            if (video.has(Constants.ID)) {
+                if (video.has(Constants.IMAGES) && ((ObjectNode) video.get(Constants.IMAGES)).has(Constants.THUMBNAIL)) {
+                    video.put(Constants.THUMBNAIL_URL, ((ObjectNode) video.get(Constants.IMAGES)).get(Constants.THUMBNAIL).get(Constants.SRC).asText());
+                } else {
+                    video.put(Constants.THUMBNAIL_URL, Constants.DEFAULT_THUMBNAIL_LOCATION);
                 }
+                videos.add(video);
             }
-        } catch (JSONException je) {
-            LOGGER.error(je.getClass().getName(), je);
         }
         return videos;
     }
 
 
-    public JSONArray getVideos(String q, int limit, int offset, String sort) {
+    public ArrayNode getVideos(String q, int limit, int offset, String sort) {
         return getVideos(q, limit, offset, sort, true, false);
     }
 
     //ACTUAL GET VIDEOS FUNCTION
     //DO NOT TOUCH  - getAPI Adaptation - IGNORES NON ACTIVE - IGNORES VIDEOS WITH "AEM_NO_DAM" TAG
-    public JSONArray getVideos(String q, int limit, int offset, String sort, boolean dam_only, boolean clips_only) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getVideos(String q, int limit, int offset, String sort, boolean dam_only, boolean clips_only) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         LOGGER.debug("account: {}" , account.getAccount_ID());
         TokenObj authToken = account.getLoginToken();
         LOGGER.debug("authToken: {}" , authToken.getToken());
@@ -637,13 +579,10 @@ public class CmsAPI {
             if (!response.isEmpty()) {
                 json = JsonReader.readJsonArrayFromString(response);
                 LOGGER.debug(Constants.RESPONSE, response);
-//                LOGGER.trace("json {}", json);
             } else if (!q.isEmpty() && NumberUtils.isNumber(q)) {
-                json.put(getVideo(q));
+                json.add(getVideo(q));
             }
         } catch (IOException e) {
-            LOGGER.error(e.getClass().getName(), e);
-        } catch (JSONException e) {
             LOGGER.error(e.getClass().getName(), e);
         } catch (NullPointerException e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -661,8 +600,8 @@ public class CmsAPI {
 		return tagParam;
 	}
     
-    public JSONArray getVideosInFolder(String folder, int offset) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getVideosInFolder(String folder, int offset) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -678,27 +617,27 @@ public class CmsAPI {
         }
         return json;
     }
-    
+
     //GET VIDEO OVERLOADS
-    public JSONArray getVideos() {
+    public ArrayNode getVideos() {
         return getVideos(Constants.EMPTY_Q_PARAM);
     }
-    public JSONArray getVideos(String q) {
+    public ArrayNode getVideos(String q) {
         return getVideos(q, DEFAULT_LIMIT);
     }
-    public JSONArray getVideos(String q, String sort) {
+    public ArrayNode getVideos(String q, String sort) {
         return getVideos(q, DEFAULT_LIMIT, DEFAULT_OFFSET, sort);
     }
-    public JSONArray getVideos(String q, String sort, int limit) {
+    public ArrayNode getVideos(String q, String sort, int limit) {
         return getVideos(q, limit, DEFAULT_OFFSET, sort);
     }
-    public JSONArray getVideos(String q, int limit) {
+    public ArrayNode getVideos(String q, int limit) {
         return getVideos(q, limit, DEFAULT_OFFSET);
     }
-    public JSONArray getVideos(String q, int limit, int offset) {
+    public ArrayNode getVideos(String q, int limit, int offset) {
         return getVideos(q, limit, offset, Constants.EMPTY_SORT_PARAM);
     }
-    public JSONArray getVideos(int limit, int offset, String sort) {
+    public ArrayNode getVideos(int limit, int offset, String sort) {
         return getVideos(Constants.EMPTY_Q_PARAM, limit, offset, sort);
     }
 
@@ -706,8 +645,8 @@ public class CmsAPI {
 
 
     //getAPI
-    public JSONObject getPlaylist(String refID) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getPlaylist(String refID) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -719,8 +658,8 @@ public class CmsAPI {
     }
 
     //getAPI
-    public JSONArray getVideosInPlaylist(String ID) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getVideosInPlaylist(String ID) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -731,14 +670,14 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONArray  getPlaylists() {
+    public ArrayNode getPlaylists() {
         return getPlaylists(DEFAULT_LIMIT,  DEFAULT_OFFSET,  Constants.NAME);
     }
-    public JSONArray  getPlaylists(int limit, int offset, String sort) {
+    public ArrayNode getPlaylists(int limit, int offset, String sort) {
         return getPlaylists( null,  limit,  offset,  sort);
     }
-    public JSONArray  getPlaylists(String q, int limit, int offset, String sort) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getPlaylists(String q, int limit, int offset, String sort) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -755,8 +694,8 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONObject getExperiences(String q, String sort) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getExperiences(String q, String sort) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -773,16 +712,16 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONArray getVideosWithLabel(String label, int offset) {
+    public ArrayNode getVideosWithLabel(String label, int offset) {
         return getVideos("labels:" + label);
     }
 
-    public JSONArray getOnlyClipVideos(String q, int limit, int offset, String sort) {
+    public ArrayNode getOnlyClipVideos(String q, int limit, int offset, String sort) {
         return getVideos(q, limit, offset, sort, true, true);
     }
 
-    public JSONArray getFolders(int limit, int offset) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getFolders(int limit, int offset) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -798,8 +737,8 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONObject getLabels() {
-        JSONObject json = new JSONObject();
+    public ObjectNode getLabels() {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
@@ -815,18 +754,14 @@ public class CmsAPI {
         return json;
     }
 
-    public JSONObject getExperiencesJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getExperiencesJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         try
         {
             String response = account.platform.getExperiencesAPI(targetURL, urlParameters, headers);
             if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
         }
         catch (IOException e) {
-            LOGGER.error(e.getClass().getName(), e);
-        }
-        catch (JSONException e)
-        {
             LOGGER.error(e.getClass().getName(), e);
         }
         return json;
@@ -834,8 +769,8 @@ public class CmsAPI {
     }
 
     //GET API
-    public JSONObject getJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
-        JSONObject json = new JSONObject();
+    public ObjectNode getJSONObjectResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         try
         {
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -844,15 +779,11 @@ public class CmsAPI {
         catch (IOException e) {
             LOGGER.error(e.getClass().getName(), e);
         }
-        catch (JSONException e)
-        {
-            LOGGER.error(e.getClass().getName(), e);
-        }
         return json;
     }
 
-    public JSONArray getJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         try
         {
             String response = account.platform.getAPI(targetURL, urlParameters, headers);
@@ -861,26 +792,18 @@ public class CmsAPI {
         catch (IOException e) {
             LOGGER.error(e.getClass().getName(), e);
         }
-        catch (JSONException e)
-        {
-            LOGGER.error(e.getClass().getName(), e);
-        }
         return json;
 
     }
 
-    public JSONArray getExperiencesJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
-        JSONArray json = new JSONArray();
+    public ArrayNode getExperiencesJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
+        ArrayNode json = JsonNodeFactory.instance.arrayNode();
         try
         {
             String response = account.platform.getExperiencesAPI(targetURL, urlParameters, headers);
             if (response != null && !response.isEmpty()) json = JsonReader.readJsonArrayFromString(response);
         }
         catch (IOException e) {
-            LOGGER.error(e.getClass().getName(), e);
-        }
-        catch (JSONException e)
-        {
             LOGGER.error(e.getClass().getName(), e);
         }
         return json;

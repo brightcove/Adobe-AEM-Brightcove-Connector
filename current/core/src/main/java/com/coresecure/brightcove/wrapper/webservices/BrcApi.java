@@ -53,9 +53,10 @@ import org.apache.sling.api.request.RequestParameter;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +78,7 @@ import java.util.*;
 public class BrcApi extends SlingAllMethodsServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BrcApi.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private transient ServiceUtil serviceUtil = null;
     private transient ConfigurationGrabber cg;
     private transient com.coresecure.brightcove.wrapper.BrightcoveAPI brAPI;
@@ -107,9 +109,9 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject getLocalPlayers(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        JSONArray players = new JSONArray();
+    private ObjectNode getLocalPlayers(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        ArrayNode players = JsonNodeFactory.instance.arrayNode();
         String playersPath = cs.getPlayersLoc();
         ResourceResolver resourceResolver = request.getResourceResolver();
         Resource res = resourceResolver.resolve(playersPath);
@@ -120,28 +122,28 @@ public class BrcApi extends SlingAllMethodsServlet {
             while (playersItr.hasNext()) {
                 Page playerRes = playersItr.next().adaptTo(Page.class);
                 if (playerRes != null && "brightcove/components/page/brightcoveplayer".equals(playerRes.getContentResource().getResourceType())) {
-                    JSONObject item = new JSONObject();
+                    ObjectNode item = JsonNodeFactory.instance.objectNode();
                     String path = playerRes.getPath();
                     String title = playerRes.getTitle();
                     String account = playerRes.getProperties().get("account", "");
                     if (TextUtil.notEmpty(account) && account.equals(selectedAccount)) {
                         item.put("id", path);
                         item.put("name", title);
-                        players.put(item);
+                        players.add(item);
                     }
                 }
             }
         }
-        result.put(Constants.ITEMS, players);
+        result.set(Constants.ITEMS, players);
         return result;
     }
 
-    private JSONObject getPlayers() throws JSONException {
+    private ObjectNode getPlayers() throws IOException {
         return serviceUtil.getPlayers();
     }
 
-    private JSONObject getListVideos(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode getListVideos(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         LOGGER.debug("query: " + request.getParameter(Constants.QUERY));
         if (request.getParameter(Constants.QUERY) != null && !request.getParameter(Constants.QUERY).trim().isEmpty()) {
             int start = 0;
@@ -158,137 +160,118 @@ public class BrcApi extends SlingAllMethodsServlet {
                 LOGGER.error("NumberFormatException", e);
 
             }
-            result = new JSONObject(serviceUtil.getList(false, start, limit, false, request.getParameter(Constants.QUERY)));
+            result = (ObjectNode) MAPPER.readTree(serviceUtil.getList(false, start, limit, false, request.getParameter(Constants.QUERY)));
         } else {
             LOGGER.debug("getListSideMenu");
-            result = new JSONObject(serviceUtil.getListSideMenu(request.getParameter(Constants.LIMIT)));
+            result = (ObjectNode) MAPPER.readTree(serviceUtil.getListSideMenu(request.getParameter(Constants.LIMIT)));
         }
         return result;
     }
 
-    private JSONObject getListPlaylists(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode getListPlaylists(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result;
         if (request.getParameter(Constants.QUERY) != null && !request.getParameter(Constants.QUERY).trim().isEmpty()) {
-            result = new JSONObject(serviceUtil.getPlaylistByID(request.getParameter(Constants.QUERY)).toString());
+            result = serviceUtil.getPlaylistByID(request.getParameter(Constants.QUERY));
         } else {
-            result = new JSONObject(serviceUtil.getListPlaylistsSideMenu(request.getParameter(Constants.LIMIT)));
+            result = (ObjectNode) MAPPER.readTree(serviceUtil.getListPlaylistsSideMenu(request.getParameter(Constants.LIMIT)));
         }
         return result;
     }
 
-    private JSONObject moveVideoToFolder(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = serviceUtil.moveVideoToFolder(request.getParameter("folder"), request.getParameter("video"));
-        return result;
+    private ObjectNode moveVideoToFolder(SlingHttpServletRequest request) throws IOException {
+        return serviceUtil.moveVideoToFolder(request.getParameter("folder"), request.getParameter("video"));
     }
 
-    private JSONObject removeVideoFromFolder(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = serviceUtil.removeVideoFromFolder(request.getParameter("folder"), request.getParameter("video"));
-        return result;
+    private ObjectNode removeVideoFromFolder(SlingHttpServletRequest request) throws IOException {
+        return serviceUtil.removeVideoFromFolder(request.getParameter("folder"), request.getParameter("video"));
     }
 
-    private JSONObject deletePlaylist(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = serviceUtil.deletePlaylist(request.getParameter("playlist"));
-        return result;
+    private ObjectNode deletePlaylist(SlingHttpServletRequest request) throws IOException {
+        return serviceUtil.deletePlaylist(request.getParameter("playlist"));
     }
 
-    private JSONObject createBlankPlaylist(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = serviceUtil.createPlaylist(request.getParameter("title"));
-        return result;
+    private ObjectNode createBlankPlaylist(SlingHttpServletRequest request) throws IOException {
+        return serviceUtil.createPlaylist(request.getParameter("title"));
     }
 
-    private JSONObject getVideosInFolder(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = new JSONObject(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
-        return result;
+    private ObjectNode getVideosInFolder(SlingHttpServletRequest request) throws IOException {
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getVideosInFolder(request.getParameter("folder"), Integer.parseInt(request.getParameter(Constants.START))));
     }
 
-    private JSONObject getVideosWithLabel(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = new JSONObject(serviceUtil.getVideosWithLabel(request.getParameter("label"), Integer.parseInt(request.getParameter(Constants.START))));
-        return result;
+    private ObjectNode getVideosWithLabel(SlingHttpServletRequest request) throws IOException {
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getVideosWithLabel(request.getParameter("label"), Integer.parseInt(request.getParameter(Constants.START))));
     }
 
-    private JSONObject getFolders(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = new JSONObject(serviceUtil.getFolders());
-        return result;
+    private ObjectNode getFolders(SlingHttpServletRequest request) throws IOException {
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getFolders());
     }
 
-    private JSONObject getLabels(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
-        result = new JSONObject(serviceUtil.getLabels());
-        return result;
+    private ObjectNode getLabels(SlingHttpServletRequest request) throws IOException {
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getLabels());
     }
 
-    private JSONObject searchVideos(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode searchVideos(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         LOGGER.debug("query: " + request.getParameter(Constants.QUERY));
         if ("true".equals(request.getParameter("isID"))) {
             LOGGER.debug("isID");
 
-            JSONArray videos = new JSONArray();
+            ArrayNode videos = JsonNodeFactory.instance.arrayNode();
             try {
-                JSONObject video = serviceUtil.getSelectedVideo(request.getParameter(Constants.QUERY));
+                ObjectNode video = serviceUtil.getSelectedVideo(request.getParameter(Constants.QUERY));
 
                 long totalItems = 0;
                 if (video.has("id")) {
                     totalItems = 1;
-                    videos.put(video);
+                    videos.add(video);
                 }
-                result.put(Constants.ITEMS, videos);
+                result.set(Constants.ITEMS, videos);
                 result.put(Constants.TOTALS, totalItems);
 
-            } catch (JSONException je) {
+            } catch (Exception je) {
                 LOGGER.error("search_videos", je);
             }
         } else {
             LOGGER.debug("NOT isID");
-            result = new JSONObject(serviceUtil.searchVideo(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT)));
+            result = serviceUtil.searchVideo(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT), false);
         }
         return result;
     }
 
-    private JSONObject searchExperiences(SlingHttpServletRequest request) throws JSONException {
+    private ObjectNode searchExperiences(SlingHttpServletRequest request) throws IOException {
         LOGGER.debug("searchExperiences called");
-        JSONObject result = new JSONObject(serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
-        return result;
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getExperiences(request.getParameter(Constants.QUERY)));
     }
 
-    private JSONObject getVideosInPlayList(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject(serviceUtil.getVideosInPlaylistByID(request.getParameter(Constants.QUERY)));
-        return result;
+    private ObjectNode getVideosInPlayList(SlingHttpServletRequest request) throws IOException {
+        return (ObjectNode) MAPPER.readTree(serviceUtil.getVideosInPlaylistByID(request.getParameter(Constants.QUERY)));
     }
 
-    private JSONObject searchPlaylist(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode searchPlaylist(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         if ("true".equals(request.getParameter("isID"))) {
-            JSONArray playlists = new JSONArray();
+            ArrayNode playlists = JsonNodeFactory.instance.arrayNode();
             try {
-                JSONObject playlist = serviceUtil.getPlaylistByID(request.getParameter(Constants.QUERY));
+                ObjectNode playlist = serviceUtil.getPlaylistByID(request.getParameter(Constants.QUERY));
 
                 long totalItems = 0;
                 if (playlist.has("id")) {
                     totalItems = 1;
-                    playlists.put(playlist);
+                    playlists.add(playlist);
                 }
-                result.put(Constants.ITEMS, playlists);
+                result.set(Constants.ITEMS, playlists);
                 result.put(Constants.TOTALS, totalItems);
 
-            } catch (JSONException je) {
+            } catch (Exception je) {
                 LOGGER.error("search_playlists", je);
             }
         } else {
-            result = new JSONObject(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), false, true));
+            result = (ObjectNode) MAPPER.readTree(serviceUtil.getPlaylists(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), false, true));
         }
         return result;
     }
 
-    private JSONObject deleteVideo(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode deleteVideo(SlingHttpServletRequest request) throws IOException {
         String[] ids = request.getParameter(Constants.QUERY).split(",");
         for (String id : ids) {
             if (!TextUtil.isEmpty(id)) {
@@ -298,12 +281,11 @@ public class BrcApi extends SlingAllMethodsServlet {
 
             }
         }
-        result = new JSONObject(serviceUtil.searchVideo("", Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT)));
-        return result;
+        return serviceUtil.searchVideo("", Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT), false);
     }
 
-    private JSONObject createPlaylist(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode createPlaylist(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         RequestParameter requestParameter = request.getRequestParameter(Constants.PLST);
         if (requestParameter == null) {
             result.put(Constants.ERROR, 500);
@@ -329,8 +311,8 @@ public class BrcApi extends SlingAllMethodsServlet {
         LOGGER.info("Writing Playlist to Media API");
 
         playlist.setVideoIds(videoIDs);
-        JSONObject videoItem = brAPI.cms.createPlaylist(playlist);
-        LOGGER.info("New Playlist id: " + videoItem.toString(1));
+        ObjectNode videoItem = brAPI.cms.createPlaylist(playlist);
+        LOGGER.info("New Playlist id: " + videoItem.toPrettyString());
         if (!videoItem.has(Constants.ID)) {
             result.put(Constants.ERROR, 409);
         } else {
@@ -339,8 +321,8 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject createLabel(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode createLabel(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         RequestParameter requestParameter = request.getRequestParameter(Constants.LABEL);
 
         if (requestParameter == null) {
@@ -349,7 +331,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
 
         LOGGER.info("Creating a Label");
-        JSONObject labelResult = brAPI.cms.createLabel(requestParameter.toString());
+        ObjectNode labelResult = brAPI.cms.createLabel(requestParameter.toString());
 
         if (!labelResult.has(Constants.ID)) {
             result.put(Constants.ERROR, 409);
@@ -359,8 +341,8 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject createVideo(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode createVideo(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         RequestParameter requestParameter = request.getRequestParameter(Constants.PLST);
         if (requestParameter == null) {
             result.put(Constants.ERROR, 500);
@@ -397,15 +379,15 @@ public class BrcApi extends SlingAllMethodsServlet {
                 false,
                 link
         );
-        JSONObject videoItem = brAPI.cms.createVideo(video);
-        String newVideoId = videoItem.getString(Constants.ID);
-        JSONObject videoIngested = new JSONObject();
+        ObjectNode videoItem = brAPI.cms.createVideo(video);
+        String newVideoId = videoItem.get(Constants.ID).asText();
+        ObjectNode videoIngested = JsonNodeFactory.instance.objectNode();
         try {
             videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
             if (videoIngested != null && videoIngested.has(Constants.ID)) {
                 LOGGER.info("New video id: {}", newVideoId);
                 result.put(Constants.VIDEOID, newVideoId);
-                result.put("output", videoIngested);
+                result.set("output", videoIngested);
             } else {
                 result.put(Constants.ERROR, "createIngest Error");
                 brAPI.cms.deleteVideo(newVideoId);
@@ -418,7 +400,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject updateVideo(SlingHttpServletRequest request) throws JSONException {
+    private ObjectNode updateVideo(SlingHttpServletRequest request) throws IOException {
         Collection<String> tagsToAdd = new ArrayList<String>();
         if (request.getParameter("tags") != null) {
 
@@ -442,14 +424,14 @@ public class BrcApi extends SlingAllMethodsServlet {
                 false,
                 link
         );
-        JSONObject videoItem = brAPI.cms.updateVideo(video);
+        ObjectNode videoItem = brAPI.cms.updateVideo(video);
         //LOGGER.debug("videoItem", videoItem);
 
         return null;
     }
 
-    private JSONObject updatePlaylist(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         if ( (request.getParameter("videos") != null) && (request.getParameter("playlistId") != null) ) {
             String[] videos = request.getParameterValues("videos");
             String playlistId = request.getParameter("playlistId");
@@ -459,8 +441,8 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject updateLabels(SlingHttpServletRequest request) throws JSONException {
-        JSONObject result = new JSONObject();
+    private ObjectNode updateLabels(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         if ( (request.getParameter("labels") != null) && (request.getParameter("videoId") != null) ) {
             String[] labels = request.getParameterValues("labels");
             String videoId = request.getParameter("videoId");
@@ -469,7 +451,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private JSONObject removeTextTrack(SlingHttpServletRequest request) throws JSONException {
+    private ObjectNode removeTextTrack(SlingHttpServletRequest request) throws IOException {
         try {
             String trackID = request.getParameter("track");
             String videoID = request.getParameter(Constants.ID);
@@ -479,25 +461,25 @@ public class BrcApi extends SlingAllMethodsServlet {
 
             //GET VIDEO FOR THIS VIDEO ID  - REMOVE FORM THE JSON OBJECT AND RESEND UP
             //GET VIDEO AND UPDATE TEXT TRACKS JSON
-            JSONObject down_video = brAPI.cms.getVideo(request.getParameter(Constants.ID));
+            ObjectNode down_video = brAPI.cms.getVideo(request.getParameter(Constants.ID));
 
             //DELETE THE TRACK
-            JSONArray trackslist = down_video.has(Constants.TEXT_TRACKS) ? down_video.getJSONArray(Constants.TEXT_TRACKS) : new JSONArray();
+            ArrayNode trackslist = down_video.has(Constants.TEXT_TRACKS) ? (ArrayNode) down_video.get(Constants.TEXT_TRACKS) : JsonNodeFactory.instance.arrayNode();
             String curID = "";
 
             //CONSTRUCTED CORRECTLY
-            JSONArray updated_tracks = new JSONArray();
+            ArrayNode updated_tracks = JsonNodeFactory.instance.arrayNode();
 
-            LOGGER.trace("OLD TRACKS LIST {}", trackslist.length());
-            for (int x = 0; x < trackslist.length(); x++) {
-                JSONObject track = trackslist.getJSONObject(x);
-                curID = track.getString(Constants.ID);
+            LOGGER.trace("OLD TRACKS LIST {}", trackslist.size());
+            for (int x = 0; x < trackslist.size(); x++) {
+                ObjectNode track = (ObjectNode) trackslist.get(x);
+                curID = track.get(Constants.ID).asText();
                 if (!trackID.equals(curID)) {
                     Text_track currentTrack = new Text_track(track);
-                    updated_tracks.put(currentTrack.toJSON());
+                    updated_tracks.add(currentTrack.toJSON());
                 }
             }
-            LOGGER.trace("UPDATED TRACKS LIST {}", updated_tracks.length());
+            LOGGER.trace("UPDATED TRACKS LIST {}", updated_tracks.size());
 
             com.coresecure.brightcove.wrapper.objects.Video video = new Video(
                     request.getParameter(Constants.ID),
@@ -517,20 +499,20 @@ public class BrcApi extends SlingAllMethodsServlet {
                     updated_tracks
             );
 
-            //LOGGER.debug("GOT VIDEO: "+ down_video.toString(1));
-            LOGGER.debug("REBUILT VIDEO: {}", video.toJSON().toString(1));
-            JSONObject videoItem = brAPI.cms.updateVideo(video);
-            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toString(1));
-        } catch (JSONException e) {
+            //LOGGER.debug("GOT VIDEO: "+ down_video.toPrettyString());
+            LOGGER.debug("REBUILT VIDEO: {}", video.toJSON().toPrettyString());
+            ObjectNode videoItem = brAPI.cms.updateVideo(video);
+            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toPrettyString());
+        } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         }
         return null;
     }
 
-    private JSONObject uploadTextTrack(SlingHttpServletRequest request, SlingHttpServletResponse response) throws JSONException, UnsupportedEncodingException, IOException {
-        JSONObject text_track_payload = new JSONObject();
-        JSONArray text_track_arr = new JSONArray();
-        JSONObject text_track = new JSONObject();
+    private ObjectNode uploadTextTrack(SlingHttpServletRequest request, SlingHttpServletResponse response) throws UnsupportedEncodingException, IOException {
+        ObjectNode text_track_payload = JsonNodeFactory.instance.objectNode();
+        ArrayNode text_track_arr = JsonNodeFactory.instance.arrayNode();
+        ObjectNode text_track = JsonNodeFactory.instance.objectNode();
 
         text_track.put(Constants.SRCLANG, request.getParameter(Constants.TRACK_LANG));
         text_track.put(Constants.KIND, request.getParameter(Constants.TRACK_KIND));
@@ -544,7 +526,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         text_track.put(Constants.DEFAULT, "true".equals(request.getParameter(Constants.TRACK_DEFAULT)));
         text_track.put(Constants.MIME_TYPE, request.getParameter(Constants.TRACK_MIME_TYPE));
-        //LOGGER.trace(text_track.toString(1));
+        //LOGGER.trace(text_track.toPrettyString());
 
 
         //FILE UPLOAD CASE***
@@ -557,11 +539,11 @@ public class BrcApi extends SlingAllMethodsServlet {
             InputStream is = new ByteArrayInputStream(request.getParameter(Constants.TRACK_FILEPATH).getBytes("UTF-8"));
 
             //REQUEST INGEST URL
-            JSONObject s3_url_resp = serviceUtil.createAssetS3(request.getParameter(Constants.ID), filename, is);
+            ObjectNode s3_url_resp = serviceUtil.createAssetS3(request.getParameter(Constants.ID), filename, is);
             //IF SUCCESS
-            if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.getBoolean(Constants.SENT)) {
-                //text_track.put("url", s3_url_resp.getString("signed_url"));
-                text_track.put(Constants.URL, s3_url_resp.getString(Constants.API_REQUEST_URL));
+            if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.get(Constants.SENT).asBoolean()) {
+                //text_track.put("url", s3_url_resp.get("signed_url").asText());
+                text_track.put(Constants.URL, s3_url_resp.get(Constants.API_REQUEST_URL).asText());
                 LOGGER.trace("S3URLRESP: {}", s3_url_resp);
             } else {
                 LOGGER.error("FAILED TO INITIALIZE BUCKET");
@@ -574,15 +556,15 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         }
 
-        text_track_arr.put(text_track);
-        text_track_payload.put(Constants.TEXT_TRACKS, text_track_arr);
+        text_track_arr.add(text_track);
+        text_track_payload.set(Constants.TEXT_TRACKS, text_track_arr);
 
 
-        JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
-        //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toString(1));
+        ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
+        //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toPrettyString());
 
         if (videoItem.has(Constants.RESPONSE)) {
-            JSONObject responseOBJ = new JSONObject(videoItem.getString(Constants.RESPONSE));
+            ObjectNode responseOBJ = (ObjectNode) MAPPER.readTree(videoItem.get(Constants.RESPONSE).asText());
             LOGGER.trace("**has id object: {}", responseOBJ.has(Constants.ID));
             //response.sendError(422, "Incompatible Payload for Audio Track");
             LOGGER.trace("Text Track Upload Complete");
@@ -593,33 +575,33 @@ public class BrcApi extends SlingAllMethodsServlet {
         return null;
     }
 
-    private JSONObject uploadImage(SlingHttpServletRequest request) throws JSONException {
+    private ObjectNode uploadImage(SlingHttpServletRequest request) throws IOException {
         LOGGER.trace("upload_thumbnail");
 
 
-        JSONObject images_payload = new JSONObject();
+        ObjectNode images_payload = JsonNodeFactory.instance.objectNode();
 
         if (request.getParameter(Constants.THUMBNAIL_SOURCE) != null) {
-            JSONObject thumbnail = new JSONObject();
+            ObjectNode thumbnail = JsonNodeFactory.instance.objectNode();
             thumbnail.put(Constants.URL, request.getParameter(Constants.THUMBNAIL_SOURCE));
-            images_payload.put(Constants.THUMBNAIL, thumbnail);
+            images_payload.set(Constants.THUMBNAIL, thumbnail);
         }
         if (request.getParameter(Constants.POSTER_SOURCE) != null) {
-            JSONObject poster = new JSONObject();
+            ObjectNode poster = JsonNodeFactory.instance.objectNode();
             poster.put(Constants.URL, request.getParameter(Constants.POSTER_SOURCE));
-            images_payload.put(Constants.POSTER, poster);
+            images_payload.set(Constants.POSTER, poster);
         }
 
-        LOGGER.trace("UploadImagesPayload>> {}", images_payload.toString(1));
+        LOGGER.trace("UploadImagesPayload>> {}", images_payload.toPrettyString());
 
-        JSONObject videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
-        LOGGER.trace(videoItem.toString(1));
+        ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
+        LOGGER.trace(videoItem.toPrettyString());
 
         return null;
     }
 
-    private JSONObject apiLogic(SlingHttpServletRequest request, SlingHttpServletResponse response, JSONObject jsonObject) throws JSONException, IOException {
-        JSONObject result = jsonObject;
+    private ObjectNode apiLogic(SlingHttpServletRequest request, SlingHttpServletResponse response, ObjectNode jsonObject) throws IOException {
+        ObjectNode result = jsonObject;
         String requestedAPI = request.getParameter("a");
         LOGGER.debug("apiLogic requested :: ", requestedAPI);
         if ("local_players".equals(requestedAPI)) { //getPlayers
@@ -631,7 +613,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         } else if ("export".equals(requestedAPI)) {
             response.setHeader("Content-type", "application/xls");
             response.setHeader("Content-disposition", "inline; filename=Brightcove_Library_Export.csv");
-            result = new JSONObject(serviceUtil.getList(true, Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), true, request.getParameter(Constants.QUERY)));
+            result = (ObjectNode) MAPPER.readTree(serviceUtil.getList(true, Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), true, request.getParameter(Constants.QUERY)));
         } else if ("list_playlists".equals(requestedAPI)) {
             result = getListPlaylists(request);
         } else if ("search_videos".equals(requestedAPI)) {
@@ -690,15 +672,14 @@ public class BrcApi extends SlingAllMethodsServlet {
         int error_code = 0;
         boolean js = "js".equals(extension);
         boolean dropdown = "jsx".equals(extension);
-        boolean hasError = false;
-        JSONObject result = new JSONObject();
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
         String resultstr = "{\"" + Constants.ITEMS + "\":[],\"" + Constants.TOTALS + "\":0,\"" + Constants.ERROR + "\":" + error_code + "}";
 
         try_loop:
         try {
-            result.put("items", new JSONArray());
+            result.set("items", JsonNodeFactory.instance.arrayNode());
             result.put(Constants.TOTALS, 0);
-            result.put("error", JSONObject.NULL);
+            result.putNull("error");
             if (request.getParameter("a") == null) break try_loop;
 
 
@@ -729,11 +710,11 @@ public class BrcApi extends SlingAllMethodsServlet {
 
             if (dropdown) {
                 response.setContentType("text/html;charset=UTF-8");
-                JSONArray itemsArray = result.getJSONArray("items");
+                ArrayNode itemsArray = (ArrayNode) result.get("items");
                 StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < itemsArray.length(); i++) {
-                    JSONObject item = new JSONObject();
-                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]\">" + itemsArray.getJSONObject(i).getString("name") + " [" + itemsArray.getJSONObject(i).getString("id") + "]</li>");
+                for (int i = 0; i < itemsArray.size(); i++) {
+                    ObjectNode item = (ObjectNode) itemsArray.get(i);
+                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + item.get("name").asText() + " [" + item.get("id").asText() + "]\">" + item.get("name").asText() + " [" + item.get("id").asText() + "]</li>");
                 }
                 LOGGER.debug("dropdown values requested");
                 response.getWriter().write(builder.toString());
@@ -743,10 +724,10 @@ public class BrcApi extends SlingAllMethodsServlet {
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(resultstr);
 
-            if (result.has(Constants.ERROR) && result.getInt(Constants.ERROR) >= 400) {
-                error_code = result.getInt(Constants.ERROR);
+            if (result.has(Constants.ERROR) && !result.get(Constants.ERROR).isNull() && result.get(Constants.ERROR).asInt() >= 400) {
+                error_code = result.get(Constants.ERROR).asInt();
             }
-        } catch (JSONException je) {
+        } catch (Exception je) {
             LOGGER.error(je.getClass().getName(), je);
             error_code = 500;
         }

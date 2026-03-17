@@ -40,8 +40,7 @@ import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,19 +73,19 @@ public class BrcImageApi extends SlingAllMethodsServlet {
 
     }
 
-    private String getPoster(String accountKeyStr, String VideoIDStr) throws JSONException {
+    private String getPoster(String accountKeyStr, String VideoIDStr) throws IOException {
         String urlStr = null;
         BrightcoveAPI brAPI = new BrightcoveAPI(accountKeyStr);
 
-        JSONObject video = brAPI.cms.getVideoImages(VideoIDStr);
+        ObjectNode video = brAPI.cms.getVideoImages(VideoIDStr);
 
 
         //TODO: MODULARIZE
 
         // Find a single video
         if (video != null && video.has(Constants.POSTER)) {
-            JSONObject poster = video.getJSONObject(Constants.POSTER);
-            urlStr = poster.getString(Constants.SRC);
+            ObjectNode poster = (ObjectNode) video.get(Constants.POSTER);
+            urlStr = poster.get(Constants.SRC).asText();
         }
 
 

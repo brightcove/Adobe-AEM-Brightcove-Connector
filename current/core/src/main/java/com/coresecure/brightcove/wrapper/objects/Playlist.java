@@ -34,10 +34,12 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.enums.PlaylistTypeEnum;
 import com.coresecure.brightcove.wrapper.utils.Constants;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -126,6 +128,8 @@ import java.util.List;
  *
  */
 public class Playlist {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private String      id;
     private String      created_at;
     private String      updated_at;
@@ -151,12 +155,12 @@ public class Playlist {
      * <p>Given a JSON string from the Media API, attempts to construct a new Playlist object and fill out all of the fields defined.  All other fields will be null.</p>
      *
      */
-    public Playlist(String json) throws JSONException {
+    public Playlist(String json) throws IOException {
         if(json == null){
-            throw new JSONException("[ERR] Playlist can not be parsed from null JSON string.");
+            throw new IOException("[ERR] Playlist can not be parsed from null JSON string.");
         }
 
-        JSONObject jsonObj = new JSONObject(json);
+        ObjectNode jsonObj = (ObjectNode) MAPPER.readTree(json);
 
         finishConstruction(jsonObj);
     }
@@ -167,7 +171,7 @@ public class Playlist {
      * <p>Given a JSON object from the Media API, attempts to construct a new Playlist object and fill out all of the fields defined.  All other fields will be null.</p>
      *
      */
-    public Playlist(JSONObject jsonObj) throws JSONException {
+    public Playlist(ObjectNode jsonObj) throws IOException {
         finishConstruction(jsonObj);
     }
 
@@ -175,29 +179,29 @@ public class Playlist {
      * <p>Private method to finish construction for other constructors</p>
      *
      * @param jsonObj
-     * @throws JSONException
+     * @throws IOException
      */
-    private void finishConstruction(JSONObject jsonObj) throws JSONException {
-        Iterator<String> rootKeys = jsonObj.keys();
-        if(jsonObj.has(Constants.NAME)) name = jsonObj.getString(Constants.NAME);
-        if(jsonObj.has(Constants.ID)) id = jsonObj.getString(Constants.ID);
-        if(jsonObj.has(Constants.FAVORITE)) favorite = jsonObj.getBoolean(Constants.FAVORITE);
-        if(jsonObj.has(Constants.ACCOUNT_ID)) account_id = jsonObj.getString(Constants.ACCOUNT_ID);
-        if(jsonObj.has(Constants.CREATED_AT)) created_at = jsonObj.getString(Constants.CREATED_AT);
-        if(jsonObj.has(Constants.UPDATED_AT)) updated_at = jsonObj.getString(Constants.UPDATED_AT);
-        if(jsonObj.has(Constants.REFERENCE_ID)) reference_id = jsonObj.getString(Constants.REFERENCE_ID);
-        if(jsonObj.has(Constants.DESCRIPTION)) description = jsonObj.getString(Constants.DESCRIPTION);
+    private void finishConstruction(ObjectNode jsonObj) throws IOException {
+        Iterator<String> rootKeys = jsonObj.fieldNames();
+        if(jsonObj.has(Constants.NAME)) name = jsonObj.get(Constants.NAME).asText();
+        if(jsonObj.has(Constants.ID)) id = jsonObj.get(Constants.ID).asText();
+        if(jsonObj.has(Constants.FAVORITE)) favorite = jsonObj.get(Constants.FAVORITE).asBoolean();
+        if(jsonObj.has(Constants.ACCOUNT_ID)) account_id = jsonObj.get(Constants.ACCOUNT_ID).asText();
+        if(jsonObj.has(Constants.CREATED_AT)) created_at = jsonObj.get(Constants.CREATED_AT).asText();
+        if(jsonObj.has(Constants.UPDATED_AT)) updated_at = jsonObj.get(Constants.UPDATED_AT).asText();
+        if(jsonObj.has(Constants.REFERENCE_ID)) reference_id = jsonObj.get(Constants.REFERENCE_ID).asText();
+        if(jsonObj.has(Constants.DESCRIPTION)) description = jsonObj.get(Constants.DESCRIPTION).asText();
         if(jsonObj.has(Constants.VIDEO_IDS)) {
             video_ids = new ArrayList<String>();
-            JSONArray idsArray = jsonObj.getJSONArray(Constants.VIDEO_IDS);
-            for(int idIdx=0;idIdx<idsArray.length();idIdx++){
-                video_ids.add(idsArray.getString(idIdx));
+            ArrayNode idsArray = (ArrayNode) jsonObj.get(Constants.VIDEO_IDS);
+            for(int idIdx=0;idIdx<idsArray.size();idIdx++){
+                video_ids.add(idsArray.get(idIdx).asText());
             }
         }
-        if(jsonObj.has(Constants.PLAYLIST_TYPE)) type = getType(jsonObj.getString(Constants.PLAYLIST_TYPE));
+        if(jsonObj.has(Constants.PLAYLIST_TYPE)) type = getType(jsonObj.get(Constants.PLAYLIST_TYPE).asText());
     }
 
-    private PlaylistTypeEnum getType(String value) throws JSONException{
+    private PlaylistTypeEnum getType(String value) throws IOException {
         PlaylistTypeEnum type = null;
         if(value.equals("OLDEST_TO_NEWEST")){
             type = PlaylistTypeEnum.OLDEST_TO_NEWEST;
@@ -218,7 +222,7 @@ public class Playlist {
             type = PlaylistTypeEnum.EXPLICIT;
         }
         else{
-            throw new JSONException("[ERR] Media API specified invalid value for playlist type '" + value + "'.  Acceptable values are 'OLDEST_TO_NEWEST', 'NEWEST_TO_OLDEST', 'ALPHABETICAL', 'PLAYSTOTAL', 'PLAYS_TRAILING_WEEK', 'EXPLICIT'.");
+            throw new IOException("[ERR] Media API specified invalid value for playlist type '" + value + "'.  Acceptable values are 'OLDEST_TO_NEWEST', 'NEWEST_TO_OLDEST', 'ALPHABETICAL', 'PLAYSTOTAL', 'PLAYS_TRAILING_WEEK', 'EXPLICIT'.");
         }
         return type;
     }
@@ -384,8 +388,8 @@ public class Playlist {
      *
      * @return JSON object representing the video
      */
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = new JSONObject();
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
 
         if(name != null){
             json.put("name", name);
@@ -413,15 +417,15 @@ public class Playlist {
             json.put("description", description);
         }
         if(video_ids != null){
-            JSONArray idArray = new JSONArray();
+            ArrayNode idArray = JsonNodeFactory.instance.arrayNode();
             for(String videoId : video_ids){
-                idArray.put(videoId);
+                idArray.add(videoId);
             }
-            json.put("video_ids", idArray);
+            json.set("video_ids", idArray);
         }
 
         if(type != null){
-            json.put("type", type);
+            json.put("type", type.toString());
         }
 
         return json;

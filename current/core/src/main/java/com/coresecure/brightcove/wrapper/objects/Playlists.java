@@ -32,12 +32,12 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 
@@ -54,18 +54,18 @@ public class Playlists extends ArrayList<Playlist> {
 
     private Integer totalCount = 0;
 
-    public Playlists(JSONObject jsonObj) throws JSONException {
-        JSONArray jsonItems = jsonObj.getJSONArray("items");
-        for(int itemIdx=0;itemIdx<jsonItems.length();itemIdx++){
-            JSONObject jsonItem = (JSONObject)jsonItems.get(itemIdx);
+    public Playlists(ObjectNode jsonObj) throws IOException {
+        ArrayNode jsonItems = (ArrayNode) jsonObj.get("items");
+        for(int itemIdx=0;itemIdx<jsonItems.size();itemIdx++){
+            ObjectNode jsonItem = (ObjectNode) jsonItems.get(itemIdx);
             Playlist playlist = new Playlist(jsonItem);
             add(playlist);
         }
 
         try{
-            totalCount = jsonObj.getInt("total_count");
+            totalCount = jsonObj.get("total_count").asInt();
         }
-        catch(JSONException e){
+        catch(Exception e){
             LOGGER.error("JsonException",e);
             totalCount = -1;
         }

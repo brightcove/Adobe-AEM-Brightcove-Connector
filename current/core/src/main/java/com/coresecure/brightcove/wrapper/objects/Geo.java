@@ -35,11 +35,12 @@ package com.coresecure.brightcove.wrapper.objects;
 import com.coresecure.brightcove.wrapper.enums.GeoFilterCodeEnum;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -55,17 +56,18 @@ public class Geo {
         countries = aCountries;
     }
 
-    public Geo(JSONObject aGeo) throws JSONException {
-        exclude_countries = aGeo.getBoolean(Constants.EXCLUDE_COUNTRIES);
-        restricted = aGeo.getBoolean(Constants.RESTRICTED);
+    public Geo(ObjectNode aGeo) throws IOException {
+        exclude_countries = aGeo.get(Constants.EXCLUDE_COUNTRIES).asBoolean();
+        restricted = aGeo.get(Constants.RESTRICTED).asBoolean();
         countries = new ArrayList<GeoFilterCodeEnum>();
-        for (int i = 0; i < aGeo.getJSONArray(Constants.COUNTRIES).length(); i++) {
-            countries.add(GeoFilterCodeEnum.lookupByCode(aGeo.getJSONArray(Constants.COUNTRIES).getString(i)));
+        ArrayNode countriesArr = (ArrayNode) aGeo.get(Constants.COUNTRIES);
+        for (int i = 0; i < countriesArr.size(); i++) {
+            countries.add(GeoFilterCodeEnum.lookupByCode(countriesArr.get(i).asText()));
         }
     }
 
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.EXCLUDE_COUNTRIES, Constants.RESTRICTED, Constants.COUNTRIES});
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.EXCLUDE_COUNTRIES, Constants.RESTRICTED, Constants.COUNTRIES});
         return json;
     }
 
@@ -73,7 +75,7 @@ public class Geo {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

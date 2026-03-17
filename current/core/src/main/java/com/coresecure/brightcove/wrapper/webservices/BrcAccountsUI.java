@@ -41,8 +41,9 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
-import org.apache.commons.collections.Transformer;
-import org.apache.commons.collections.iterators.TransformIterator;
+import org.apache.commons.collections4.Transformer;
+import org.apache.commons.collections4.iterators.TransformIterator;
+import org.apache.sling.api.resource.Resource;
 import org.apache.sling.servlets.annotations.SlingServletResourceTypes;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.propertytypes.ServiceDescription;
@@ -59,8 +60,8 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,9 +104,9 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
         routeUIrequest(request, response);
     }
 
-    private List<JSONObject>  buildList(SlingHttpServletRequest request) {
+    private List<ObjectNode>  buildList(SlingHttpServletRequest request) {
         boolean is_authorized = false;
-        List<JSONObject> accountsList = new ArrayList<JSONObject>();
+        List<ObjectNode> accountsList = new ArrayList<ObjectNode>();
 
         try {
             ResourceResolver resourceResolver = request.getResourceResolver();
@@ -141,7 +142,7 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                     optionText = String.format("%s [%s]", alias, account);
                 }
                 if (allowedGroups.size() > 0) {
-                    JSONObject accountJson = new JSONObject();
+                    ObjectNode accountJson = JsonNodeFactory.instance.objectNode();
                     accountJson.put("text", optionText);
                     accountJson.put("value", account);
                     accountJson.put("id", i);
@@ -149,8 +150,6 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
                     accountsList.add(accountJson);
                 }
             }
-        } catch (JSONException e) {
-            LOGGER.error(e.getClass().getName(), e);
         } catch (RepositoryException e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -163,18 +162,16 @@ public class BrcAccountsUI extends SlingAllMethodsServlet {
 
         boolean is_authorized = false;
 
-        List<JSONObject> accountsList = buildList(request);
+        List<ObjectNode> accountsList = buildList(request);
 
 
-        DataSource ds = new SimpleDataSource(new TransformIterator(accountsList.iterator(), new Transformer() {
-            public Object transform(Object input) {
+        DataSource ds = new SimpleDataSource(new TransformIterator<ObjectNode, Resource>(accountsList.iterator(), new Transformer<ObjectNode, Resource>() {
+            public Resource transform(ObjectNode item) {
                 try {
-                    JSONObject item = (JSONObject) input;
-
                     ValueMap vm = new ValueMapDecorator(new HashMap<String, Object>());
-                    vm.put(Constants.VALUE, item.getString(Constants.VALUE));
-                    vm.put(Constants.TEXT, item.getString(Constants.TEXT));
-                    vm.put(Constants.ID, item.getString(Constants.ID));
+                    vm.put(Constants.VALUE, item.get(Constants.VALUE).asText());
+                    vm.put(Constants.TEXT, item.get(Constants.TEXT).asText());
+                    vm.put(Constants.ID, item.get(Constants.ID).asText());
 
                     return new ValueMapResource(request.getResourceResolver(), new ResourceMetadata(), "nt:unstructured", vm);
                 } catch (Exception e) {

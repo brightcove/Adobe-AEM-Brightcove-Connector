@@ -46,8 +46,8 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.models.annotations.injectorspecific.OSGiService;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,13 +91,13 @@ public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
             IOException {
         PrintWriter outWriter = response.getWriter();
         response.setContentType("application/json");
-        JSONObject root = new JSONObject();
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
 
         try {
             ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
 
             String brcAccountId = request.getParameter("account_id");
-            
+
             if ( brcAccountId == null || brcAccountId.length() == 0 ) {
                 brcAccountId = ServiceUtil.getAccountFromCookie(request);
             }
@@ -111,16 +111,16 @@ public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
             }
 
             LOGGER.debug("brcAccountId:", brcAccountId);
-            
+
             ConfigurationService brcService = cg.getConfigurationService(brcAccountId);
-            
+
             String assetsPath = brcService.getAssetIntegrationPath();
             LOGGER.debug("Brightcove Videos Asset Path is {}", assetsPath);
 
             root.put("brightcoveAssetPath", assetsPath);
-            outWriter.write(root.toString(1));
-        } catch (JSONException e) {
-            LOGGER.error("JSONException", e);
+            outWriter.write(root.toPrettyString());
+        } catch (Exception e) {
+            LOGGER.error("Exception", e);
             outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");
         }
 

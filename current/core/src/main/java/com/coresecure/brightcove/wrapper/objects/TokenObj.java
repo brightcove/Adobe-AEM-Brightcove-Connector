@@ -32,9 +32,6 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
-
 public class TokenObj {
     private final String token_type;
     private final String token;

@@ -42,7 +42,6 @@ import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.servlets.post.JSONResponse;
 
 import javax.servlet.ServletException;
@@ -65,7 +64,6 @@ public class BrcSuggestions extends SlingAllMethodsServlet {
             IOException {
         PrintWriter outWriter = response.getWriter();
         response.setContentType(JSONResponse.RESPONSE_CONTENT_TYPE);
-        JSONObject root = new JSONObject();
 
 
         int requestedAPI = 0;

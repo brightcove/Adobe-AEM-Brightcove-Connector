@@ -35,12 +35,12 @@ package com.coresecure.brightcove.wrapper.objects;
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -65,8 +65,8 @@ public class Video {
     public final Schedule schedule;
     public final boolean complete;
     public final EconomicsEnum economics;
-    public final JSONArray text_tracks;
-    public final JSONArray variants;
+    public final ArrayNode text_tracks;
+    public final ArrayNode variants;
     public final Images images;
 
 
@@ -91,23 +91,23 @@ public class Video {
         this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, null);
     }
 
-    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, ArrayNode aText_tracks) {
         this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, null);
     }
 
-    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, ArrayNode aText_tracks, Images aImages) {
         this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, null, null, null);
     }
 
-    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, Collection<String> aLabels) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, ArrayNode aText_tracks, Images aImages, Collection<String> aLabels) {
         this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, aLabels, null, null);
     }
 
-    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, Collection<String> aLabels, JSONArray aVariants) {
+    public Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, ArrayNode aText_tracks, Images aImages, Collection<String> aLabels, ArrayNode aVariants) {
         this(aId, aName, aReference_id, aDescription, aLong_description, aState, aTags, aGeo, aSchedule, aComplete, aLink, aCustom_fields, aEconomics, aProjection, aText_tracks, aImages, null, aLabels, aVariants, null);
     }
 
-    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, JSONArray aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels, JSONArray aVariants, String aFolderId) {
+    private Video(String aId, String aName, String aReference_id, String aDescription, String aLong_description, String aState, Collection<String> aTags, Geo aGeo, Schedule aSchedule, boolean aComplete, RelatedLink aLink, Map<String, Object> aCustom_fields, EconomicsEnum aEconomics, String aProjection, ArrayNode aText_tracks, Images aImages, String aAccountId, Collection<String> aLabels, ArrayNode aVariants, String aFolderId) {
         id = aId;
         account_id = aAccountId;
         name = aName;
@@ -130,10 +130,10 @@ public class Video {
         folderId = aFolderId;
     }
 
-    private Object getNotNull(JSONObject video, String key) throws JSONException{
-        return !video.isNull(key) ? video.get(key) : null;
+    private String getNotNullText(ObjectNode video, String key) {
+        return (video.has(key) && !video.get(key).isNull()) ? video.get(key).asText() : null;
     }
-    public Video(JSONObject video) throws JSONException {
+    public Video(ObjectNode video) throws IOException {
 
         String localname = null;
         String localid = null;
@@ -152,39 +152,37 @@ public class Video {
         Schedule localschedule = null;
         boolean localcomplete = false;
         EconomicsEnum localeconomics = null;
-        JSONArray localtext_tracks = null;
-        JSONArray localvariants = null;
+        ArrayNode localtext_tracks = null;
+        ArrayNode localvariants = null;
         Images localimages = null;
         try {
-            localid = (String) getNotNull(video, Constants.ID);
-            localaccount_id = (String) getNotNull(video, Constants.ACCOUNT_ID);
-            localname = (String) getNotNull(video, Constants.NAME);
-            localreference_id = (String) getNotNull(video, Constants.REFERENCE_ID);
-            localdescription = (String) getNotNull(video, Constants.DESCRIPTION);
-            localfolderid = (String) getNotNull(video, Constants.FOLDER_ID);
-            locallong_description = (String) getNotNull(video, Constants.LONG_DESCRIPTION);
-            localstate = (String) getNotNull(video, Constants.STATE);
-            localprojection = (Projection) getNotNull(video, Constants.PROJECTION);
-            localgeo = (Geo) getNotNull(video, Constants.GEO);
-            localschedule = (Schedule) getNotNull(video, Constants.SCHEDULE);
-            locallink = (RelatedLink) getNotNull(video, Constants.LINK);
-            localtext_tracks = (JSONArray) getNotNull(video, Constants.TEXT_TRACKS);
-            localvariants = (JSONArray) getNotNull(video, Constants.VARIANTS);
-            localcomplete = (Boolean) getNotNull(video, Constants.COMPLETE);
-            if (!video.isNull(Constants.TAGS))
+            localid = getNotNullText(video, Constants.ID);
+            localaccount_id = getNotNullText(video, Constants.ACCOUNT_ID);
+            localname = getNotNullText(video, Constants.NAME);
+            localreference_id = getNotNullText(video, Constants.REFERENCE_ID);
+            localdescription = getNotNullText(video, Constants.DESCRIPTION);
+            localfolderid = getNotNullText(video, Constants.FOLDER_ID);
+            locallong_description = getNotNullText(video, Constants.LONG_DESCRIPTION);
+            localstate = getNotNullText(video, Constants.STATE);
+            if (video.has(Constants.TEXT_TRACKS) && !video.get(Constants.TEXT_TRACKS).isNull()) localtext_tracks = (ArrayNode) video.get(Constants.TEXT_TRACKS);
+            if (video.has(Constants.VARIANTS) && !video.get(Constants.VARIANTS).isNull()) localvariants = (ArrayNode) video.get(Constants.VARIANTS);
+            if (video.has(Constants.COMPLETE) && !video.get(Constants.COMPLETE).isNull()) localcomplete = video.get(Constants.COMPLETE).asBoolean();
+            if (video.has(Constants.TAGS) && !video.get(Constants.TAGS).isNull())
             {
+                ArrayNode tagsArr = (ArrayNode) video.get(Constants.TAGS);
                 localtags = new ArrayList<String>();
-                for (int i = 0; i < video.getJSONArray(Constants.TAGS).length(); i++)
+                for (int i = 0; i < tagsArr.size(); i++)
                 {
-                    localtags.add(video.getJSONArray(Constants.TAGS).getString(i));
+                    localtags.add(tagsArr.get(i).asText());
                 }
             }
-            if (!video.isNull(Constants.LABELS))
+            if (video.has(Constants.LABELS) && !video.get(Constants.LABELS).isNull())
             {
+                ArrayNode labelsArr = (ArrayNode) video.get(Constants.LABELS);
                 localLabels = new ArrayList<String>();
-                for (int i = 0; i < video.getJSONArray(Constants.LABELS).length(); i++)
+                for (int i = 0; i < labelsArr.size(); i++)
                 {
-                    localLabels.add(video.getJSONArray(Constants.LABELS).getString(i));
+                    localLabels.add(labelsArr.get(i).asText());
                 }
             }
         }
@@ -217,8 +215,8 @@ public class Video {
         }
     }
 
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS, Constants.LABELS});
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID, Constants.NAME, Constants.REFERENCE_ID, Constants.DESCRIPTION, Constants.LONG_DESCRIPTION, Constants.STATE, Constants.TAGS, Constants.CUSTOM_FIELDS, Constants.GEO, Constants.SCHEDULE, Constants.LINK, Constants.ECONOMICS,Constants.PROJECTION, Constants.TEXT_TRACKS, Constants.LABELS});
         return json;
     }
 
@@ -226,7 +224,7 @@ public class Video {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

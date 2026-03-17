@@ -45,7 +45,7 @@ import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.resource.*;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -367,12 +367,12 @@ public class BrcReplicationHandler implements TransportHandler {
         try {
             InputStream is = _asset.getOriginal().getStream();      //VIDEO ORIGINAL BINARY FOR BC DATABASE
 
-            JSONObject api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is); //ACTUAL VIDEO UPLOAD CALL - WITH METADATA
+            ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is); //ACTUAL VIDEO UPLOAD CALL - WITH METADATA
 
-            //LOGGER.trace("API-RESP >>" + api_resp.toString(1));
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            //LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            boolean sent = api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
-                brc_lastsync_map.put(Constants.BRC_ID, api_resp.getString(Constants.VIDEOID));
+                brc_lastsync_map.put(Constants.BRC_ID, api_resp.get(Constants.VIDEOID).asText());
 
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
@@ -395,11 +395,11 @@ public class BrcReplicationHandler implements TransportHandler {
         ReplicationResult result = ReplicationResult.OK;
         try {
             LOGGER.trace("CREATE VIDEO - THUMBNAIL / POSTER TEST>>");
-            LOGGER.trace(video.toJSON().toString(1));
+            LOGGER.trace(video.toJSON().toPrettyString());
 
             //do update video
-            JSONObject api_resp = serviceUtil.updateVideo(video); //ONLY UPDATE METADATA - DO NOT SEND BINARY
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            ObjectNode api_resp = serviceUtil.updateVideo(video); //ONLY UPDATE METADATA - DO NOT SEND BINARY
+            boolean sent = api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
@@ -483,8 +483,8 @@ public class BrcReplicationHandler implements TransportHandler {
                     try {
                         LOGGER.trace("DEACTIVATION");
                         LOGGER.trace(video.toString());
-                        JSONObject update_resp = serviceUtil.updateVideo(video);
-                        boolean sent = update_resp.getBoolean(Constants.SENT);
+                        ObjectNode update_resp = serviceUtil.updateVideo(video);
+                        boolean sent = update_resp.get(Constants.SENT).asBoolean();
                         if (sent) {
                             replicationLog.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
                             result = ReplicationResult.OK;

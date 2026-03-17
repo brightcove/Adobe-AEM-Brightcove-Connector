@@ -78,10 +78,11 @@ import com.coresecure.brightcove.wrapper.sling.CertificateListService;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.webdav.DavMethods;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
 import org.apache.sling.servlets.post.JSONResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -94,6 +95,7 @@ public class HttpServices {
     private static final String CA = "ca";
     private static final String TLS = "TLS";
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpServices.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
 
     public static void setProxy(Proxy proxy) {
@@ -276,7 +278,7 @@ public class HttpServices {
         String exPostResponse = null;
         BufferedReader rd = null;
         DataOutputStream wr = null;
-        JSONObject responseJSON = new JSONObject();
+        ObjectNode responseJSON = JsonNodeFactory.instance.objectNode();
 
         try {
             // Create connection
@@ -333,14 +335,15 @@ public class HttpServices {
 
                 if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
                     //CORRECT ADDITION OF THE REQUEST BODY
-                    responseJSON = new JSONObject(exPostResponse);
+                    responseJSON = (ObjectNode) MAPPER.readTree(exPostResponse);
                     responseJSON.put("error", connection.getResponseCode());
                 } else {
 
-                    JSONArray errorArray = new JSONArray(exPostResponse);
-                    responseJSON = new JSONObject();
-                    responseJSON.put("error", errorArray.getJSONObject(0).has("error_code") ? errorArray.getJSONObject(0).get("error_code") : "DefaultError");
-                    responseJSON.put("error_message", errorArray.getJSONObject(0).has("message") ? errorArray.getJSONObject(0).get("message") : "Default Message");
+                    ArrayNode errorArray = (ArrayNode) MAPPER.readTree(exPostResponse);
+                    responseJSON = JsonNodeFactory.instance.objectNode();
+                    ObjectNode firstError = (ObjectNode) errorArray.get(0);
+                    responseJSON.put("error", firstError.has("error_code") ? firstError.get("error_code").asText() : "DefaultError");
+                    responseJSON.put("error_message", firstError.has("message") ? firstError.get("message").asText() : "Default Message");
                 }
 
                 LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));
@@ -606,8 +609,8 @@ public class HttpServices {
                                     Map<String, String> headers) {
         String exGetResponse = null;
         try {
-            JSONObject response = executeFullGet(targetURL, urlParameters, headers);
-            exGetResponse = response.has(Constants.RESPONSE) ? response.getString(Constants.RESPONSE) : null;
+            ObjectNode response = executeFullGet(targetURL, urlParameters, headers);
+            exGetResponse = response.has(Constants.RESPONSE) ? response.get(Constants.RESPONSE).asText() : null;
 
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
@@ -615,15 +618,17 @@ public class HttpServices {
         return exGetResponse;
     }
 
-    public static JSONObject executeFullGet(String targetURL, String urlParameters,
+    public static ObjectNode executeFullGet(String targetURL, String urlParameters,
                                             Map<String, String> headers) {
         LOGGER.debug("executeFullGet: " + targetURL);
         URL url;
         URLConnection connection = null;
         InputStream is = null;
         ByteArrayOutputStream response = null;
- 
-        JSONObject exGetResponse = new JSONObject();
+
+        ObjectNode exGetResponse = JsonNodeFactory.instance.objectNode();
+        // store raw bytes separately since ObjectNode cannot hold byte[]
+        byte[] responseBytes = null;
         try {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20") + "?" + urlParameters);
@@ -632,7 +637,7 @@ public class HttpServices {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
             } else {
                 connection = getSSLConnection(url, targetURL, HttpsURLConnection.class);
- 
+
             }
             connection.setRequestProperty(Constants.CONTENT_TYPE_HEADER,
                     com.adobe.granite.rest.Constants.CT_WWW_FORM_URLENCODED);
@@ -649,19 +654,19 @@ public class HttpServices {
             connection.connect();
             // Get Response
             is = connection.getInputStream();
- 
+
             response = new ByteArrayOutputStream();
- 
+
             byte[] buffer = new byte[4096];
             int n;
- 
+
             while ((n = is.read(buffer)) != -1) {
                 response.write(buffer, 0, n);
             }
             LOGGER.trace("response committed!");
- 
-            exGetResponse.put(Constants.RESPONSE, new String(response.toByteArray(), "UTF-8"));
-            exGetResponse.put(Constants.BINARY, response.toByteArray());
+
+            responseBytes = response.toByteArray();
+            exGetResponse.put(Constants.RESPONSE, new String(responseBytes, "UTF-8"));
             exGetResponse.put(Constants.MIME_TYPE, connection.getContentType());
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
@@ -678,10 +683,14 @@ public class HttpServices {
                     response.flush();
                     response.close();
                 } catch (IOException e) {
- 
+
                     LOGGER.error(Constants.ERROR_LOG_TMPL, e);
                 }
             }
+        }
+        // attach bytes via a transient holder so callers can retrieve binary data
+        if (responseBytes != null) {
+            exGetResponse.putPOJO(Constants.BINARY, responseBytes);
         }
         return exGetResponse;
     }
@@ -843,14 +852,17 @@ public class HttpServices {
         return path.startsWith("/content/") || path.startsWith("/apps/") || path.startsWith("/libs/");
     }
 
-    public static BinaryObj getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws JSONException {
+    public static BinaryObj getRemoteBinary(String path, String urlParameters, Map<String, String> headers) throws IOException {
         LOGGER.debug("getRemoteBinary: " + path);
         BinaryObj binary = new BinaryObj();
-        JSONObject get_response = HttpServices.executeFullGet(path, urlParameters, headers != null ? headers : new HashMap<String, String>());
+        ObjectNode get_response = HttpServices.executeFullGet(path, urlParameters, headers != null ? headers : new HashMap<String, String>());
         if (get_response != null && get_response.has(Constants.BINARY)) {
-            InputStream binarystream = new ByteArrayInputStream((byte[]) get_response.get(Constants.BINARY));
-            String mime_type = get_response.getString(Constants.MIME_TYPE); //< SET MIME TYPE
-            binary = new BinaryObj(binarystream, mime_type);
+            byte[] bytes = (byte[]) (get_response.get(Constants.BINARY).isPojo() ? ((com.fasterxml.jackson.databind.node.POJONode) get_response.get(Constants.BINARY)).getPojo() : null);
+            if (bytes != null) {
+                InputStream binarystream = new ByteArrayInputStream(bytes);
+                String mime_type = get_response.has(Constants.MIME_TYPE) ? get_response.get(Constants.MIME_TYPE).asText() : ""; //< SET MIME TYPE
+                binary = new BinaryObj(binarystream, mime_type);
+            }
         }
         return binary;
     }

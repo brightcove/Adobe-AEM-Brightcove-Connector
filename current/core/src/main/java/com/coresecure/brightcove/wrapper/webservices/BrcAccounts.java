@@ -47,9 +47,9 @@ import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,8 +110,8 @@ public class BrcAccounts extends SlingAllMethodsServlet {
             IOException {
         PrintWriter outWriter = response.getWriter();
         response.setContentType("application/json");
-        JSONObject root = new JSONObject();
-        JSONArray accounts = new JSONArray();
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+        ArrayNode accounts = JsonNodeFactory.instance.arrayNode();
 
         LOGGER.debug("get account");
         try {
@@ -142,12 +142,12 @@ public class BrcAccounts extends SlingAllMethodsServlet {
                         optionText = String.format("%s [%s]", alias, account);
                     }
                     if (allowedGroups.size() > 0) {
-                        JSONObject accountJson = new JSONObject();
+                        ObjectNode accountJson = JsonNodeFactory.instance.objectNode();
                         accountJson.put("text", optionText);
                         accountJson.put("value", account);
                         accountJson.put("id", i);
                         i++;
-                        accounts.put(accountJson);
+                        accounts.add(accountJson);
                     }
                 }
 
@@ -156,13 +156,10 @@ public class BrcAccounts extends SlingAllMethodsServlet {
 
             } else {
                 LOGGER.debug("not authorized");
-                root.put("error",403);
+                root.put("error", 403);
             }
-            root.put("accounts", accounts);
-            outWriter.write(root.toString(1));
-        } catch (JSONException e) {
-            LOGGER.error("JSONException", e);
-            outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");
+            root.set("accounts", accounts);
+            outWriter.write(root.toPrettyString());
         } catch (RepositoryException e) {
             LOGGER.error("RepositoryException", e);
             outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");

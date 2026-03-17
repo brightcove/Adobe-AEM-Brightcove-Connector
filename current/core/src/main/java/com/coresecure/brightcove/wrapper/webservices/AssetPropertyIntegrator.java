@@ -50,8 +50,8 @@ import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.sling.commons.mime.MimeTypeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,15 +136,15 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                     session.save();
                     final ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
 
-                    JSONArray folders = serviceUtil.getFoldersAsJsonArray();
+                    ArrayNode folders = serviceUtil.getFoldersAsJsonArray();
                 LOGGER.trace("<<< " + basePath + " USED AS BASE PATH!");
-                LOGGER.trace("<<< " + folders.length() + " FOLDERS FOUND IN ACCOUNT: " + requestedAccount);
+                LOGGER.trace("<<< " + folders.size() + " FOLDERS FOUND IN ACCOUNT: " + requestedAccount);
 
-                if (folders.length() > 0) {
-                    for (int x = 0; x < folders.length(); x++) {
-                        JSONObject folder = folders.getJSONObject(x);
-                        String folderId = folder.getString("id");
-                        String folderName = folder.getString("name");
+                if (folders.size() > 0) {
+                    for (int x = 0; x < folders.size(); x++) {
+                        ObjectNode folder = (ObjectNode) folders.get(x);
+                        String folderId = folder.get("id").asText();
+                        String folderName = folder.get("name").asText();
 
                         // check if folder (1) already exists or (2) has been renamed
                         QueryManager qm = session.getWorkspace().getQueryManager();
@@ -184,15 +184,15 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
                     //GET VIDEOS
                     int startOffset = 0;
-                    JSONObject jsonObject = new JSONObject(serviceUtil.searchVideo("", startOffset, 0)); //QUERY<------
-                    final JSONArray itemsArr = jsonObject.getJSONArray("items");
+                    ObjectNode jsonObject = serviceUtil.searchVideo("", startOffset, 0, com.coresecure.brightcove.wrapper.utils.Constants.NAME, true); //QUERY<------
+                    final ArrayNode itemsArr = (ArrayNode) jsonObject.get("items");
 
 
-                    LOGGER.trace("<<< " + itemsArr.length() + " INCOMING VIDEOS");
+                    LOGGER.trace("<<< " + itemsArr.size() + " INCOMING VIDEOS");
 
                     //FOR EACH VIDEO IN THE ITEMS ARRAY
-                    for (int i = 0; i < itemsArr.length(); i++) {
-                        final JSONObject innerObj = itemsArr.getJSONObject(i);
+                    for (int i = 0; i < itemsArr.size(); i++) {
+                        final ObjectNode innerObj = (ObjectNode) itemsArr.get(i);
 
                         Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
                         Future<String> future = executor.submit(callable);

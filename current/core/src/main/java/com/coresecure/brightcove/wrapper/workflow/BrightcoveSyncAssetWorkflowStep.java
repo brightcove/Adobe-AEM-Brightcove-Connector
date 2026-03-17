@@ -51,9 +51,7 @@ import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Component(property = {
     org.osgi.framework.Constants.SERVICE_DESCRIPTION + "=Sync Asset to Brightcove",
@@ -160,11 +158,13 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
     private void syncBrightcoveData(String brightcoveAssetId, ServiceUtil serviceUtil, Asset _asset, ResourceResolver rr, String brightcoveAccountId) {
         
         try {
-            JSONObject result = serviceUtil.getSelectedVideo(brightcoveAssetId);
-            
-        
+            ObjectNode result = serviceUtil.getSelectedVideo(brightcoveAssetId);
+
+
             serviceUtil.updateAsset(_asset, result, rr, brightcoveAccountId);
-        } catch (PersistenceException | JSONException | RepositoryException e) {
+        } catch (PersistenceException | RepositoryException e) {
+            LOG.error("Error when updating Brightcove metadata and renditions: {}", e.getMessage());
+        } catch (Exception e) {
             LOG.error("Error when updating Brightcove metadata and renditions: {}", e.getMessage());
         }
     }
@@ -181,12 +181,12 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             InputStream is = _asset.getOriginal().getStream();
 
             // // make the actual video upload call
-            JSONObject api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
+            ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
-            // LOGGER.trace("API-RESP >>" + api_resp.toString(1));
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            boolean sent = api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
-                brightcoveAssetId = api_resp.getString(Constants.VIDEOID);
+                brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();
                 brc_lastsync_map.put(Constants.BRC_ID, brightcoveAssetId);
 
                 LOG.trace("UPDATING RENDITIONS FOR THIS ASSET");
@@ -229,12 +229,12 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
             // do update video
             LOG.info("About to make Brightcove API call with video: {}", _asset.getPath());
-            JSONObject api_resp = serviceUtil.updateVideo(video);
+            ObjectNode api_resp = serviceUtil.updateVideo(video);
             LOG.info("Brightcove Asset Modification Response: {}", api_resp.toString());
 
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            boolean sent = api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
-            	brightcoveAssetId = api_resp.getString(Constants.VIDEOID);
+            	brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());
                 serviceUtil.updateRenditions(_asset, video);
                 LOG.info("Updated renditions for Brightcove video: {}", _asset.getPath());
@@ -264,11 +264,11 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 
     }
 
-	private void syncFolder(ServiceUtil serviceUtil, JSONObject api_resp, Node assetNode) {
+	private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Node assetNode) {
 		try {
 			LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
 			Node parentNode = assetNode.getParent();
-			String videoId = api_resp.getString(Constants.VIDEOID);
+			String videoId = api_resp.get(Constants.VIDEOID).asText();
 
 			// Skip folder sync if the asset lives directly in the account root folder.
 			// The account root (e.g. /content/dam/brightcove_assets/{accountId}) has no
