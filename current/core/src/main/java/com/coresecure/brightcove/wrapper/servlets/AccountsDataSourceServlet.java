@@ -28,7 +28,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.adobe.cq.commerce.common.ValueMapDecorator;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import com.adobe.granite.ui.components.ds.DataSource;
 import com.adobe.granite.ui.components.ds.SimpleDataSource;
 import com.adobe.granite.ui.components.ds.ValueMapResource;
