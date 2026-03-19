@@ -692,8 +692,8 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
             try {
-                q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-                String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&limit=" + limit + "&offset=" + offset + "&sort=" + sort;
+                String encodedQ = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
+                String urlParameters = "q=" + encodedQ + "&limit=" + limit + "&offset=" + offset + "&sort=" + sort;
                 json = getJSONArrayResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
                 LOGGER.error(e.getClass().getName(), e);
