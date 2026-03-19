@@ -618,6 +618,7 @@ public class ServiceUtil {
         try {
             ObjectNode videoItem = brAPI.cms.createVideo(aVideo);
             if (!videoItem.has(Constants.ID)) {
+                result.put(Constants.SENT, false);
                 result.put(Constants.ERROR, "createVideo failed");
                 return result;
             }
@@ -627,20 +628,24 @@ public class ServiceUtil {
                 ObjectNode videoIngested = brAPI.cms.createIngest(new com.coresecure.brightcove.wrapper.objects.Video(videoItem), ingest);
                 if (videoIngested != null && videoIngested.has(Constants.ID)) {
                     LOGGER.info(Constants.RESULT_LOG_NEW_VIDEO_TMPL, newVideoId);
+                    result.put(Constants.SENT, true);
                     result.put(Constants.VIDEOID, newVideoId);
                     result.set("output", videoIngested);
                 } else {
+                    result.put(Constants.SENT, false);
                     result.put(Constants.ERROR, "createIngest Error");
                     brAPI.cms.deleteVideo(newVideoId);
                 }
 
             } catch (Exception exIngest) {
                 LOGGER.error("createVideo", exIngest);
+                result.put(Constants.SENT, false);
                 result.put(Constants.ERROR, "createIngest Exception");
                 brAPI.cms.deleteVideo(newVideoId);
             }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName() + "Create Video", e);
+            result.put(Constants.SENT, false);
         }
         return result;
     }
@@ -718,6 +723,7 @@ public class ServiceUtil {
             LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
+            result.put(Constants.SENT, false);
             result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
             brAPI.cms.deleteVideo(newVideoId);
         }
