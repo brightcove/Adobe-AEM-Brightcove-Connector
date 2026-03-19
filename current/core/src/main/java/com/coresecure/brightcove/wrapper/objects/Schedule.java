@@ -51,7 +51,10 @@ public class Schedule {
     }
 
     public Schedule(ObjectNode aSchedule) throws IOException {
-        this(aSchedule.get(Constants.STARTS_AT).asText(), aSchedule.get(Constants.ENDS_AT).asText());
+        this(
+            aSchedule.has(Constants.STARTS_AT) && !aSchedule.get(Constants.STARTS_AT).isNull() ? aSchedule.get(Constants.STARTS_AT).asText() : null,
+            aSchedule.has(Constants.ENDS_AT) && !aSchedule.get(Constants.ENDS_AT).isNull() ? aSchedule.get(Constants.ENDS_AT).asText() : null
+        );
     }
 
     public ObjectNode toJSON() throws IOException {

@@ -370,7 +370,7 @@ public class BrcReplicationHandler implements TransportHandler {
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is); //ACTUAL VIDEO UPLOAD CALL - WITH METADATA
 
             //LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 brc_lastsync_map.put(Constants.BRC_ID, api_resp.get(Constants.VIDEOID).asText());
 
@@ -399,7 +399,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
             //do update video
             ObjectNode api_resp = serviceUtil.updateVideo(video); //ONLY UPDATE METADATA - DO NOT SEND BINARY
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
@@ -484,7 +484,7 @@ public class BrcReplicationHandler implements TransportHandler {
                         LOGGER.trace("DEACTIVATION");
                         LOGGER.trace(video.toString());
                         ObjectNode update_resp = serviceUtil.updateVideo(video);
-                        boolean sent = update_resp.get(Constants.SENT).asBoolean();
+                        boolean sent = update_resp.has(Constants.SENT) && update_resp.get(Constants.SENT).asBoolean();
                         if (sent) {
                             replicationLog.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
                             result = ReplicationResult.OK;

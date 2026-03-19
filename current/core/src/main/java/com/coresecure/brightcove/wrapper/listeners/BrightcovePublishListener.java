@@ -86,7 +86,7 @@ public class BrightcovePublishListener implements EventHandler {
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
             // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
 
                 brc_lastsync_map.put(Constants.BRC_ID, api_resp.get(Constants.VIDEOID).asText());
@@ -127,7 +127,7 @@ public class BrightcovePublishListener implements EventHandler {
             ObjectNode api_resp = serviceUtil.updateVideo(video);
             LOG.info("Brightcove Asset Modification Response: {}", api_resp.toString());
 
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
 
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());
@@ -223,7 +223,7 @@ public class BrightcovePublishListener implements EventHandler {
                     try {
 
                         ObjectNode update_resp = serviceUtil.updateVideo(video);
-                        boolean sent = update_resp.get(Constants.SENT).asBoolean();
+                        boolean sent = update_resp.has(Constants.SENT) && update_resp.get(Constants.SENT).asBoolean();
 
                         if (sent) {
 

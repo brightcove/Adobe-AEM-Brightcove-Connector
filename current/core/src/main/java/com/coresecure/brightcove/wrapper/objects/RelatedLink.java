@@ -50,7 +50,10 @@ public class RelatedLink {
     }
 
     public RelatedLink(ObjectNode aLink) throws IOException {
-        this(aLink.get("text").asText(), aLink.get("url").asText());
+        this(
+            aLink.has("text") && !aLink.get("text").isNull() ? aLink.get("text").asText() : null,
+            aLink.has("url") && !aLink.get("url").isNull() ? aLink.get("url").asText() : null
+        );
     }
 
     public ObjectNode toJSON() throws IOException {

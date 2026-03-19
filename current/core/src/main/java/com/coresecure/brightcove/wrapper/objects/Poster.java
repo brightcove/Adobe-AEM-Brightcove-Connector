@@ -55,7 +55,7 @@ public class Poster {
 
     public Poster(ObjectNode aPoster) throws IOException
     {
-        this(aPoster.get(Constants.SRC).asText());
+        this(aPoster != null && aPoster.has(Constants.SRC) && !aPoster.get(Constants.SRC).isNull() ? aPoster.get(Constants.SRC).asText() : null);
     }
 
 

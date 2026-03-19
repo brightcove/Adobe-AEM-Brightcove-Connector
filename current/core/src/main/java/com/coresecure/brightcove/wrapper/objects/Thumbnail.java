@@ -54,7 +54,7 @@ public class Thumbnail {
     }
     public Thumbnail(ObjectNode aPoster) throws IOException
     {
-        this(aPoster.get(Constants.SRC).asText());
+        this(aPoster != null && aPoster.has(Constants.SRC) && !aPoster.get(Constants.SRC).isNull() ? aPoster.get(Constants.SRC).asText() : null);
     }
 
     public ObjectNode toJSON() throws IOException

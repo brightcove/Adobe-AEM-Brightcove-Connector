@@ -83,9 +83,11 @@ public class BrcImageApi extends SlingAllMethodsServlet {
         //TODO: MODULARIZE
 
         // Find a single video
-        if (video != null && video.has(Constants.POSTER)) {
+        if (video != null && video.has(Constants.POSTER) && video.get(Constants.POSTER).isObject()) {
             ObjectNode poster = (ObjectNode) video.get(Constants.POSTER);
-            urlStr = poster.get(Constants.SRC).asText();
+            if (poster.has(Constants.SRC) && !poster.get(Constants.SRC).isNull()) {
+                urlStr = poster.get(Constants.SRC).asText();
+            }
         }
 
 

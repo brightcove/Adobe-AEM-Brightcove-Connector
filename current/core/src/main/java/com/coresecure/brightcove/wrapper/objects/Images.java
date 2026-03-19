@@ -58,7 +58,10 @@ public class Images {
 
     public Images(ObjectNode aImagesObj) throws IOException
     {
-        this(new Poster((ObjectNode) aImagesObj.get(Constants.POSTER)),new Thumbnail((ObjectNode) aImagesObj.get(Constants.THUMBNAIL)));
+        this(
+            aImagesObj.has(Constants.POSTER) && aImagesObj.get(Constants.POSTER).isObject() ? new Poster((ObjectNode) aImagesObj.get(Constants.POSTER)) : null,
+            aImagesObj.has(Constants.THUMBNAIL) && aImagesObj.get(Constants.THUMBNAIL).isObject() ? new Thumbnail((ObjectNode) aImagesObj.get(Constants.THUMBNAIL)) : null
+        );
     }
 
 

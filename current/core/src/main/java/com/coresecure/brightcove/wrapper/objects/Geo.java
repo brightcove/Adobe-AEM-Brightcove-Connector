@@ -57,12 +57,14 @@ public class Geo {
     }
 
     public Geo(ObjectNode aGeo) throws IOException {
-        exclude_countries = aGeo.get(Constants.EXCLUDE_COUNTRIES).asBoolean();
-        restricted = aGeo.get(Constants.RESTRICTED).asBoolean();
+        exclude_countries = aGeo.has(Constants.EXCLUDE_COUNTRIES) && !aGeo.get(Constants.EXCLUDE_COUNTRIES).isNull() && aGeo.get(Constants.EXCLUDE_COUNTRIES).asBoolean();
+        restricted = aGeo.has(Constants.RESTRICTED) && !aGeo.get(Constants.RESTRICTED).isNull() && aGeo.get(Constants.RESTRICTED).asBoolean();
         countries = new ArrayList<GeoFilterCodeEnum>();
-        ArrayNode countriesArr = (ArrayNode) aGeo.get(Constants.COUNTRIES);
-        for (int i = 0; i < countriesArr.size(); i++) {
-            countries.add(GeoFilterCodeEnum.lookupByCode(countriesArr.get(i).asText()));
+        if (aGeo.has(Constants.COUNTRIES) && aGeo.get(Constants.COUNTRIES).isArray()) {
+            ArrayNode countriesArr = (ArrayNode) aGeo.get(Constants.COUNTRIES);
+            for (int i = 0; i < countriesArr.size(); i++) {
+                countries.add(GeoFilterCodeEnum.lookupByCode(countriesArr.get(i).asText()));
+            }
         }
     }
 

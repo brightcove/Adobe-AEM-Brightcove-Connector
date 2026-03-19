@@ -184,7 +184,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
             // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();
                 brc_lastsync_map.put(Constants.BRC_ID, brightcoveAssetId);
@@ -232,7 +232,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             ObjectNode api_resp = serviceUtil.updateVideo(video);
             LOG.info("Brightcove Asset Modification Response: {}", api_resp.toString());
 
-            boolean sent = api_resp.get(Constants.SENT).asBoolean();
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
             	brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());

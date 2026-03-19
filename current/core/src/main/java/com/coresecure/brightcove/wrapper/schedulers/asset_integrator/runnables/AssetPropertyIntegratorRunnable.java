@@ -175,7 +175,7 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 //GET VIDEOS
                 int startOffset = 0;
                 ObjectNode jsonObject = serviceUtil.searchVideo("", startOffset, 0, Constants.NAME, true); //QUERY<------
-                final ArrayNode itemsArr = jsonObject.has("items") ? (ArrayNode) jsonObject.get("items") : null;
+                final ArrayNode itemsArr = jsonObject.has("items") && jsonObject.get("items").isArray() ? (ArrayNode) jsonObject.get("items") : null;
 
                 if (itemsArr == null) {
                     LOGGER.error("searchVideo returned no items array, skipping sync");
