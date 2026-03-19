@@ -650,6 +650,7 @@ public class ServiceUtil {
         try {
             ObjectNode videoItem = brAPI.cms.createVideo(aVideo);
             if (!videoItem.has(Constants.ID)) {
+                result.put(Constants.SENT, false);
                 result.put(Constants.ERROR, "createVideo failed");
                 return result;
             }
@@ -690,6 +691,7 @@ public class ServiceUtil {
 
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
+            result.put(Constants.SENT, false);
         }
         return result;
     }
