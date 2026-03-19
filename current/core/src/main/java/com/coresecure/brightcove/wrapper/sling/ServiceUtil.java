@@ -711,6 +711,7 @@ public class ServiceUtil {
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
             result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
+            brAPI.cms.deleteVideo(newVideoId);
         }
 
         return result;
@@ -1078,7 +1079,11 @@ public class ServiceUtil {
             LOGGER.trace("S3RESP : " + s3_url_resp_original);
             LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
             if (s3_url_resp_original != null && s3_url_resp_original.has(Constants.SENT) && s3_url_resp_original.get(Constants.SENT).asBoolean()) {
-                master = (ObjectNode) MAPPER.readTree("{'master': {'url': '" + s3_url_resp_original.get(Constants.API_REQUEST_URL).asText() + "'},'profile': '" + ingest_profile + "','capture-images': false}");
+                ObjectNode masterUrl = JsonNodeFactory.instance.objectNode();
+                masterUrl.put("url", s3_url_resp_original.get(Constants.API_REQUEST_URL).asText());
+                master.set("master", masterUrl);
+                master.put("profile", ingest_profile);
+                master.put("capture-images", false);
             }
 
         }
