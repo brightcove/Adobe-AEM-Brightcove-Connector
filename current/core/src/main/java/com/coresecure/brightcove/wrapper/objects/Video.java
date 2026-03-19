@@ -167,6 +167,12 @@ public class Video {
             if (video.has(Constants.TEXT_TRACKS) && !video.get(Constants.TEXT_TRACKS).isNull()) localtext_tracks = (ArrayNode) video.get(Constants.TEXT_TRACKS);
             if (video.has(Constants.VARIANTS) && !video.get(Constants.VARIANTS).isNull()) localvariants = (ArrayNode) video.get(Constants.VARIANTS);
             if (video.has(Constants.COMPLETE) && !video.get(Constants.COMPLETE).isNull()) localcomplete = video.get(Constants.COMPLETE).asBoolean();
+            if (video.has(Constants.PROJECTION) && !video.get(Constants.PROJECTION).isNull()) localprojection = new Projection(video.get(Constants.PROJECTION).asText());
+            if (video.has(Constants.GEO) && !video.get(Constants.GEO).isNull()) localgeo = new Geo((ObjectNode) video.get(Constants.GEO));
+            if (video.has(Constants.SCHEDULE) && !video.get(Constants.SCHEDULE).isNull()) localschedule = new Schedule((ObjectNode) video.get(Constants.SCHEDULE));
+            if (video.has(Constants.LINK) && !video.get(Constants.LINK).isNull()) locallink = new RelatedLink((ObjectNode) video.get(Constants.LINK));
+            if (video.has(Constants.ECONOMICS) && !video.get(Constants.ECONOMICS).isNull()) localeconomics = EconomicsEnum.valueOf(video.get(Constants.ECONOMICS).asText());
+            if (video.has(Constants.IMAGES) && !video.get(Constants.IMAGES).isNull()) localimages = new Images((ObjectNode) video.get(Constants.IMAGES));
             if (video.has(Constants.TAGS) && !video.get(Constants.TAGS).isNull())
             {
                 ArrayNode tagsArr = (ArrayNode) video.get(Constants.TAGS);

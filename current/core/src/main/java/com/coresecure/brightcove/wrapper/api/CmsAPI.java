@@ -540,16 +540,20 @@ public class CmsAPI {
     //No network call
     public ArrayNode addThumbnail(ArrayNode input) {
         ArrayNode videos = JsonNodeFactory.instance.arrayNode();
-        for (int i = 0; i < input.size(); i++) {
-            ObjectNode video = (ObjectNode) input.get(i);
-            if (video.has(Constants.ID)) {
-                if (video.has(Constants.IMAGES) && ((ObjectNode) video.get(Constants.IMAGES)).has(Constants.THUMBNAIL)) {
-                    video.put(Constants.THUMBNAIL_URL, ((ObjectNode) video.get(Constants.IMAGES)).get(Constants.THUMBNAIL).get(Constants.SRC).asText());
-                } else {
-                    video.put(Constants.THUMBNAIL_URL, Constants.DEFAULT_THUMBNAIL_LOCATION);
+        try {
+            for (int i = 0; i < input.size(); i++) {
+                ObjectNode video = (ObjectNode) input.get(i);
+                if (video.has(Constants.ID)) {
+                    if (video.has(Constants.IMAGES) && ((ObjectNode) video.get(Constants.IMAGES)).has(Constants.THUMBNAIL)) {
+                        video.put(Constants.THUMBNAIL_URL, ((ObjectNode) video.get(Constants.IMAGES)).get(Constants.THUMBNAIL).get(Constants.SRC).asText());
+                    } else {
+                        video.put(Constants.THUMBNAIL_URL, Constants.DEFAULT_THUMBNAIL_LOCATION);
+                    }
+                    videos.add(video);
                 }
-                videos.add(video);
             }
+        } catch (Exception e) {
+            LOGGER.error(e.getClass().getName(), e);
         }
         return videos;
     }
