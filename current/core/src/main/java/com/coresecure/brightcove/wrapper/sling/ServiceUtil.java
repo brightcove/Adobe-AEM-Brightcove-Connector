@@ -51,6 +51,7 @@ import com.day.cq.tagging.TagManager;
 import com.day.cq.wcm.api.NameConstants;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.*;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -704,9 +705,6 @@ public class ServiceUtil {
 
             boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.get(Constants.SIGNED_URL).asText()), is , HttpServices.getProxy());
             result.put(Constants.SENT, sent);
-            if (!sent) {
-                brAPI.cms.deleteVideo(newVideoId);
-            }
             LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -1210,9 +1208,12 @@ public class ServiceUtil {
             LOGGER.trace("master OBJECT : {}" , master);
             ObjectNode response = brAPI.cms.uploadInjest(currentVideo.id, master);
             LOGGER.trace(Constants.RESPONSE , response);
-            ObjectNode api_resp = (ObjectNode) MAPPER.readTree(response.get(Constants.RESPONSE).asText());
-            if (api_resp.has(Constants.ID)) {
-                result = true;
+            JsonNode responseNode = response != null ? response.get(Constants.RESPONSE) : null;
+            if (responseNode != null && !responseNode.isNull()) {
+                ObjectNode api_resp = (ObjectNode) MAPPER.readTree(responseNode.asText());
+                if (api_resp.has(Constants.ID)) {
+                    result = true;
+                }
             }
         } else {
             result = true;
