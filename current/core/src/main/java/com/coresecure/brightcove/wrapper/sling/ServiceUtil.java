@@ -617,6 +617,10 @@ public class ServiceUtil {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         try {
             ObjectNode videoItem = brAPI.cms.createVideo(aVideo);
+            if (!videoItem.has(Constants.ID)) {
+                result.put(Constants.ERROR, "createVideo failed");
+                return result;
+            }
             String newVideoId = videoItem.get(Constants.ID).asText();
             try {
                 com.coresecure.brightcove.wrapper.objects.Ingest ingest = new com.coresecure.brightcove.wrapper.objects.Ingest(ingestProfile, ingestURL);
@@ -645,6 +649,10 @@ public class ServiceUtil {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         try {
             ObjectNode videoItem = brAPI.cms.createVideo(aVideo);
+            if (!videoItem.has(Constants.ID)) {
+                result.put(Constants.ERROR, "createVideo failed");
+                return result;
+            }
             String newVideoId = videoItem.get(Constants.ID).asText();
             try {
                 ObjectNode videoIngested = brAPI.cms.getIngestURL(newVideoId, filename);
@@ -1316,11 +1324,14 @@ public class ServiceUtil {
         try
         {
             ObjectNode custom_fields_obj = getCustomFields();
-            ArrayNode custom_fields_arr = (ArrayNode) custom_fields_obj.get(Constants.CUSTOM_FIELDS);
-            for(int z = 0 ; z < custom_fields_arr.size() ; z ++ )
-            {
-                ObjectNode current = (ObjectNode) custom_fields_arr.get(z);
-                custom_fields.put( current.get(Constants.ID).asText(), custom_node_map.get(current.get(Constants.ID).asText(),""));
+            ArrayNode custom_fields_arr = (custom_fields_obj != null && custom_fields_obj.has(Constants.CUSTOM_FIELDS) && custom_fields_obj.get(Constants.CUSTOM_FIELDS).isArray())
+                    ? (ArrayNode) custom_fields_obj.get(Constants.CUSTOM_FIELDS) : null;
+            if (custom_fields_arr != null) {
+                for(int z = 0 ; z < custom_fields_arr.size() ; z ++ )
+                {
+                    ObjectNode current = (ObjectNode) custom_fields_arr.get(z);
+                    custom_fields.put( current.get(Constants.ID).asText(), custom_node_map.get(current.get(Constants.ID).asText(),""));
+                }
             }
 
         }

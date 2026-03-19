@@ -235,7 +235,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
             try {
-                String payload = "{ \"name\": \"" + title + "\"";
+                String payload = "{ \"name\": \"" + title + "\" }";
                 String response = account.platform.postAPI(targetURL, payload, headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
@@ -545,7 +545,11 @@ public class CmsAPI {
                 ObjectNode video = (ObjectNode) input.get(i);
                 if (video.has(Constants.ID)) {
                     if (video.has(Constants.IMAGES) && ((ObjectNode) video.get(Constants.IMAGES)).has(Constants.THUMBNAIL)) {
-                        video.put(Constants.THUMBNAIL_URL, ((ObjectNode) video.get(Constants.IMAGES)).get(Constants.THUMBNAIL).get(Constants.SRC).asText());
+                        com.fasterxml.jackson.databind.JsonNode thumbNode = ((ObjectNode) video.get(Constants.IMAGES)).get(Constants.THUMBNAIL);
+                        String srcUrl = (thumbNode != null && thumbNode.has(Constants.SRC) && !thumbNode.get(Constants.SRC).isNull())
+                                ? thumbNode.get(Constants.SRC).asText()
+                                : Constants.DEFAULT_THUMBNAIL_LOCATION;
+                        video.put(Constants.THUMBNAIL_URL, srcUrl);
                     } else {
                         video.put(Constants.THUMBNAIL_URL, Constants.DEFAULT_THUMBNAIL_LOCATION);
                     }

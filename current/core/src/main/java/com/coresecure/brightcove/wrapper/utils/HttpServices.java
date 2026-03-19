@@ -155,11 +155,11 @@ public class HttpServices {
                 }
                 putResponse = response.toString();
             } else {
-                putResponse = "{'error_code':" + connection.getResponseCode() + ",'message':'" + connection.getResponseMessage() + "'}";
+                putResponse = "{\"error_code\":" + connection.getResponseCode() + ",\"message\":\"" + connection.getResponseMessage() + "\"}";
             }
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
-            putResponse = "{'error_code':-1,'message':'Exception in executeDelete'}";
+            putResponse = "{\"error_code\":-1,\"message\":\"Exception in executePut\"}";
 
         } finally {
 
@@ -231,11 +231,11 @@ public class HttpServices {
                 }
                 delResponse = response.toString();
             } else {
-                delResponse = "{'error_code':" + connection.getResponseCode() + ",'message':'" + connection.getResponseMessage() + "'}";
+                delResponse = "{\"error_code\":" + connection.getResponseCode() + ",\"message\":\"" + connection.getResponseMessage() + "\"}";
             }
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
-            delResponse = "{'error_code':-1,'message':'Exception in executeDelete'}";
+            delResponse = "{\"error_code\":-1,\"message\":\"Exception in executeDelete\"}";
 
         } finally {
 
@@ -339,11 +339,21 @@ public class HttpServices {
                     responseJSON.put("error", connection.getResponseCode());
                 } else {
 
-                    ArrayNode errorArray = (ArrayNode) MAPPER.readTree(exPostResponse);
+                    com.fasterxml.jackson.databind.JsonNode errorRoot = MAPPER.readTree(exPostResponse);
                     responseJSON = JsonNodeFactory.instance.objectNode();
-                    ObjectNode firstError = (ObjectNode) errorArray.get(0);
-                    responseJSON.put("error", firstError.has("error_code") ? firstError.get("error_code").asText() : "DefaultError");
-                    responseJSON.put("error_message", firstError.has("message") ? firstError.get("message").asText() : "Default Message");
+                    ObjectNode firstError = null;
+                    if (errorRoot.isArray() && errorRoot.size() > 0 && errorRoot.get(0).isObject()) {
+                        firstError = (ObjectNode) errorRoot.get(0);
+                    } else if (errorRoot.isObject()) {
+                        firstError = (ObjectNode) errorRoot;
+                    }
+                    if (firstError != null) {
+                        responseJSON.put("error", firstError.has("error_code") ? firstError.get("error_code").asText() : "DefaultError");
+                        responseJSON.put("error_message", firstError.has("message") ? firstError.get("message").asText() : "Default Message");
+                    } else {
+                        responseJSON.put("error", connection.getResponseCode());
+                        responseJSON.put("error_message", "Default Message");
+                    }
                 }
 
                 LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));

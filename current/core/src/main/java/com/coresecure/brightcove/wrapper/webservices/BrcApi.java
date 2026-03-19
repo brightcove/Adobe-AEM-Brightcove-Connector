@@ -380,6 +380,10 @@ public class BrcApi extends SlingAllMethodsServlet {
                 link
         );
         ObjectNode videoItem = brAPI.cms.createVideo(video);
+        if (!videoItem.has(Constants.ID)) {
+            result.put(Constants.ERROR, "createVideo failed");
+            return result;
+        }
         String newVideoId = videoItem.get(Constants.ID).asText();
         ObjectNode videoIngested = JsonNodeFactory.instance.objectNode();
         try {
@@ -563,12 +567,13 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
         //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toPrettyString());
 
-        if (videoItem.has(Constants.RESPONSE)) {
-            ObjectNode responseOBJ = (ObjectNode) MAPPER.readTree(videoItem.get(Constants.RESPONSE).asText());
-            LOGGER.trace("**has id object: {}", responseOBJ.has(Constants.ID));
-            //response.sendError(422, "Incompatible Payload for Audio Track");
+        if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
+            com.fasterxml.jackson.databind.JsonNode parsedResponse = MAPPER.readTree(videoItem.get(Constants.RESPONSE).asText());
+            if (parsedResponse != null && parsedResponse.isObject()) {
+                ObjectNode responseOBJ = (ObjectNode) parsedResponse;
+                LOGGER.trace("**has id object: {}", responseOBJ.has(Constants.ID));
+            }
             LOGGER.trace("Text Track Upload Complete");
-
         } else {
             response.sendError(500, "Check logs");
         }
