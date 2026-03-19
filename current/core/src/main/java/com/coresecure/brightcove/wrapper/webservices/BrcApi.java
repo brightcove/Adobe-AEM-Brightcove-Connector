@@ -715,11 +715,16 @@ public class BrcApi extends SlingAllMethodsServlet {
 
             if (dropdown) {
                 response.setContentType("text/html;charset=UTF-8");
-                ArrayNode itemsArray = (ArrayNode) result.get("items");
                 StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < itemsArray.size(); i++) {
-                    ObjectNode item = (ObjectNode) itemsArray.get(i);
-                    builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + item.get("name").asText() + " [" + item.get("id").asText() + "]\">" + item.get("name").asText() + " [" + item.get("id").asText() + "]</li>");
+                if (result.has("items") && result.get("items").isArray()) {
+                    ArrayNode itemsArray = (ArrayNode) result.get("items");
+                    for (int i = 0; i < itemsArray.size(); i++) {
+                        if (!itemsArray.get(i).isObject()) continue;
+                        ObjectNode item = (ObjectNode) itemsArray.get(i);
+                        String iName = item.has("name") && !item.get("name").isNull() ? item.get("name").asText() : "";
+                        String iId = item.has("id") && !item.get("id").isNull() ? item.get("id").asText() : "";
+                        builder.append("<li class=\"coral-SelectList-item coral-SelectList-item--option\" data-value=\"" + iName + " [" + iId + "]\">" + iName + " [" + iId + "]</li>");
+                    }
                 }
                 LOGGER.debug("dropdown values requested");
                 response.getWriter().write(builder.toString());

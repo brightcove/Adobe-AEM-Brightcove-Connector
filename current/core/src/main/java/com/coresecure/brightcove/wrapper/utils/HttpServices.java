@@ -335,7 +335,10 @@ public class HttpServices {
 
                 if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
                     //CORRECT ADDITION OF THE REQUEST BODY
-                    responseJSON = (ObjectNode) MAPPER.readTree(exPostResponse);
+                    com.fasterxml.jackson.databind.JsonNode parsedSuccess = MAPPER.readTree(exPostResponse);
+                    responseJSON = parsedSuccess != null && parsedSuccess.isObject()
+                            ? (ObjectNode) parsedSuccess
+                            : JsonNodeFactory.instance.objectNode();
                     responseJSON.put("error", connection.getResponseCode());
                 } else {
 

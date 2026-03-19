@@ -854,19 +854,23 @@ public class ServiceUtil {
     
     private void setImages(ObjectNode objObject, Asset newAsset) {
         try {
-            if (objObject.has(Constants.POSTER)) {
+            if (objObject.has(Constants.POSTER) && objObject.get(Constants.POSTER).isObject()) {
                 ObjectNode images_poster_obj = (ObjectNode) objObject.get(Constants.POSTER);
-                String src = images_poster_obj.get(Constants.SRC).asText();
-                InputStream ris = getRenditionInputStream(src);
-                newAsset.addRendition(Constants.BRC_POSTER_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+                if (images_poster_obj.has(Constants.SRC) && !images_poster_obj.get(Constants.SRC).isNull()) {
+                    String src = images_poster_obj.get(Constants.SRC).asText();
+                    InputStream ris = getRenditionInputStream(src);
+                    newAsset.addRendition(Constants.BRC_POSTER_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+                }
             } else {
                 newAsset.removeRendition(Constants.BRC_POSTER_PNG);
             }
-            if (objObject.has(Constants.THUMBNAIL)) {
+            if (objObject.has(Constants.THUMBNAIL) && objObject.get(Constants.THUMBNAIL).isObject()) {
                 ObjectNode images_poster_obj = (ObjectNode) objObject.get(Constants.THUMBNAIL);
-                String src = images_poster_obj.get(Constants.SRC).asText();
-                InputStream ris = getRenditionInputStream(src);
-                newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+                if (images_poster_obj.has(Constants.SRC) && !images_poster_obj.get(Constants.SRC).isNull()) {
+                    String src = images_poster_obj.get(Constants.SRC).asText();
+                    InputStream ris = getRenditionInputStream(src);
+                    newAsset.addRendition(Constants.BRC_THUMBNAIL_PNG, ris, StandardImageHandler.PNG1_MIMETYPE);
+                }
             } else {
                 newAsset.removeRendition(Constants.BRC_THUMBNAIL_PNG);
             }
