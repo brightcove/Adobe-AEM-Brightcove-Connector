@@ -82,7 +82,7 @@ public class Account {
             ObjectNode response = JsonReader.readJsonFromString(loginResponse);
             LOGGER.debug(Constants.RESPONSE ,response);
 
-            if (response.get(Constants.ACCESS_TOKEN) != null && response.get("token_type") != null) {
+            if (response.get(Constants.ACCESS_TOKEN) != null && response.get("token_type") != null && response.get("expires_in") != null) {
                 authToken = new TokenObj(response.get(Constants.ACCESS_TOKEN).asText(), response.get("token_type").asText(), response.get("expires_in").asInt());
                 result = true;
             }

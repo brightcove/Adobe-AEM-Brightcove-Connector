@@ -936,7 +936,16 @@ public class ServiceUtil {
             Iterator<String> itrObj = objObject.fieldNames();
             while (itrObj.hasNext()) {
                 String selectorKey = itrObj.next();
-                submap.put(selectorKey, objObject.get(selectorKey).asText());
+                JsonNode valueNode = objObject.get(selectorKey);
+                if (valueNode.isBoolean()) {
+                    submap.put(selectorKey, valueNode.asBoolean());
+                } else if (valueNode.isIntegralNumber()) {
+                    submap.put(selectorKey, valueNode.asLong());
+                } else if (valueNode.isFloatingPointNumber()) {
+                    submap.put(selectorKey, valueNode.asDouble());
+                } else if (!valueNode.isNull()) {
+                    submap.put(selectorKey, valueNode.isValueNode() ? valueNode.asText() : valueNode.toString());
+                }
             }
         } catch (RepositoryException e) {
             LOGGER.error(e.getClass().getName(), e);
