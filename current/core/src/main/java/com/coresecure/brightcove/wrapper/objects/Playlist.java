@@ -183,14 +183,14 @@ public class Playlist {
      */
     private void finishConstruction(ObjectNode jsonObj) throws IOException {
         Iterator<String> rootKeys = jsonObj.fieldNames();
-        if(jsonObj.has(Constants.NAME)) name = jsonObj.get(Constants.NAME).asText();
-        if(jsonObj.has(Constants.ID)) id = jsonObj.get(Constants.ID).asText();
-        if(jsonObj.has(Constants.FAVORITE)) favorite = jsonObj.get(Constants.FAVORITE).asBoolean();
-        if(jsonObj.has(Constants.ACCOUNT_ID)) account_id = jsonObj.get(Constants.ACCOUNT_ID).asText();
-        if(jsonObj.has(Constants.CREATED_AT)) created_at = jsonObj.get(Constants.CREATED_AT).asText();
-        if(jsonObj.has(Constants.UPDATED_AT)) updated_at = jsonObj.get(Constants.UPDATED_AT).asText();
-        if(jsonObj.has(Constants.REFERENCE_ID)) reference_id = jsonObj.get(Constants.REFERENCE_ID).asText();
-        if(jsonObj.has(Constants.DESCRIPTION)) description = jsonObj.get(Constants.DESCRIPTION).asText();
+        if(jsonObj.has(Constants.NAME) && !jsonObj.get(Constants.NAME).isNull()) name = jsonObj.get(Constants.NAME).asText();
+        if(jsonObj.has(Constants.ID) && !jsonObj.get(Constants.ID).isNull()) id = jsonObj.get(Constants.ID).asText();
+        if(jsonObj.has(Constants.FAVORITE) && !jsonObj.get(Constants.FAVORITE).isNull()) favorite = jsonObj.get(Constants.FAVORITE).asBoolean();
+        if(jsonObj.has(Constants.ACCOUNT_ID) && !jsonObj.get(Constants.ACCOUNT_ID).isNull()) account_id = jsonObj.get(Constants.ACCOUNT_ID).asText();
+        if(jsonObj.has(Constants.CREATED_AT) && !jsonObj.get(Constants.CREATED_AT).isNull()) created_at = jsonObj.get(Constants.CREATED_AT).asText();
+        if(jsonObj.has(Constants.UPDATED_AT) && !jsonObj.get(Constants.UPDATED_AT).isNull()) updated_at = jsonObj.get(Constants.UPDATED_AT).asText();
+        if(jsonObj.has(Constants.REFERENCE_ID) && !jsonObj.get(Constants.REFERENCE_ID).isNull()) reference_id = jsonObj.get(Constants.REFERENCE_ID).asText();
+        if(jsonObj.has(Constants.DESCRIPTION) && !jsonObj.get(Constants.DESCRIPTION).isNull()) description = jsonObj.get(Constants.DESCRIPTION).asText();
         if(jsonObj.has(Constants.VIDEO_IDS)) {
             video_ids = new ArrayList<String>();
             ArrayNode idsArray = (ArrayNode) jsonObj.get(Constants.VIDEO_IDS);

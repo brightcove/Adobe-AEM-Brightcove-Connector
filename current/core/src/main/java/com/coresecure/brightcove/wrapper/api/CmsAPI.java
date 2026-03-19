@@ -710,8 +710,8 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/experiences";
             try {
-                q = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
-                String urlParameters = "q=" + URLEncoder.encode(q, DEFAULT_ENCODING) + "&sort=" + sort;
+                String encodedQ = (q != null) ? URLEncoder.encode(q, DEFAULT_ENCODING) : "";
+                String urlParameters = "q=" + encodedQ + "&sort=" + sort;
                 json = getExperiencesJSONObjectResponse(targetURL, urlParameters, headers);
             } catch (UnsupportedEncodingException e) {
                 LOGGER.error(e.getClass().getName(), e);
