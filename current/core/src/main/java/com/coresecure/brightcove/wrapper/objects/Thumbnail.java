@@ -35,10 +35,11 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 
 public class Thumbnail {
@@ -51,14 +52,14 @@ public class Thumbnail {
     {
         url = aSrc;
     }
-    public Thumbnail(JSONObject aPoster) throws JSONException
+    public Thumbnail(ObjectNode aPoster) throws IOException
     {
-        this(aPoster.getString(Constants.SRC));
+        this(aPoster != null && aPoster.has(Constants.SRC) && !aPoster.get(Constants.SRC).isNull() ? aPoster.get(Constants.SRC).asText() : null);
     }
 
-    public JSONObject toJSON() throws JSONException
+    public ObjectNode toJSON() throws IOException
     {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.URL});
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.URL});
         return json;
     }
 
@@ -66,7 +67,7 @@ public class Thumbnail {
     {
         try {
             return toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
             return new String();
         }

@@ -35,11 +35,12 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 
 public class Text_track {
@@ -53,13 +54,13 @@ public class Text_track {
     public final String mime_type;
     public final String asset_id;
     public final Boolean _default;
-    public final JSONArray sources;
+    public final ArrayNode sources;
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Text_track.class);
 
 
-    public Text_track(String id, String account_id, String src, String srclang, String label, String kind, String mime_type, String asset_id, Boolean _default, JSONArray sources)
+    public Text_track(String id, String account_id, String src, String srclang, String label, String kind, String mime_type, String asset_id, Boolean _default, ArrayNode sources)
     {
         this.id = id;
         this.account_id = account_id;
@@ -75,7 +76,7 @@ public class Text_track {
 
 
 
-    public Text_track(JSONObject aText_track)
+    public Text_track(ObjectNode aText_track)
     {
         String localid = null;
         String localaccount_id = null;
@@ -86,24 +87,21 @@ public class Text_track {
         String localmime_type = null;
         String localasset_id = null;
         Boolean local_default = null;
-        JSONArray localsources = null;
+        ArrayNode localsources = null;
         try
         {
-            if(!aText_track.isNull(Constants.ID)) localid = aText_track.getString(Constants.ID);
-            if(!aText_track.isNull(Constants.ACCOUNT_ID))localaccount_id = aText_track.getString(Constants.ACCOUNT_ID);
-            if(!aText_track.isNull(Constants.SRC))localsrc = aText_track.getString(Constants.SRC);
-            if(!aText_track.isNull(Constants.SRCLANG))localsrclang = aText_track.getString(Constants.SRCLANG);
-            if(!aText_track.isNull(Constants.LABEL))locallabel = aText_track.getString(Constants.LABEL);
-            if(!aText_track.isNull(Constants.KIND))localkind = aText_track.getString(Constants.KIND);
-            if(!aText_track.isNull(Constants.MIME_TYPE))localmime_type = aText_track.getString(Constants.MIME_TYPE);
-            if(!aText_track.isNull(Constants.ASSET_ID))localasset_id = aText_track.getString(Constants.ASSET_ID);
-            if(!aText_track.isNull(Constants.SOURCES))localsources = aText_track.getJSONArray(Constants.SOURCES);
-            if(!aText_track.isNull(Constants.DEFAULT))local_default = aText_track.getBoolean(Constants.DEFAULT);
+            if(aText_track.has(Constants.ID) && !aText_track.get(Constants.ID).isNull()) localid = aText_track.get(Constants.ID).asText();
+            if(aText_track.has(Constants.ACCOUNT_ID) && !aText_track.get(Constants.ACCOUNT_ID).isNull()) localaccount_id = aText_track.get(Constants.ACCOUNT_ID).asText();
+            if(aText_track.has(Constants.SRC) && !aText_track.get(Constants.SRC).isNull()) localsrc = aText_track.get(Constants.SRC).asText();
+            if(aText_track.has(Constants.SRCLANG) && !aText_track.get(Constants.SRCLANG).isNull()) localsrclang = aText_track.get(Constants.SRCLANG).asText();
+            if(aText_track.has(Constants.LABEL) && !aText_track.get(Constants.LABEL).isNull()) locallabel = aText_track.get(Constants.LABEL).asText();
+            if(aText_track.has(Constants.KIND) && !aText_track.get(Constants.KIND).isNull()) localkind = aText_track.get(Constants.KIND).asText();
+            if(aText_track.has(Constants.MIME_TYPE) && !aText_track.get(Constants.MIME_TYPE).isNull()) localmime_type = aText_track.get(Constants.MIME_TYPE).asText();
+            if(aText_track.has(Constants.ASSET_ID) && !aText_track.get(Constants.ASSET_ID).isNull()) localasset_id = aText_track.get(Constants.ASSET_ID).asText();
+            if(aText_track.has(Constants.SOURCES) && !aText_track.get(Constants.SOURCES).isNull()) localsources = (ArrayNode) aText_track.get(Constants.SOURCES);
+            if(aText_track.has(Constants.DEFAULT) && !aText_track.get(Constants.DEFAULT).isNull()) local_default = aText_track.get(Constants.DEFAULT).asBoolean();
         }
-        catch (JSONException e)
-        {
-            LOGGER.error(e.getClass().getName(),e );
-        } catch (Exception e )
+        catch (Exception e)
         {
             LOGGER.error(e.getClass().getName(), e);
         } finally {
@@ -120,9 +118,9 @@ public class Text_track {
         }
     }
 
-    public JSONObject toJSON() throws JSONException
+    public ObjectNode toJSON() throws IOException
     {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID , Constants.SRC, Constants.SRCLANG, Constants.LABEL,Constants.KIND,Constants.MIME_TYPE,Constants.ASSET_ID,Constants.SOURCES, Constants.UNDERSCORE_DEFAULT});
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.ID, Constants.ACCOUNT_ID , Constants.SRC, Constants.SRCLANG, Constants.LABEL,Constants.KIND,Constants.MIME_TYPE,Constants.ASSET_ID,Constants.SOURCES, Constants.UNDERSCORE_DEFAULT});
         return json;
     }
 
@@ -130,7 +128,7 @@ public class Text_track {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

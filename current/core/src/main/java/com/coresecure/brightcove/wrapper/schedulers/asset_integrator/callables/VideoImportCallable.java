@@ -42,8 +42,7 @@ import com.day.cq.dam.api.AssetManager;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.sling.commons.mime.MimeTypeService;
 import org.jcodec.api.awt.AWTSequenceEncoder;
 import org.slf4j.Logger;
@@ -69,14 +68,14 @@ public class VideoImportCallable implements Callable<String> {
     private static final String ISO_8601_24H_FULL_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
 
-    private JSONObject innerObj;
+    private ObjectNode innerObj;
     private String confPath;
     private String requestedServiceAccount;
     private MimeTypeService mType;
     private ServiceUtil serviceUtil;
     private ResourceResolverFactory resourceResolverFactory;
     private ResourceResolver resourceResolver = null;
-    public VideoImportCallable(JSONObject innerObj, String confPath, String requestedServiceAccount, ResourceResolverFactory resourceResolverFactory, MimeTypeService mType, ServiceUtil serviceUtil){
+    public VideoImportCallable(ObjectNode innerObj, String confPath, String requestedServiceAccount, ResourceResolverFactory resourceResolverFactory, MimeTypeService mType, ServiceUtil serviceUtil){
         this.innerObj = innerObj;
         this.confPath = confPath;
         this.requestedServiceAccount = requestedServiceAccount;
@@ -85,11 +84,11 @@ public class VideoImportCallable implements Callable<String> {
         this.resourceResolverFactory = resourceResolverFactory;
     }
 
-    private String getItemFromJson(JSONObject innerObj, String key) throws JSONException{
-        return innerObj.has(key) && innerObj.get(key)!=null ? innerObj.getString(key) : "";
+    private String getItemFromJson(ObjectNode innerObj, String key) {
+        return innerObj.has(key) && !innerObj.get(key).isNull() ? innerObj.get(key).asText() : "";
     }
 
-    private Asset createAsset(String localpath, String id, String brightcove_filename) throws JSONException, IOException, RepositoryException {
+    private Asset createAsset(String localpath, String id, String brightcove_filename) throws IOException, RepositoryException {
         Asset newAsset = null;
 
         String mime_type = "";
@@ -205,8 +204,8 @@ public class VideoImportCallable implements Callable<String> {
             return accountFolder.concat(folderId + "/").concat(filename);
     }
 
-    private String cleanFilename(JSONObject innerObj) throws JSONException{
-        return innerObj.getString(Constants.ORIGINAL_FILENAME) != null ? innerObj.getString(Constants.ORIGINAL_FILENAME).replaceAll("%20", " ") : null;
+    private String cleanFilename(ObjectNode innerObj) {
+        return innerObj.has(Constants.ORIGINAL_FILENAME) && !innerObj.get(Constants.ORIGINAL_FILENAME).isNull() ? innerObj.get(Constants.ORIGINAL_FILENAME).asText().replaceAll("%20", " ") : null;
     }
 
     private Asset getAsset(String oldpath, String localpath ){
@@ -232,7 +231,7 @@ public class VideoImportCallable implements Callable<String> {
 
 
             //CHECK IF VIDEO'S STATE IS SET TO ACTIVE - CONDITION ONE
-            Boolean active = innerObj.has(Constants.STATE) && innerObj.get(Constants.STATE) != null && "ACTIVE".equals(innerObj.getString(Constants.STATE)) &&  innerObj.has(Constants.ID) && innerObj.get(Constants.ID) != null;
+            Boolean active = innerObj.has(Constants.STATE) && !innerObj.get(Constants.STATE).isNull() && "ACTIVE".equals(innerObj.get(Constants.STATE).asText()) && innerObj.has(Constants.ID) && !innerObj.get(Constants.ID).isNull();
 
             //CONDITIONN TWO - MUST HAVE AN ID
             String id = getItemFromJson(innerObj,Constants.ID);
@@ -241,17 +240,17 @@ public class VideoImportCallable implements Callable<String> {
             LOGGER.trace(">>>>START>>>>> {} >> {}", id ,active);
 
             if (!active) {
-                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toString(1));
+                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toPrettyString());
                 if (resourceResolver != null) {
                     resourceResolver.close();
                 }
                 return  Thread.currentThread().getName();
             }
 
-            String name = innerObj.getString(Constants.NAME);
+            String name = innerObj.get(Constants.NAME).asText();
             String brightcove_filename = id + ".mp4"; //BRIGHTCOVE FILE NAME IS ID + . MP4 <-
             String original_filename = cleanFilename(innerObj);
-            String brightcove_folder_id = (innerObj.isNull(Constants.FOLDER_ID) ? "" : innerObj.getString(Constants.FOLDER_ID));
+            String brightcove_folder_id = (!innerObj.has(Constants.FOLDER_ID) || innerObj.get(Constants.FOLDER_ID).isNull() ? "" : innerObj.get(Constants.FOLDER_ID).asText());
 
             LOGGER.trace("SYNCING VIDEO >> [" + name + "\tSTATE:ACTIVE\tTO BE:" + original_filename + "]");
 
@@ -282,7 +281,7 @@ public class VideoImportCallable implements Callable<String> {
                 Date local_mod_date = new Date(newAsset.getLastModified());
 
                 SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
-                Date remote_date = sdf.parse(innerObj.getString(Constants.UPDATED_AT));
+                Date remote_date = sdf.parse(innerObj.get(Constants.UPDATED_AT).asText());
 
                 //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
                 if (local_mod_date.compareTo(remote_date) < 0) {

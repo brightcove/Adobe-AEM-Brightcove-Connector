@@ -46,8 +46,8 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.apache.sling.api.wrappers.SlingHttpServletResponseWrapper;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,6 +75,7 @@ import java.util.Map;
 public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements Filter {
 
     final static private Logger LOGGER = LoggerFactory.getLogger(CustomAddDialogTabFilter.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public void init(FilterConfig filterConfig) {
@@ -142,15 +143,12 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
                         TidyJsonItemWriter td = new TidyJsonItemWriter(null);
                         StringWriter writer = new StringWriter();
                         td.dump(dialogNode, writer, 1000);
-                        JSONObject originalDialog = new JSONObject(writer.toString());
-                        JSONObject originalTabs =  getOriginalTabs(componentPath, originalDialog, slingRequest);
+                        ObjectNode originalDialog = (ObjectNode) MAPPER.readTree(writer.toString());
+                        ObjectNode originalTabs =  getOriginalTabs(componentPath, originalDialog, slingRequest);
                         slingResponse.getWriter().write(originalDialog.toString());
                     }
                 }
                 slingResponse.getWriter().close();
-            } catch (JSONException je) {
-                LOGGER.error("JE " + je.getMessage());
-                pChain.doFilter(pRequest, pResponse);
             } catch (Exception e) {
                 LOGGER.error("E " + e.getMessage());
                 pChain.doFilter(pRequest, pResponse);
@@ -161,8 +159,8 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
         }
     }
 
-    private JSONObject getOriginalTabs(String componentPath, JSONObject originalDialog, final SlingHttpServletRequest slingRequest) throws JSONException, RepositoryException{
-        JSONObject originalTabs = originalDialog.getJSONObject("items").getJSONObject("tabs").getJSONObject("items");
+    private ObjectNode getOriginalTabs(String componentPath, ObjectNode originalDialog, final SlingHttpServletRequest slingRequest) throws IOException, RepositoryException{
+        ObjectNode originalTabs = (ObjectNode) ((ObjectNode) originalDialog.get("items")).get("tabs").get("items");
         Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
         if (componentRes != null) {
             for (Resource item : getInheritResources(componentRes))
@@ -172,7 +170,7 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
                     Node nodeItem = item.adaptTo(Node.class);
                     if(nodeItem!=null)
                     {
-                        getOriginalTabsFromRes(nodeItem,originalTabs);
+                        getOriginalTabsFromRes(nodeItem, originalTabs);
                     }
                 }
             }
@@ -180,7 +178,7 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
         return originalTabs;
     }
 
-    private void getOriginalTabsFromRes(Node nodeItem, JSONObject originalTabs) throws JSONException, RepositoryException{
+    private void getOriginalTabsFromRes(Node nodeItem, ObjectNode originalTabs) throws RepositoryException{
 
         NodeIterator additionalTabs = nodeItem.getNodes("additional_tab_*");
         while (additionalTabs.hasNext())
@@ -189,12 +187,12 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
             String includeURL = tab.getPath() + ".infinity.json";
             LOGGER.trace(includeURL);
 
-            JSONObject newTab = new JSONObject();
+            ObjectNode newTab = MAPPER.createObjectNode();
             newTab.put("xtype", "cqinclude");
             newTab.put("jcr:primaryType", "cq:Widget");
             newTab.put("path", includeURL);
             if (!originalTabs.has(tab.getName())) {
-                originalTabs.put(tab.getName(), newTab);
+                originalTabs.set(tab.getName(), newTab);
             }
         }
 

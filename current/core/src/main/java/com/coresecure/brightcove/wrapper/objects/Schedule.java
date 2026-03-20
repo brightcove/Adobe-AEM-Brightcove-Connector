@@ -34,10 +34,11 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class Schedule {
     private static final Logger LOGGER = LoggerFactory.getLogger(Schedule.class);
@@ -49,12 +50,15 @@ public class Schedule {
         ends_at = aEnds_at;
     }
 
-    public Schedule(JSONObject aSchedule) throws JSONException {
-        this(aSchedule.getString(Constants.STARTS_AT),aSchedule.getString(Constants.ENDS_AT));
+    public Schedule(ObjectNode aSchedule) throws IOException {
+        this(
+            aSchedule.has(Constants.STARTS_AT) && !aSchedule.get(Constants.STARTS_AT).isNull() ? aSchedule.get(Constants.STARTS_AT).asText() : null,
+            aSchedule.has(Constants.ENDS_AT) && !aSchedule.get(Constants.ENDS_AT).isNull() ? aSchedule.get(Constants.ENDS_AT).asText() : null
+        );
     }
 
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.STARTS_AT, Constants.ENDS_AT});
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.STARTS_AT, Constants.ENDS_AT});
         return json;
     }
 
@@ -62,7 +66,7 @@ public class Schedule {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

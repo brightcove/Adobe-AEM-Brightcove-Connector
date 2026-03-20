@@ -34,9 +34,9 @@ package com.coresecure.brightcove.wrapper.utils;
 
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.*;
-import org.apache.sling.commons.json.JSONArray;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,93 +52,100 @@ public class ObjectSerializer {
     private static String cleanFilterName(String name){
         return (name.startsWith("_")) ? name.substring(1) : name;
     }
-    private static void addAsCollection(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsCollection(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         Collection value = (Collection) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            JSONArray itemCollection = new JSONArray(value);
-            json.put(json_key, itemCollection);
+            ArrayNode itemCollection = JsonNodeFactory.instance.arrayNode();
+            for (Object item : value) {
+                itemCollection.add(item.toString());
+            }
+            json.set(json_key, itemCollection);
         }
     }
-    private static void addAsString(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsString(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         String value = (String) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING))  json.put(json_key, value);
     }
-    private static void addAsMap(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsMap(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         Map value = (Map) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            JSONObject itemObj = new JSONObject((Map) f.get(obj));
-            json.put(json_key, itemObj);
+            ObjectNode itemObj = JsonNodeFactory.instance.objectNode();
+            for (Object k : value.keySet()) {
+                Object v = value.get(k);
+                itemObj.put(k.toString(), v != null ? v.toString() : "");
+            }
+            json.set(json_key, itemObj);
         }
     }
-    private static void addAsBoolean(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsBoolean(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         Boolean value = (Boolean) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) json.put(json_key, value);
     }
-    private static void addAsRelatedLink(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsRelatedLink(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         RelatedLink value = (RelatedLink) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsGeo(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsGeo(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         Geo value = (Geo) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsSchedule(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsSchedule(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         Schedule value = (Schedule) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsEconomicsEnum(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsEconomicsEnum(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         EconomicsEnum value = (EconomicsEnum) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
             json.put(json_key, value.name());
         }
     }
-    private static void addAsText_track(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsText_track(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         Text_track value = (Text_track) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsJSONArray(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
-        JSONArray value = (JSONArray) f.get(obj);
+    private static void addAsJSONArray(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
+        ArrayNode value = (ArrayNode) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value);
+            json.set(json_key, value);
         }
     }
-    private static void addAsImages(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
-        JSONArray value = (JSONArray) f.get(obj);
+    private static void addAsImages(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
+        ArrayNode value = (ArrayNode) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value);
+            json.set(json_key, value);
         }
     }
-    private static void addAsPoster(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsPoster(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         Poster value = (Poster) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsThumbnail(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsThumbnail(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         Thumbnail value = (Thumbnail) f.get(obj);
         if (value != null && !value.toString().equals(Constants.NULLSTRING)) {
-            json.put(json_key, value.toJSON());
+            json.set(json_key, value.toJSON());
         }
     }
-    private static void addAsProjection(Field f, Object obj, JSONObject json, String json_key) throws JSONException, IllegalAccessException{
+    private static void addAsProjection(Field f, Object obj, ObjectNode json, String json_key) throws IllegalAccessException{
         Projection value = (Projection) f.get(obj);
         if (value.type != null) {
             if (value.type.isEmpty()) {
-                json.put(json_key, JSONObject.NULL);
+                json.putNull(json_key);
             } else {
                 json.put(json_key, value.type);
             }
         }
     }
-    private static void addFieldToJson(Field f, Object obj, JSONObject json, String json_key)  throws JSONException, IllegalAccessException {
+    private static void addFieldToJson(Field f, Object obj, ObjectNode json, String json_key) throws Exception {
         if (f.getType().equals(Collection.class)) {
             addAsCollection(f, obj, json, json_key);
         } else if (f.getType().equals(String.class)) {
@@ -157,7 +164,7 @@ public class ObjectSerializer {
             addAsEconomicsEnum(f, obj, json, json_key);
         } else if (f.getType().equals(Text_track.class)) {
             addAsText_track(f, obj, json, json_key);
-        } else if (f.getType().equals(JSONArray.class)) {
+        } else if (f.getType().equals(ArrayNode.class)) {
             addAsJSONArray(f, obj, json, json_key);
         } else if (f.getType().equals(Images.class)) {
             addAsImages(f, obj, json, json_key);
@@ -169,8 +176,8 @@ public class ObjectSerializer {
             addAsProjection(f, obj, json, json_key);
         }
     }
-    public static JSONObject toJSON(Object obj, String[] fields) throws JSONException {
-        JSONObject json = new JSONObject();
+    public static ObjectNode toJSON(Object obj, String[] fields) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
         for (String field_name : fields) {
             try {
                 Class<?> c = obj.getClass();

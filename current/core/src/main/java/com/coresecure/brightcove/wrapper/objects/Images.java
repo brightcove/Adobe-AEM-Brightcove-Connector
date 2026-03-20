@@ -35,10 +35,11 @@ package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 
 public class Images {
@@ -55,17 +56,20 @@ public class Images {
         poster = aPoster;
     }
 
-    public Images(JSONObject aImagesObj) throws JSONException
+    public Images(ObjectNode aImagesObj) throws IOException
     {
-        this(new Poster(aImagesObj.getJSONObject(Constants.POSTER)),new Thumbnail(aImagesObj.getJSONObject(Constants.THUMBNAIL)));
+        this(
+            aImagesObj.has(Constants.POSTER) && aImagesObj.get(Constants.POSTER).isObject() ? new Poster((ObjectNode) aImagesObj.get(Constants.POSTER)) : null,
+            aImagesObj.has(Constants.THUMBNAIL) && aImagesObj.get(Constants.THUMBNAIL).isObject() ? new Thumbnail((ObjectNode) aImagesObj.get(Constants.THUMBNAIL)) : null
+        );
     }
 
 
 
-    public JSONObject toJSON() throws JSONException
+    public ObjectNode toJSON() throws IOException
     {
 
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{Constants.POSTER,Constants.THUMBNAIL});
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{Constants.POSTER,Constants.THUMBNAIL});
         return json;
     }
 
@@ -73,7 +77,7 @@ public class Images {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

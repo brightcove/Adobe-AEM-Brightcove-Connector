@@ -35,10 +35,9 @@ package com.coresecure.brightcove.wrapper.objects;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.jackrabbit.util.Base64;
 import org.apache.jackrabbit.webdav.DavConstants;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,16 +79,14 @@ public class Account {
         try {
             String loginResponse = HttpServices.executePost(targetURL, urlParameters, headers);
             if (loginResponse == null) return false;
-            JSONObject response = JsonReader.readJsonFromString(loginResponse);
+            ObjectNode response = JsonReader.readJsonFromString(loginResponse);
             LOGGER.debug(Constants.RESPONSE ,response);
 
-            if (response.getString(Constants.ACCESS_TOKEN) != null && response.getString("token_type") != null) {
-                authToken = new TokenObj(response.getString(Constants.ACCESS_TOKEN), response.getString("token_type"), response.getInt("expires_in"));
+            if (response.get(Constants.ACCESS_TOKEN) != null && response.get("token_type") != null && response.get("expires_in") != null) {
+                authToken = new TokenObj(response.get(Constants.ACCESS_TOKEN).asText(), response.get("token_type").asText(), response.get("expires_in").asInt());
                 result = true;
             }
         } catch (IOException e) {
-            LOGGER.error(e.getClass().getName(), e);
-        } catch (JSONException e) {
             LOGGER.error(e.getClass().getName(), e);
         }
         return result;

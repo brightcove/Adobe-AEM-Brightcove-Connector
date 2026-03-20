@@ -32,14 +32,12 @@
  */
 package com.coresecure.brightcove.wrapper.objects;
 
-import com.coresecure.brightcove.wrapper.enums.GeoFilterCodeEnum;
 import com.coresecure.brightcove.wrapper.utils.ObjectSerializer;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
+import java.io.IOException;
 
 public class RelatedLink {
     public final String text;
@@ -51,12 +49,15 @@ public class RelatedLink {
         url = aUrl;
     }
 
-    public RelatedLink(JSONObject aLink) throws JSONException {
-        this(aLink.getString("text"), aLink.getString("url"));
+    public RelatedLink(ObjectNode aLink) throws IOException {
+        this(
+            aLink.has("text") && !aLink.get("text").isNull() ? aLink.get("text").asText() : null,
+            aLink.has("url") && !aLink.get("url").isNull() ? aLink.get("url").asText() : null
+        );
     }
 
-    public JSONObject toJSON() throws JSONException {
-        JSONObject json = ObjectSerializer.toJSON(this, new String[]{"text", "url"});
+    public ObjectNode toJSON() throws IOException {
+        ObjectNode json = ObjectSerializer.toJSON(this, new String[]{"text", "url"});
         return json;
     }
 
@@ -64,7 +65,7 @@ public class RelatedLink {
         String result = new String();
         try {
             result = toJSON().toString();
-        } catch (JSONException e) {
+        } catch (IOException e) {
             LOGGER.error(e.getClass().getName(),e);
         }
         return result;

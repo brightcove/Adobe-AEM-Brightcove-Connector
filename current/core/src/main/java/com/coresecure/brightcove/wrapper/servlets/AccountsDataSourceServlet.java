@@ -28,12 +28,11 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.adobe.cq.commerce.common.ValueMapDecorator;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import com.adobe.granite.ui.components.ds.DataSource;
 import com.adobe.granite.ui.components.ds.SimpleDataSource;
 import com.adobe.granite.ui.components.ds.ValueMapResource;
 import com.coresecure.brightcove.wrapper.utils.SlingUtils;
-import com.day.cq.contentsync.handler.util.RequestResponseFactory;
 import com.google.gson.Gson;
 
 /**
@@ -52,10 +51,6 @@ public class AccountsDataSourceServlet extends SlingSafeMethodsServlet {
 
 	/** The Constant BRIGHTCOVE_API_PATH. */
 	private static final String BRIGHTCOVE_API_PATH = "/bin/brightcove/accounts";
-
-	/** The request response factory. */
-	@Reference
-	private RequestResponseFactory requestResponseFactory;
 
 	/** The request processor. */
 	@Reference
@@ -78,7 +73,7 @@ public class AccountsDataSourceServlet extends SlingSafeMethodsServlet {
 		ResourceResolver resourceResolver = request.getResourceResolver();
 
 		logger.debug("api path is " + apiUrl);
-		String jsonString = SlingUtils.makeSlingRequest(this.requestResponseFactory, this.requestProcessor,
+		String jsonString = SlingUtils.makeSlingRequest(this.requestProcessor,
 				resourceResolver, apiUrl);
 		logger.debug("account json is " + jsonString);
 

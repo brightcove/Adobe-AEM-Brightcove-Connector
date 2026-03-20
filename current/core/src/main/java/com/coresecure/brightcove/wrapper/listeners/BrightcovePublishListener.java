@@ -15,7 +15,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.sling.commons.json.JSONObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
@@ -83,13 +83,13 @@ public class BrightcovePublishListener implements EventHandler {
             InputStream is = _asset.getOriginal().getStream();
 
             // // make the actual video upload call
-            JSONObject api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
+            ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
-            // LOGGER.trace("API-RESP >>" + api_resp.toString(1));
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
 
-                brc_lastsync_map.put(Constants.BRC_ID, api_resp.getString(Constants.VIDEOID));
+                brc_lastsync_map.put(Constants.BRC_ID, api_resp.get(Constants.VIDEOID).asText());
 
                 LOG.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
@@ -124,10 +124,10 @@ public class BrightcovePublishListener implements EventHandler {
 
             // do update video
             LOG.info("About to make Brightcove API call with video: {}", _asset.getPath());
-            JSONObject api_resp = serviceUtil.updateVideo(video);
+            ObjectNode api_resp = serviceUtil.updateVideo(video);
             LOG.info("Brightcove Asset Modification Response: {}", api_resp.toString());
 
-            boolean sent = api_resp.getBoolean(Constants.SENT);
+            boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
 
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());
@@ -222,8 +222,8 @@ public class BrightcovePublishListener implements EventHandler {
 
                     try {
 
-                        JSONObject update_resp = serviceUtil.updateVideo(video);
-                        boolean sent = update_resp.getBoolean(Constants.SENT);
+                        ObjectNode update_resp = serviceUtil.updateVideo(video);
+                        boolean sent = update_resp.has(Constants.SENT) && update_resp.get(Constants.SENT).asBoolean();
 
                         if (sent) {
 
