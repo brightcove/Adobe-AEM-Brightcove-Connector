@@ -270,7 +270,8 @@ public class ServiceUtil {
         boolean fullscroll = !(limit > 0);
         String result = getList(false, offset, limit, fullscroll, querystr, sort, dam_only);
         try {
-            return (ObjectNode) MAPPER.readTree(result);
+            com.fasterxml.jackson.databind.JsonNode parsed = MAPPER.readTree(result);
+            return (parsed != null && parsed.isObject()) ? (ObjectNode) parsed : JsonNodeFactory.instance.objectNode();
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
             return JsonNodeFactory.instance.objectNode();
