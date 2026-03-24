@@ -261,7 +261,7 @@ public class VideoImportCallable implements Callable<String> {
 
             //USNIG THE CONFIGURATION - BUILD THE DIRECTORY TO SEARCH FOR THE LOCAL ASSETS OR BUILD INTO
             String localpath = cleanPath(confPath, brightcove_filename, brightcove_folder_id);
-            String oldpath = cleanPath(confPath, original_filename, brightcove_folder_id);
+            String oldpath = original_filename != null ? cleanPath(confPath, original_filename, brightcove_folder_id) : null;
 
             LOGGER.trace("SEARCHING FOR LOCAL ASSET");
             LOGGER.trace(">>ORIGINAL: " + oldpath);
