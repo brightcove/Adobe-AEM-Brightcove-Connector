@@ -635,14 +635,22 @@ public class BrcApi extends SlingAllMethodsServlet {
                     if (asset != null) {
                         if (posterSource != null) {
                             java.net.URL srcURL = new java.net.URL(posterSource);
-                            try (InputStream is = HttpServices.getSSLConnection(srcURL, posterSource).getInputStream()) {
-                                asset.addRendition(Constants.BRC_POSTER_PNG, is, "image/png");
+                            if (!"https".equalsIgnoreCase(srcURL.getProtocol())) {
+                                LOGGER.warn("Skipping poster rendition update for video {} — URL must use HTTPS", videoId);
+                            } else {
+                                try (InputStream is = HttpServices.getSSLConnection(srcURL, posterSource).getInputStream()) {
+                                    asset.addRendition(Constants.BRC_POSTER_PNG, is, "image/png");
+                                }
                             }
                         }
                         if (thumbnailSource != null) {
                             java.net.URL srcURL = new java.net.URL(thumbnailSource);
-                            try (InputStream is = HttpServices.getSSLConnection(srcURL, thumbnailSource).getInputStream()) {
-                                asset.addRendition(Constants.BRC_THUMBNAIL_PNG, is, "image/png");
+                            if (!"https".equalsIgnoreCase(srcURL.getProtocol())) {
+                                LOGGER.warn("Skipping thumbnail rendition update for video {} — URL must use HTTPS", videoId);
+                            } else {
+                                try (InputStream is = HttpServices.getSSLConnection(srcURL, thumbnailSource).getInputStream()) {
+                                    asset.addRendition(Constants.BRC_THUMBNAIL_PNG, is, "image/png");
+                                }
                             }
                         }
                         resourceResolver.commit();

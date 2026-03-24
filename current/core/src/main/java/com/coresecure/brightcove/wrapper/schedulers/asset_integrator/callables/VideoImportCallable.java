@@ -235,6 +235,10 @@ public class VideoImportCallable implements Callable<String> {
             String accountBasePath = (confPath.endsWith("/") ? confPath : confPath + "/") + requestedServiceAccount;
             Session session = resourceResolver.adaptTo(Session.class);
             if (session != null) {
+                if (!videoId.matches("[A-Za-z0-9_-]+")) {
+                    LOGGER.warn("Skipping brc_id query — unexpected characters in video ID: {}", videoId);
+                    return null;
+                }
                 QueryManager qm = session.getWorkspace().getQueryManager();
                 String query = "SELECT * FROM [dam:Asset] AS node "
                         + "WHERE ISDESCENDANTNODE(node, \"" + accountBasePath + "\") "
