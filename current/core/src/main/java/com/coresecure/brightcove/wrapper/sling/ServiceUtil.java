@@ -1342,7 +1342,10 @@ public class ServiceUtil {
                 for(int z = 0 ; z < custom_fields_arr.size() ; z ++ )
                 {
                     ObjectNode current = (ObjectNode) custom_fields_arr.get(z);
-                    custom_fields.put( current.get(Constants.ID).asText(), custom_node_map.get(current.get(Constants.ID).asText(),""));
+                    String fieldId = current.has(Constants.ID) && !current.get(Constants.ID).isNull() ? current.get(Constants.ID).asText() : null;
+                    if (fieldId != null && custom_node_map != null) {
+                        custom_fields.put(fieldId, custom_node_map.get(fieldId, ""));
+                    }
                 }
             }
 
