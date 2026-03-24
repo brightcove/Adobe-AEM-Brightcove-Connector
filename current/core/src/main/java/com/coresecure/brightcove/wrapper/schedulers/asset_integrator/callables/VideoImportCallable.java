@@ -132,6 +132,10 @@ public class VideoImportCallable implements Callable<String> {
             return null;
         }
         BufferedImage image = ImageIO.read(binary);
+        if (image == null) {
+            LOGGER.warn("ImageIO.read returned null for thumbnail of video {} — skipping asset creation", id);
+            return null;
+        }
 
         //CRATE TEMPORARY MP4 FILE
         String prefix = id + "-";
