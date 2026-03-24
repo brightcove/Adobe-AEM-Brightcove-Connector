@@ -209,11 +209,13 @@ public class VideoImportCallable implements Callable<String> {
     }
 
     private Asset getAsset(String oldpath, String localpath ){
-        Resource resource = resourceResolver.getResource(oldpath);
-        if(resource != null) {
-            return resource.adaptTo(Asset.class);
+        if (oldpath != null) {
+            Resource resource = resourceResolver.getResource(oldpath);
+            if (resource != null) {
+                return resource.adaptTo(Asset.class);
+            }
         }
-        resource = resourceResolver.getResource(localpath);
+        Resource resource = resourceResolver.getResource(localpath);
         if(resource != null) {
             return resource.adaptTo(Asset.class);
         }
