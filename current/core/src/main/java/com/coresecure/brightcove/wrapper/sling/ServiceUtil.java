@@ -270,7 +270,8 @@ public class ServiceUtil {
         boolean fullscroll = !(limit > 0);
         String result = getList(false, offset, limit, fullscroll, querystr, sort, dam_only);
         try {
-            return (ObjectNode) MAPPER.readTree(result);
+            com.fasterxml.jackson.databind.JsonNode parsed = MAPPER.readTree(result);
+            return (parsed != null && parsed.isObject()) ? (ObjectNode) parsed : JsonNodeFactory.instance.objectNode();
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
             return JsonNodeFactory.instance.objectNode();
@@ -1342,7 +1343,10 @@ public class ServiceUtil {
                 for(int z = 0 ; z < custom_fields_arr.size() ; z ++ )
                 {
                     ObjectNode current = (ObjectNode) custom_fields_arr.get(z);
-                    custom_fields.put( current.get(Constants.ID).asText(), custom_node_map.get(current.get(Constants.ID).asText(),""));
+                    String fieldId = current.has(Constants.ID) && !current.get(Constants.ID).isNull() ? current.get(Constants.ID).asText() : null;
+                    if (fieldId != null && custom_node_map != null) {
+                        custom_fields.put(fieldId, custom_node_map.get(fieldId, ""));
+                    }
                 }
             }
 

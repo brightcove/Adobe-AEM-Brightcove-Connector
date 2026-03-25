@@ -42,7 +42,9 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
+import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.Page;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.propertytypes.ServiceDescription;
@@ -583,17 +585,19 @@ public class BrcApi extends SlingAllMethodsServlet {
     private ObjectNode uploadImage(SlingHttpServletRequest request) throws IOException {
         LOGGER.trace("upload_thumbnail");
 
+        String posterSource = request.getParameter(Constants.POSTER_SOURCE);
+        String thumbnailSource = request.getParameter(Constants.THUMBNAIL_SOURCE);
 
         ObjectNode images_payload = JsonNodeFactory.instance.objectNode();
 
-        if (request.getParameter(Constants.THUMBNAIL_SOURCE) != null) {
+        if (thumbnailSource != null) {
             ObjectNode thumbnail = JsonNodeFactory.instance.objectNode();
-            thumbnail.put(Constants.URL, request.getParameter(Constants.THUMBNAIL_SOURCE));
+            thumbnail.put(Constants.URL, thumbnailSource);
             images_payload.set(Constants.THUMBNAIL, thumbnail);
         }
-        if (request.getParameter(Constants.POSTER_SOURCE) != null) {
+        if (posterSource != null) {
             ObjectNode poster = JsonNodeFactory.instance.objectNode();
-            poster.put(Constants.URL, request.getParameter(Constants.POSTER_SOURCE));
+            poster.put(Constants.URL, posterSource);
             images_payload.set(Constants.POSTER, poster);
         }
 
@@ -601,6 +605,64 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
         LOGGER.trace(videoItem.toPrettyString());
+
+        if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
+            try {
+                String videoId = request.getParameter(Constants.ID);
+                String accountId = AccountUtil.getSelectedAccount(request);
+                String confPath = cs.getAssetIntegrationPath();
+                String accountFolder = (confPath.endsWith("/") ? confPath : confPath + "/") + accountId + "/";
+                String filename = videoId + ".mp4";
+                ResourceResolver resourceResolver = request.getResourceResolver();
+
+                // check root of account folder first, then one level of subfolders (Brightcove folders)
+                Resource assetResource = resourceResolver.getResource(accountFolder + filename);
+                if (assetResource == null) {
+                    Resource accountFolderRes = resourceResolver.getResource(accountFolder);
+                    if (accountFolderRes != null) {
+                        Iterator<Resource> children = accountFolderRes.listChildren();
+                        while (children.hasNext() && assetResource == null) {
+                            Resource candidate = children.next().getChild(filename);
+                            if (candidate != null) {
+                                assetResource = candidate;
+                            }
+                        }
+                    }
+                }
+
+                if (assetResource != null) {
+                    Asset asset = assetResource.adaptTo(Asset.class);
+                    if (asset != null) {
+                        if (posterSource != null) {
+                            java.net.URL srcURL = new java.net.URL(posterSource);
+                            if (!"https".equalsIgnoreCase(srcURL.getProtocol())) {
+                                LOGGER.warn("Skipping poster rendition update for video {} — URL must use HTTPS", videoId);
+                            } else {
+                                try (InputStream is = HttpServices.getSSLConnection(srcURL, posterSource).getInputStream()) {
+                                    asset.addRendition(Constants.BRC_POSTER_PNG, is, "image/png");
+                                }
+                            }
+                        }
+                        if (thumbnailSource != null) {
+                            java.net.URL srcURL = new java.net.URL(thumbnailSource);
+                            if (!"https".equalsIgnoreCase(srcURL.getProtocol())) {
+                                LOGGER.warn("Skipping thumbnail rendition update for video {} — URL must use HTTPS", videoId);
+                            } else {
+                                try (InputStream is = HttpServices.getSSLConnection(srcURL, thumbnailSource).getInputStream()) {
+                                    asset.addRendition(Constants.BRC_THUMBNAIL_PNG, is, "image/png");
+                                }
+                            }
+                        }
+                        resourceResolver.commit();
+                        LOGGER.trace("DAM renditions updated for video {}", videoId);
+                    }
+                } else {
+                    LOGGER.warn("Could not find DAM asset for video {} — rendition not updated", videoId);
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to update DAM rendition after image upload for video {}", request.getParameter(Constants.ID), e);
+            }
+        }
 
         return null;
     }

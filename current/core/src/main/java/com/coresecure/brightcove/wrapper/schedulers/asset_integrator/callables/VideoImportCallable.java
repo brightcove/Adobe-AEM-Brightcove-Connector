@@ -49,7 +49,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
+import javax.jcr.Node;
+import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.query.Query;
+import javax.jcr.query.QueryManager;
+import javax.jcr.query.QueryResult;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -132,6 +138,10 @@ public class VideoImportCallable implements Callable<String> {
             return null;
         }
         BufferedImage image = ImageIO.read(binary);
+        if (image == null) {
+            LOGGER.warn("ImageIO.read returned null for thumbnail of video {} — skipping asset creation", id);
+            return null;
+        }
 
         //CRATE TEMPORARY MP4 FILE
         String prefix = id + "-";
@@ -208,7 +218,7 @@ public class VideoImportCallable implements Callable<String> {
         return innerObj.has(Constants.ORIGINAL_FILENAME) && !innerObj.get(Constants.ORIGINAL_FILENAME).isNull() ? innerObj.get(Constants.ORIGINAL_FILENAME).asText().replaceAll("%20", " ") : null;
     }
 
-    private Asset getAsset(String oldpath, String localpath ){
+    private Asset getAsset(String oldpath, String localpath, String videoId) {
         if (oldpath != null) {
             Resource resource = resourceResolver.getResource(oldpath);
             if (resource != null) {
@@ -216,8 +226,37 @@ public class VideoImportCallable implements Callable<String> {
             }
         }
         Resource resource = resourceResolver.getResource(localpath);
-        if(resource != null) {
+        if (resource != null) {
             return resource.adaptTo(Asset.class);
+        }
+        // asset not found at expected path — user may have placed it in a manually-named folder.
+        // fall back to JCR query by brc_id metadata property.
+        try {
+            String accountBasePath = (confPath.endsWith("/") ? confPath : confPath + "/") + requestedServiceAccount;
+            Session session = resourceResolver.adaptTo(Session.class);
+            if (session != null) {
+                if (!videoId.matches("[A-Za-z0-9_-]+")) {
+                    LOGGER.warn("Skipping brc_id query — unexpected characters in video ID: {}", videoId);
+                    return null;
+                }
+                QueryManager qm = session.getWorkspace().getQueryManager();
+                String query = "SELECT * FROM [dam:Asset] AS node "
+                        + "WHERE ISDESCENDANTNODE(node, \"" + accountBasePath + "\") "
+                        + "AND [jcr:content/metadata/brc_id] = \"" + videoId + "\"";
+                Query q = qm.createQuery(query, Query.JCR_SQL2);
+                QueryResult result = q.execute();
+                NodeIterator nodes = result.getNodes();
+                if (nodes.hasNext()) {
+                    Node node = nodes.nextNode();
+                    Resource found = resourceResolver.getResource(node.getPath());
+                    if (found != null) {
+                        LOGGER.trace("Found asset for video {} via brc_id query at {}", videoId, node.getPath());
+                        return found.adaptTo(Asset.class);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("brc_id fallback search failed for video {}: {}", videoId, e.getMessage());
         }
         return null;
     }
@@ -271,7 +310,7 @@ public class VideoImportCallable implements Callable<String> {
 
 
             //TRY TO GET THIS ASSET IN THE CONFIGURED BC NODE PATH - IF IT IS NULL - IT MUST BE CREATED
-            newAsset = getAsset(oldpath,localpath);
+            newAsset = getAsset(oldpath, localpath, id);
             if (newAsset == null) {
                 newAsset = createAsset(localpath,id,brightcove_filename);
                 if (newAsset != null) serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
