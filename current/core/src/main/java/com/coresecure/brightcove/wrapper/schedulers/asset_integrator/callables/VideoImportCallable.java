@@ -288,7 +288,7 @@ public class VideoImportCallable implements Callable<String> {
                 return  Thread.currentThread().getName();
             }
 
-            String name = innerObj.get(Constants.NAME).asText();
+            String name = innerObj.has(Constants.NAME) && !innerObj.get(Constants.NAME).isNull() ? innerObj.get(Constants.NAME).asText() : "";
             String brightcove_filename = id + ".mp4"; //BRIGHTCOVE FILE NAME IS ID + . MP4 <-
             String original_filename = cleanFilename(innerObj);
             String brightcove_folder_id = (!innerObj.has(Constants.FOLDER_ID) || innerObj.get(Constants.FOLDER_ID).isNull() ? "" : innerObj.get(Constants.FOLDER_ID).asText());
@@ -322,19 +322,24 @@ public class VideoImportCallable implements Callable<String> {
                 Date local_mod_date = new Date(newAsset.getLastModified());
 
                 SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_24H_FULL_FORMAT);
-                Date remote_date = sdf.parse(innerObj.get(Constants.UPDATED_AT).asText());
-
-                //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
-                if (local_mod_date.compareTo(remote_date) < 0) {
-                    LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
-                    LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
-                    LOGGER.trace(local_mod_date + " < " + remote_date);
-                    LOGGER.trace("MODIFICATION DETECTED");
+                if (!innerObj.has(Constants.UPDATED_AT) || innerObj.get(Constants.UPDATED_AT).isNull()) {
+                    LOGGER.warn("Asset {} has no {} — forcing update", localpath, Constants.UPDATED_AT);
                     serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
-
                 } else {
-                    LOGGER.trace("No Changes to be Made = Asset is equivalent");
+                    Date remote_date = sdf.parse(innerObj.get(Constants.UPDATED_AT).asText());
 
+                    //LOCAL COMPARISON DATE TO SEE IF IT NEEDS TO UPDATE
+                    if (local_mod_date.compareTo(remote_date) < 0) {
+                        LOGGER.trace("OLDERS-DATE>>>>>" + local_mod_date);
+                        LOGGER.trace("PARSED-DATE>>>>>" + remote_date);
+                        LOGGER.trace(local_mod_date + " < " + remote_date);
+                        LOGGER.trace("MODIFICATION DETECTED");
+                        serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
+
+                    } else {
+                        LOGGER.trace("No Changes to be Made = Asset is equivalent");
+
+                    }
                 }
 
             }

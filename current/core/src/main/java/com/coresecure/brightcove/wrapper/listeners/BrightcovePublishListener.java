@@ -1,6 +1,7 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
 import com.day.cq.replication.ReplicationAction;
+import com.day.cq.replication.ReplicationActionType;
 
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -42,7 +43,8 @@ import java.util.Date;
 
 @Component(service = EventHandler.class, immediate = true, property = {
         "service.description" + "=Brightcove Distribution Event Listener ",
-        EventConstants.EVENT_TOPIC + "= org/apache/sling/distribution/agent/package/distributed"
+        EventConstants.EVENT_TOPIC + "=org/apache/sling/distribution/agent/package/distributed",
+        EventConstants.EVENT_TOPIC + "=" + ReplicationAction.EVENT_TOPIC
 })
 @Designate(ocd = BrightcovePublishListener.EventListenerPageActivationListenerConfiguration.class)
 public class BrightcovePublishListener implements EventHandler {
@@ -162,33 +164,35 @@ public class BrightcovePublishListener implements EventHandler {
         Resource assetRes = _asset.adaptTo(Resource.class);
 
         if (assetRes == null) {
+            LOG.warn("activateAsset: could not adapt asset to Resource, skipping: {}", _asset.getPath());
             return;
         }
 
         Resource metadataRes = assetRes.getChild(Constants.ASSET_METADATA_PATH);
         if (metadataRes == null) {
+            LOG.warn("activateAsset: metadata node not found at {}/{}, skipping", _asset.getPath(), Constants.ASSET_METADATA_PATH);
             return;
         }
 
         ModifiableValueMap brc_lastsync_map = metadataRes.adaptTo(ModifiableValueMap.class);
         if (brc_lastsync_map == null) {
+            LOG.warn("activateAsset: could not obtain ModifiableValueMap for {}, skipping (check brightcove_admin write permissions)", _asset.getPath());
             return;
         }
 
-        Long jcr_lastmod = _asset.getLastModified();
         Long brc_lastsync_time = brc_lastsync_map.get(Constants.BRC_LASTSYNC, Long.class);
 
         brc_lastsync_map.put(Constants.BRC_STATE, "ACTIVE");
 
         if (brc_lastsync_time == null) {
 
-            // we need to activate a new asset here
+            // no prior sync — upload as new asset
             LOG.info("Activating New Brightcove Asset: {}", _asset.getPath());
             activateNew(_asset, serviceUtil, video, brc_lastsync_map);
 
-        } else if (jcr_lastmod > brc_lastsync_time) {
+        } else {
 
-            // we need to modify an existing asset here
+            // asset was previously synced — update it
             LOG.info("Activating Modified Brightcove Asset: {}", _asset.getPath());
             activateModified(_asset, serviceUtil, video, brc_lastsync_map);
 
@@ -248,7 +252,7 @@ public class BrightcovePublishListener implements EventHandler {
 
     @Override
     public void handleEvent(Event event) {
-        LOG.error("********************* Event info:" + event.toString());
+        LOG.debug("handleEvent: topic={}", event.getTopic());
         // check that the service is enabled and that we are running on Author
         if (enabled && slingSettings.getRunModes().contains("author")) {
 
@@ -260,64 +264,97 @@ public class BrightcovePublishListener implements EventHandler {
                         (Object) SERVICE_ACCOUNT_IDENTIFIER);
 
                 // Get the Service resource resolver
-                ResourceResolver rr = resourceResolverFactory.getServiceResourceResolver(authInfo);
+                try (ResourceResolver rr = resourceResolverFactory.getServiceResourceResolver(authInfo)) {
 
-                // grab all the configured services
-                ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-                Set<String> services = cg.getAvailableServices();
+                    // grab all the configured services
+                    ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+                    Set<String> services = cg.getAvailableServices();
 
-                // set up a variable to store the paths
-                paths = new LinkedHashMap<>();
+                    // set up a variable to store the paths
+                    paths = new LinkedHashMap<>();
 
-                // for each service, check to see the integration path
-                for (String service : services) {
+                    // for each service, check to see the integration path
+                    for (String service : services) {
 
-                    // get the service from that account ID
-                    ConfigurationService brcService = cg.getConfigurationService(service);
+                        // get the service from that account ID
+                        ConfigurationService brcService = cg.getConfigurationService(service);
 
-                    // add the account ID to a HashMap with a key of the path
-                    paths.put(brcService.getAssetIntegrationPath(), brcService.getAccountID());
+                        // add the account ID to a HashMap with a key of the path
+                        paths.put(brcService.getAssetIntegrationPath(), brcService.getAccountID());
 
-                }
+                    }
 
-                String[] activatedAssets = (String[]) event.getProperty("paths");
+                    // extract paths and action type depending on which event system fired
+                    String[] activatedAssets;
+                    boolean isActivate;
+                    boolean isDeactivate;
+                    if (ReplicationAction.EVENT_TOPIC.equals(event.getTopic())) {
+                        activatedAssets = (String[]) event.getProperty("paths");
+                        ReplicationAction replicationAction = ReplicationAction.fromEvent(event);
+                        if (replicationAction == null) {
+                            return;
+                        }
+                        ReplicationActionType replicationActionType = replicationAction.getType();
+                        isActivate = ReplicationActionType.ACTIVATE.equals(replicationActionType);
+                        isDeactivate = ReplicationActionType.DEACTIVATE.equals(replicationActionType);
+                    } else {
+                        activatedAssets = (String[]) event.getProperty("distribution.paths");
+                        isActivate = "ADD".equals(event.getProperty("distribution.type"));
+                        isDeactivate = "DELETE".equals(event.getProperty("distribution.type"));
+                    }
 
-                // iterate through all assets that were part of this replication event
-                for (String asset : activatedAssets) {
+                    if (activatedAssets == null) {
+                        return;
+                    }
 
-                    // get all the account IDs of the integration paths
-                    Set<String> keys = paths.keySet();
+                    // iterate through all assets that were part of this replication event
+                    for (String asset : activatedAssets) {
 
-                    // check against the paths for each ConfigurationService
-                    for (String key : keys) {
+                        // get all the account IDs of the integration paths
+                        Set<String> keys = paths.keySet();
 
-                        // check if this asset lives underneath a Brightcove managed folder
-                        if (asset.contains(key)) {
+                        // check against the paths for each ConfigurationService
+                        for (String key : keys) {
 
-                            // get the account ID
-                            String brightcoveAccountId = paths.get(key);
-                            LOG.info("Found Brightcove Account ID #{} for {}", brightcoveAccountId, asset);
+                            // check if this asset lives underneath a Brightcove managed folder
+                            if (asset.contains(key)) {
 
-                            // get a proper Asset object from the path
-                            Resource assetResource = rr.getResource(asset);
-                            Asset _asset = assetResource.adaptTo(Asset.class);
+                                // get the account ID
+                                String brightcoveAccountId = paths.get(key);
+                                LOG.info("Found Brightcove Account ID #{} for {}", brightcoveAccountId, asset);
 
-                            // check the activation type
-                            if ("ACTIVATE".equals(event.getProperty("type"))) {
+                                // get a proper Asset object from the path
+                                Resource assetResource = rr.getResource(asset);
+                                if (assetResource == null) {
+                                    LOG.warn("handleEvent: resource not found for path {}, skipping", asset);
+                                    continue;
+                                }
+                                Asset _asset = assetResource.adaptTo(Asset.class);
+                                if (_asset == null) {
+                                    LOG.warn("handleEvent: could not adapt resource to Asset at {}, skipping", asset);
+                                    continue;
+                                }
 
-                                // upload or modify the asset
-                                activateAsset(rr, _asset, brightcoveAccountId);
+                                // check the activation type
+                                if (isActivate) {
 
-                            } else if ("DEACTIVATE".equals(event.getProperty("type"))) {
+                                    // upload or modify the asset
+                                    activateAsset(rr, _asset, brightcoveAccountId);
 
-                                // delete the asset
-                                deactivateAsset(rr, _asset, brightcoveAccountId);
+                                } else if (isDeactivate) {
+
+                                    // delete the asset
+                                    deactivateAsset(rr, _asset, brightcoveAccountId);
+
+                                }
 
                             }
 
                         }
 
                     }
+
+                    rr.commit();
 
                 }
 
