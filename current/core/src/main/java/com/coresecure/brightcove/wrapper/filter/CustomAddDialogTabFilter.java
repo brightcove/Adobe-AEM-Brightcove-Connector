@@ -46,6 +46,7 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.apache.sling.api.wrappers.SlingHttpServletResponseWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
@@ -160,7 +161,13 @@ public class CustomAddDialogTabFilter extends SlingSafeMethodsServlet implements
     }
 
     private ObjectNode getOriginalTabs(String componentPath, ObjectNode originalDialog, final SlingHttpServletRequest slingRequest) throws IOException, RepositoryException{
-        ObjectNode originalTabs = (ObjectNode) ((ObjectNode) originalDialog.get("items")).get("tabs").get("items");
+        JsonNode itemsNode = originalDialog.get("items");
+        if (itemsNode == null || !itemsNode.isObject()) throw new IOException("Dialog JSON missing 'items' node");
+        JsonNode tabsNode = itemsNode.get("tabs");
+        if (tabsNode == null || !tabsNode.isObject()) throw new IOException("Dialog JSON missing 'items/tabs' node");
+        JsonNode tabItemsNode = tabsNode.get("items");
+        if (tabItemsNode == null || !tabItemsNode.isObject()) throw new IOException("Dialog JSON missing 'items/tabs/items' node");
+        ObjectNode originalTabs = (ObjectNode) tabItemsNode;
         Resource componentRes = slingRequest.getResourceResolver().getResource(componentPath);
         if (componentRes != null) {
             for (Resource item : getInheritResources(componentRes))
