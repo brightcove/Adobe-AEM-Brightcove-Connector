@@ -35,6 +35,10 @@
 var brc_admin = brc_admin || {},
     apiLocation = brc_admin.apiProxy; //This should be set to point to proxy.jsp on your server
 
+function togglePlSearchHint(field) {
+    var hint = document.getElementById('pl_search_hint');
+    if (hint) hint.style.display = (field === 'find_playlist_by_name') ? 'block' : 'none';
+}
 
 //Default Fields
 //specifying a subset of fields cuts down on the amount of data sent over the wire.  If you want to access another field, include it here.

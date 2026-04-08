@@ -793,6 +793,7 @@ function buildPlaylistList() {
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "none";
     document.getElementById('searchDiv_pl').style.display = "inline";
+    togglePlSearchHint(document.getElementById('selField_pl').value);
     document.getElementById('checkToggle').style.display = "none";
 	document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();

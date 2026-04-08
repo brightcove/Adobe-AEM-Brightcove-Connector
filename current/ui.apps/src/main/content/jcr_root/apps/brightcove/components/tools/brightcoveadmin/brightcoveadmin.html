@@ -110,7 +110,7 @@
                                                 <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''"
                                                        style="position: relative;top: 5px; height: 30px; margin-left: 15px;">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
-                                                <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;">
+                                                <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;" onchange="togglePlSearchHint(this.value)">
                                                     <option value="find_playlist_by_name">Name</option>
                                                     <option value="find_playlist_by_id">Playlist ID</option>
                                                     <option value="find_playlist_by_reference_id">Reference ID</option>
@@ -118,6 +118,7 @@
                                                 <button id="searchBut" onClick="searchVal=document.getElementById('search_pl').value;searchField=document.getElementById('selField_pl').value;Load(getFindPlaylistsURL())">
                                                     Search
                                                 </button>
+                                                <div id="pl_search_hint" style="font-size:11px;color:#666;margin-top:4px;margin-left:15px;">Matches whole words only (e.g. "Smart" finds "Smart Playlist")</div>
                                             </div>
 
                                         </td>
