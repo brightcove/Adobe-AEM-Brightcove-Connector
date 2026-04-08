@@ -109,7 +109,7 @@ function getFindPlaylistsURL() {
     if (searchVal != "" && searchVal != "Search Playlists") {
         if (searchField == "find_playlist_by_name") {
             return apiLocation +
-                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + encodeURIComponent('+name:' + searchVal)
+                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         } else if (searchField == "find_playlist_by_id") {
             return apiLocation +
