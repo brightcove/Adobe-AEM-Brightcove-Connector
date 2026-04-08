@@ -111,8 +111,9 @@
                                                        style="position: relative;top: 5px; height: 30px; margin-left: 15px;">
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;">
-                                                    <option value="find_playlist_by_id">In Playlist ID</option>
-                                                    <option value="find_playlist_by_reference_id">In Reference ID</option>
+                                                    <option value="find_playlist_by_name">Name</option>
+                                                    <option value="find_playlist_by_id">Playlist ID</option>
+                                                    <option value="find_playlist_by_reference_id">Reference ID</option>
                                                 </select>
                                                 <button id="searchBut" onClick="searchVal=document.getElementById('search_pl').value;searchField=document.getElementById('selField_pl').value;Load(getFindPlaylistsURL())">
                                                     Search
