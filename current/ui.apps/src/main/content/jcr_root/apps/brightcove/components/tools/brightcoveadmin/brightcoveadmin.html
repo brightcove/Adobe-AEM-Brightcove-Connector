@@ -90,7 +90,7 @@
                                                 </select>
 
                                                 <div style="position:relative; display:inline-block;">
-                                                    <input id="search" type="text" value="Search Videos" onClick="this.value=''">
+                                                    <input id="search" type="text" value="Search Videos" onClick="if(this.value==='Search Videos') this.value='';">
                                                     <button type="button" id="searchClear" style="display:none;">&#x2715;</button>
                                                 </div>
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
@@ -111,7 +111,7 @@
                                                     Create Playlist
                                                 </button>-->
                                                 <div style="position:relative; display:inline-block; top:5px; height:30px; margin-left:15px;">
-                                                    <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''" style="height:30px;">
+                                                    <input id="search_pl" type="text" value="Search Playlists" onClick="if(this.value==='Search Playlists') this.value='';" style="height:30px;">
                                                     <button type="button" id="searchClear_pl" style="display:none;">&#x2715;</button>
                                                 </div>
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
