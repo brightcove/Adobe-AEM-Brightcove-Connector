@@ -725,8 +725,65 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = getLabels(request);
         } else if ("create_label".equals(requestedAPI)) {
             result = createLabel(request);
+        } else if ("add_variant".equals(requestedAPI)) {
+            result = addVariant(request);
+        } else if ("update_variant".equals(requestedAPI)) {
+            result = updateVariant(request);
         } else {
             result.put(Constants.ERROR, 404);
+        }
+        return result;
+    }
+
+    private ObjectNode addVariant(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        String videoId = request.getParameter("videoId");
+        String language = request.getParameter("language");
+        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
+            ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
+            variantBody.put("language", language);
+            String name = request.getParameter(Constants.NAME);
+            if (name != null) variantBody.put(Constants.NAME, name);
+            String description = request.getParameter(Constants.DESCRIPTION);
+            if (description != null) variantBody.put(Constants.DESCRIPTION, description);
+            String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
+            if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
+            String customFieldsJson = request.getParameter("custom_fields");
+            if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
+                try {
+                    variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
+                } catch (Exception e) {
+                    variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
+                }
+            } else {
+                variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
+            }
+            result = brAPI.cms.addVariant(videoId, variantBody);
+        }
+        return result;
+    }
+
+    private ObjectNode updateVariant(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        String videoId = request.getParameter("videoId");
+        String language = request.getParameter("language");
+        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
+            ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
+            String name = request.getParameter(Constants.NAME);
+            if (name != null) variantBody.put(Constants.NAME, name);
+            String description = request.getParameter(Constants.DESCRIPTION);
+            if (description != null) variantBody.put(Constants.DESCRIPTION, description);
+            String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
+            if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
+            String customFieldsJson = request.getParameter("custom_fields");
+            if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
+                try {
+                    variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
+                } catch (Exception e) {
+                    variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
+                }
+            }
+            result = brAPI.cms.updateVariant(videoId, language, variantBody);
         }
         return result;
     }

@@ -75,6 +75,13 @@
 
         String[] brcVariantsRaw = map.get("brc_variants", new String[0]);
 %>
+<script type="application/json" id="brc-variants-data">[<%
+    for (int bvIdx = 0; bvIdx < brcVariantsRaw.length; bvIdx++) {
+        if (bvIdx > 0) out.print(",");
+        String bv = brcVariantsRaw[bvIdx];
+        out.print((bv != null && !bv.isEmpty()) ? bv : "{}");
+    }
+%>]</script>
 
     <div  class="aem-assets-metadata-form-column">
         <div class="foundation-field-editable">
@@ -214,10 +221,10 @@
                         if (variantLang.isEmpty()) continue;
             %>
             <span class="brc-variant-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#e8f0fe;border-radius:14px;font-size:12px;">
-                <span class="brc-variant-language"><%=variantLang%></span>
+                <span class="brc-variant-language"><%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(variantLang)%></span>
                 <button is="coral-button" variant="minimal" size="S"
                         class="brc-edit-variant-btn"
-                        data-language="<%=variantLang%>"
+                        data-language="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(variantLang)%>"
                         data-variant-index="<%=vIdx%>"
                         data-video-id="<%=brcid%>"
                         type="button">Edit</button>
@@ -233,6 +240,67 @@
                 type="button">+ Add Variant</button>
     </div>
 </div>
+
+<coral-dialog id="brc-variant-dialog" closable="on">
+    <coral-dialog-header>Variant</coral-dialog-header>
+    <coral-dialog-content>
+        <div class="coral-Form coral-Form--vertical" style="padding:0;">
+            <div id="brc-variant-error" style="display:none;color:#d9534f;margin-bottom:8px;"></div>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel" for="brc-variant-language">Language Code <span style="color:#d9534f;">*</span></label>
+                <input id="brc-variant-language" is="coral-textfield" class="coral-Form-field" type="text" placeholder="e.g. fr, de, es">
+            </div>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel" for="brc-variant-name">Name</label>
+                <input id="brc-variant-name" is="coral-textfield" class="coral-Form-field" type="text">
+            </div>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel" for="brc-variant-description">Short Description</label>
+                <input id="brc-variant-description" is="coral-textfield" class="coral-Form-field" type="text" maxlength="250">
+            </div>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel" for="brc-variant-long-description">Long Description</label>
+                <textarea id="brc-variant-long-description" is="coral-textarea" class="coral-Form-field" maxlength="5000"></textarea>
+            </div>
+            <%
+                if (custom_fields_arr.length() > 0) {
+                    for (int dlgZ = 0; dlgZ < custom_fields_arr.length(); dlgZ++) {
+                        JSONObject dlgCf = custom_fields_arr.getJSONObject(dlgZ);
+                        String dlgFieldTitle = dlgCf.getString("display_name");
+                        String dlgFieldId    = dlgCf.getString("id");
+                        String dlgFieldType  = dlgCf.getString("type");
+                        boolean dlgRequired  = dlgCf.getBoolean("required");
+                        if (dlgFieldType.equals("enum")) {
+                            JSONArray dlgEnums = dlgCf.getJSONArray("enum_values");
+            %>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%><%=dlgRequired ? " *":""%></b></label>
+                <coral-select class="coral-Form-field brc-variant-cf" data-cf-id="<%=dlgFieldId%>">
+                    <coral-select-item value=""></coral-select-item>
+                    <% for (int dlgX = 0; dlgX < dlgEnums.length(); dlgX++) { %>
+                    <coral-select-item value="<%=dlgEnums.getString(dlgX)%>"><%=dlgEnums.getString(dlgX)%></coral-select-item>
+                    <% } %>
+                </coral-select>
+            </div>
+            <%
+                        } else {
+            %>
+            <div class="coral-Form-fieldwrapper">
+                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%><%=dlgRequired ? " *":""%></b></label>
+                <input is="coral-textfield" class="coral-Form-field brc-variant-cf" type="text" data-cf-id="<%=dlgFieldId%>">
+            </div>
+            <%
+                        }
+                    }
+                }
+            %>
+        </div>
+    </coral-dialog-content>
+    <coral-dialog-footer>
+        <button is="coral-button" variant="default" coral-close type="button">Cancel</button>
+        <button id="brc-variant-save" is="coral-button" variant="primary" type="button">Save</button>
+    </coral-dialog-footer>
+</coral-dialog>
 <%
     } else {
 %>

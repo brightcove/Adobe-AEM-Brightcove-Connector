@@ -804,6 +804,42 @@ public class CmsAPI {
 
     }
 
+    // POST /accounts/{accountId}/videos/{videoId}/variants
+    public ObjectNode addVariant(String videoId, ObjectNode variantBody) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants";
+            try {
+                String response = account.platform.postAPI(targetURL, variantBody.toPrettyString(), headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
+    // PATCH /accounts/{accountId}/videos/{videoId}/variants/{language}
+    public ObjectNode updateVariant(String videoId, String language, ObjectNode variantBody) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        TokenObj authToken = account.getLoginToken();
+        if (authToken != null) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants/" + language;
+            try {
+                String response = account.platform.patchAPI(targetURL, variantBody.toPrettyString(), headers);
+                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+            } catch (IOException e) {
+                LOGGER.error(e.getClass().getName(), e);
+            }
+        }
+        return json;
+    }
+
     public ArrayNode getExperiencesJSONArrayResponse(String targetURL, String urlParameters, Map<String, String> headers) {
         ArrayNode json = JsonNodeFactory.instance.arrayNode();
         try
