@@ -89,7 +89,10 @@
                                                     <option value="all">All Folders</option>
                                                 </select>
 
-                                                <input id="search" type="text" value="Search Video" onClick="this.value=''">
+                                                <div style="position:relative; display:inline-block;">
+                                                    <input id="search" type="text" value="Search Videos" onClick="this.value=''">
+                                                    <button type="button" id="searchClear" style="display:none;">&#x2715;</button>
+                                                </div>
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField' name="selField" >
                                                     <option value="every_field">In Every Field</option>
@@ -107,8 +110,10 @@
                                                 <!--<button id="searchBut" class="btn-create-playlist">
                                                     Create Playlist
                                                 </button>-->
-                                                <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''"
-                                                       style="position: relative;top: 5px; height: 30px; margin-left: 15px;">
+                                                <div style="position:relative; display:inline-block; top:5px; height:30px; margin-left:15px;">
+                                                    <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''" style="height:30px;">
+                                                    <button type="button" id="searchClear_pl" style="display:none;">&#x2715;</button>
+                                                </div>
                                                 <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
                                                 <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;" onchange="togglePlSearchHint(this.value)">
                                                     <option value="find_playlist_by_name">Name</option>

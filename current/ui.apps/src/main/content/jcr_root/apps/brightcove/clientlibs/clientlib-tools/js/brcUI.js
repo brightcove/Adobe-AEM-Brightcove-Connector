@@ -318,6 +318,35 @@ $(function () {
                 });
     });
 
+    // Clear search button — Videos
+    $('#search').on('input', function() {
+        $('#searchClear').toggle(this.value !== '' && this.value !== 'Search Videos');
+    });
+
+    $('#searchClear').on('click', function() {
+        document.getElementById('search').value = '';
+        document.getElementById('selField').value = 'every_field';
+        $(this).hide();
+        searchVal = '';
+        searchField = 'every_field';
+        Load(getAllVideosURL());
+    });
+
+    // Clear search button — Playlists
+    $('#search_pl').on('input', function() {
+        $('#searchClear_pl').toggle(this.value !== '' && this.value !== 'Search Playlists');
+    });
+
+    $('#searchClear_pl').on('click', function() {
+        document.getElementById('search_pl').value = '';
+        document.getElementById('selField_pl').value = 'find_playlist_by_name';
+        $(this).hide();
+        togglePlSearchHint('find_playlist_by_name');
+        searchVal = '';
+        searchField = 'find_playlist_by_name';
+        Load(getAllPlaylistsURL());
+    });
+
 });
 
 function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, onCancel) {
@@ -726,6 +755,7 @@ function buildMainVideoList(title) {
     document.getElementById('nameCol').innerHTML = "Video Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = title;
     document.getElementById('search').value = searchVal ? searchVal : "Search Videos";
+    $('#searchClear').toggle(!!searchVal && searchVal !== 'Search Videos');
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "inline";
     document.getElementById('searchDiv_pl').style.display = "none";
@@ -790,6 +820,7 @@ function buildPlaylistList() {
     document.getElementById('nameCol').innerHTML = "Playlist Name";
     document.getElementById('headTitle').innerHTML = "All Playlists";
     document.getElementById('search_pl').value = "Search Playlists";
+    $('#searchClear_pl').hide();
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "none";
     document.getElementById('searchDiv_pl').style.display = "inline";
@@ -864,6 +895,7 @@ function showPlaylist() {
     document.getElementById('nameCol').innerHTML = "Video Name";
     document.getElementById('headTitle').innerHTML = oCurrentPlaylistList.name;
     document.getElementById('search').value = "Search Videos";
+    $('#searchClear').hide();
     document.getElementById('searchDiv').style.display = "inline"
     document.getElementById('searchDiv_pl').style.display = "none";
 
