@@ -1,39 +1,33 @@
 (function (document, $) {
     "use strict";
 
-    var currentMode; // 'add' or 'edit'
+    var currentMode;    // 'add' or 'edit'
     var currentVideoId;
-    var currentLanguage; // only set in edit mode
+    var currentLanguage; // only used in edit mode
+
+    // ── Data helpers ──────────────────────────────────────────────────────────
 
     function getVariantsData() {
-        var scriptEl = document.getElementById("brc-variants-data");
-        if (!scriptEl) return [];
-        try {
-            return JSON.parse(scriptEl.textContent);
-        } catch (e) {
-            return [];
-        }
+        var el = document.getElementById("brc-variants-data");
+        if (!el) return [];
+        try { return JSON.parse(el.textContent); } catch (e) { return []; }
     }
 
     function setVariantsData(variants) {
-        var scriptEl = document.getElementById("brc-variants-data");
-        if (scriptEl) scriptEl.textContent = JSON.stringify(variants);
+        var el = document.getElementById("brc-variants-data");
+        if (el) el.textContent = JSON.stringify(variants);
     }
 
-    function showError(dlg, message) {
-        var errorEl = dlg.querySelector("#brc-variant-error");
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.style.display = "block";
-        }
+    // ── Dialog helpers ────────────────────────────────────────────────────────
+
+    function showError(dlg, msg) {
+        var el = dlg.querySelector("#brc-variant-error");
+        if (el) { el.textContent = msg; el.style.display = "block"; }
     }
 
     function clearError(dlg) {
-        var errorEl = dlg.querySelector("#brc-variant-error");
-        if (errorEl) {
-            errorEl.textContent = "";
-            errorEl.style.display = "none";
-        }
+        var el = dlg.querySelector("#brc-variant-error");
+        if (el) { el.textContent = ""; el.style.display = "none"; }
     }
 
     function clearForm(dlg) {
@@ -41,116 +35,73 @@
         dlg.querySelector("#brc-variant-name").value = "";
         dlg.querySelector("#brc-variant-description").value = "";
         dlg.querySelector("#brc-variant-long-description").value = "";
-        dlg.querySelectorAll(".brc-variant-cf").forEach(function (el) {
-            el.value = "";
-        });
+        dlg.querySelectorAll(".brc-variant-cf").forEach(function (el) { el.value = ""; });
         clearError(dlg);
     }
+
+    function showDialog(dlg) {
+        // Wait for the specific coral-dialog element to be upgraded before calling show()
+        Coral.commons.ready(dlg, function () {
+            dlg.show();
+        });
+    }
+
+    // ── Open add ──────────────────────────────────────────────────────────────
 
     function openAddDialog(videoId) {
         var dlg = document.getElementById("brc-variant-dialog");
         if (!dlg) return;
 
-        currentMode = "add";
+        currentMode    = "add";
         currentVideoId = videoId;
 
         dlg.querySelector("coral-dialog-header").textContent = "Add Variant";
 
-        var langField = dlg.querySelector("#brc-variant-language");
-        langField.removeAttribute("readonly");
         clearForm(dlg);
-        dlg.show();
+        dlg.querySelector("#brc-variant-language").removeAttribute("readonly");
+
+        showDialog(dlg);
     }
+
+    // ── Open edit ─────────────────────────────────────────────────────────────
 
     function openEditDialog(videoId, language) {
         var dlg = document.getElementById("brc-variant-dialog");
         if (!dlg) return;
 
-        currentMode = "edit";
-        currentVideoId = videoId;
+        currentMode     = "edit";
+        currentVideoId  = videoId;
         currentLanguage = language;
 
         dlg.querySelector("coral-dialog-header").textContent = "Edit Variant";
 
         clearForm(dlg);
 
-        // Language is read-only in edit mode
         var langField = dlg.querySelector("#brc-variant-language");
         langField.value = language;
         langField.setAttribute("readonly", "readonly");
 
-        // Populate from stored variant data
         var variants = getVariantsData();
-        var variant = null;
+        var variant  = null;
         for (var i = 0; i < variants.length; i++) {
-            if (variants[i].language === language) {
-                variant = variants[i];
-                break;
-            }
+            if (variants[i].language === language) { variant = variants[i]; break; }
         }
 
         if (variant) {
-            dlg.querySelector("#brc-variant-name").value = variant.name || "";
-            dlg.querySelector("#brc-variant-description").value = variant.description || "";
+            dlg.querySelector("#brc-variant-name").value         = variant.name          || "";
+            dlg.querySelector("#brc-variant-description").value  = variant.description   || "";
             dlg.querySelector("#brc-variant-long-description").value = variant.long_description || "";
-            var customFields = variant.custom_fields || {};
+            var cf = variant.custom_fields || {};
             dlg.querySelectorAll(".brc-variant-cf").forEach(function (el) {
-                var cfId = el.dataset.cfId;
-                if (cfId && customFields[cfId] != null) {
-                    el.value = customFields[cfId];
-                }
+                var id = el.dataset.cfId;
+                if (id && cf[id] != null) el.value = cf[id];
             });
         }
 
-        dlg.show();
+        showDialog(dlg);
     }
 
-    function buildCustomFieldsObject(dlg) {
-        var obj = {};
-        dlg.querySelectorAll(".brc-variant-cf").forEach(function (el) {
-            var cfId = el.dataset.cfId;
-            if (cfId) obj[cfId] = el.value || "";
-        });
-        return obj;
-    }
-
-    function addBadgeToDOM(language, videoId) {
-        var list = document.querySelector(".brc-variants-list");
-        if (!list) return;
-
-        // Remove the "no variants" placeholder if present
-        var placeholder = list.querySelector(".coral-Form-fielddescription");
-        if (placeholder) placeholder.remove();
-
-        var idx = list.querySelectorAll(".brc-variant-badge").length;
-
-        var badge = document.createElement("span");
-        badge.className = "brc-variant-badge";
-        badge.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#e8f0fe;border-radius:14px;font-size:12px;";
-
-        var langSpan = document.createElement("span");
-        langSpan.className = "brc-variant-language";
-        langSpan.textContent = language;
-        badge.appendChild(langSpan);
-
-        var editBtn = document.createElement("button");
-        editBtn.setAttribute("is", "coral-button");
-        editBtn.setAttribute("variant", "minimal");
-        editBtn.setAttribute("size", "S");
-        editBtn.className = "brc-edit-variant-btn";
-        editBtn.dataset.language = language;
-        editBtn.dataset.variantIndex = String(idx);
-        editBtn.dataset.videoId = videoId;
-        editBtn.type = "button";
-        editBtn.textContent = "Edit";
-        badge.appendChild(editBtn);
-
-        list.appendChild(badge);
-
-        editBtn.addEventListener("click", function () {
-            openEditDialog(this.dataset.videoId, this.dataset.language);
-        });
-    }
+    // ── Save ──────────────────────────────────────────────────────────────────
 
     function handleSave() {
         var dlg = document.getElementById("brc-variant-dialog");
@@ -159,49 +110,43 @@
         clearError(dlg);
 
         var language = dlg.querySelector("#brc-variant-language").value.trim();
-        if (!language) {
-            showError(dlg, "Language code is required.");
-            return;
-        }
+        if (!language) { showError(dlg, "Language code is required."); return; }
 
-        var name          = dlg.querySelector("#brc-variant-name").value.trim();
-        var description   = dlg.querySelector("#brc-variant-description").value.trim();
-        var longDesc      = dlg.querySelector("#brc-variant-long-description").value.trim();
-        var customFields  = buildCustomFieldsObject(dlg);
-        var action        = currentMode === "add" ? "add_variant" : "update_variant";
+        var name        = dlg.querySelector("#brc-variant-name").value.trim();
+        var description = dlg.querySelector("#brc-variant-description").value.trim();
+        var longDesc    = dlg.querySelector("#brc-variant-long-description").value.trim();
+
+        var customFields = {};
+        dlg.querySelectorAll(".brc-variant-cf").forEach(function (el) {
+            var id = el.dataset.cfId;
+            if (id) customFields[id] = el.value || "";
+        });
 
         Granite.$.ajax({
             url: "/bin/brightcove/api.json",
             type: "POST",
             data: {
-                a: action,
-                videoId: currentVideoId,
-                language: language,
-                name: name,
-                description: description,
+                a:             currentMode === "add" ? "add_variant" : "update_variant",
+                videoId:       currentVideoId,
+                language:      language,
+                name:          name,
+                description:   description,
                 long_description: longDesc,
                 custom_fields: JSON.stringify(customFields)
             },
             success: function (data) {
                 if (data && data.error && data.error !== null && data.error !== 0) {
-                    showError(dlg, "Save failed. Please check the language code and try again.");
+                    showError(dlg, "Save failed. Check the language code and try again.");
                     return;
                 }
                 dlg.hide();
+                var variants = getVariantsData();
                 if (currentMode === "add") {
                     addBadgeToDOM(language, currentVideoId);
-                    var variants = getVariantsData();
-                    variants.push({
-                        language: language,
-                        name: name,
-                        description: description,
-                        long_description: longDesc,
-                        custom_fields: customFields
-                    });
-                    setVariantsData(variants);
+                    variants.push({ language: language, name: name,
+                        description: description, long_description: longDesc,
+                        custom_fields: customFields });
                 } else {
-                    // Update the in-memory data so subsequent edits see fresh values
-                    var variants = getVariantsData();
                     for (var i = 0; i < variants.length; i++) {
                         if (variants[i].language === currentLanguage) {
                             variants[i].name = name;
@@ -211,8 +156,8 @@
                             break;
                         }
                     }
-                    setVariantsData(variants);
                 }
+                setVariantsData(variants);
             },
             error: function () {
                 showError(dlg, "An error occurred. Please try again.");
@@ -220,36 +165,54 @@
         });
     }
 
-    function bindButtons() {
-        var saveBtn = document.getElementById("brc-variant-save");
-        if (saveBtn && !saveBtn.dataset.brcBound) {
-            saveBtn.dataset.brcBound = "1";
-            saveBtn.addEventListener("click", handleSave);
-        }
+    // ── DOM update after add ──────────────────────────────────────────────────
 
-        document.querySelectorAll(".brc-add-variant-btn").forEach(function (btn) {
-            if (!btn.dataset.brcBound) {
-                btn.dataset.brcBound = "1";
-                btn.addEventListener("click", function () {
-                    openAddDialog(this.dataset.videoId);
-                });
-            }
-        });
+    function addBadgeToDOM(language, videoId) {
+        var list = document.querySelector(".brc-variants-list");
+        if (!list) return;
 
-        document.querySelectorAll(".brc-edit-variant-btn").forEach(function (btn) {
-            if (!btn.dataset.brcBound) {
-                btn.dataset.brcBound = "1";
-                btn.addEventListener("click", function () {
-                    openEditDialog(this.dataset.videoId, this.dataset.language);
-                });
-            }
-        });
+        var placeholder = list.querySelector(".coral-Form-fielddescription");
+        if (placeholder) placeholder.remove();
+
+        var idx = list.querySelectorAll(".brc-variant-badge").length;
+
+        var badge    = document.createElement("span");
+        badge.className  = "brc-variant-badge";
+        badge.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#e8f0fe;border-radius:14px;font-size:12px;";
+
+        var langSpan = document.createElement("span");
+        langSpan.className   = "brc-variant-language";
+        langSpan.textContent = language;
+        badge.appendChild(langSpan);
+
+        var editBtn = document.createElement("button");
+        editBtn.setAttribute("is", "coral-button");
+        editBtn.setAttribute("variant", "minimal");
+        editBtn.setAttribute("size", "S");
+        editBtn.className          = "brc-edit-variant-btn";
+        editBtn.dataset.language   = language;
+        editBtn.dataset.variantIndex = String(idx);
+        editBtn.dataset.videoId    = videoId;
+        editBtn.type               = "button";
+        editBtn.textContent        = "Edit";
+        badge.appendChild(editBtn);
+
+        list.appendChild(badge);
     }
 
-    $(document).on("foundation-contentloaded", function () {
-        Coral.commons.ready(function () {
-            bindButtons();
-        });
+    // ── Event binding (delegation — works regardless of load timing) ──────────
+
+    // Add variant
+    $(document).on("click", ".brc-add-variant-btn", function () {
+        openAddDialog(this.dataset.videoId);
     });
+
+    // Edit variant
+    $(document).on("click", ".brc-edit-variant-btn", function () {
+        openEditDialog(this.dataset.videoId, this.dataset.language);
+    });
+
+    // Save (inside dialog)
+    $(document).on("click", "#brc-variant-save", handleSave);
 
 }(document, Granite.$));
