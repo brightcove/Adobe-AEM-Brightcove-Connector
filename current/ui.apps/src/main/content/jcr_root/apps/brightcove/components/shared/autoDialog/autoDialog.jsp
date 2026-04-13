@@ -60,11 +60,15 @@
         }
 
 
-        ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
-
-
-        JSONObject custom_fields_obj = serviceUtil.getCustomFields();
-        JSONArray custom_fields_arr = custom_fields_obj.getJSONArray("custom_fields");
+        JSONArray custom_fields_arr = new JSONArray();
+        try {
+            ServiceUtil serviceUtil = new ServiceUtil(requestedAccount);
+            JSONObject custom_fields_obj = new JSONObject(serviceUtil.getCustomFields().toString());
+            JSONArray fetched = custom_fields_obj.optJSONArray("custom_fields");
+            if (fetched != null) custom_fields_arr = fetched;
+        } catch (Exception e) {
+            // account not configured in this environment — render without custom fields
+        }
 
         Resource custom_fields = metadataRes.getChild("brc_custom_fields");
         ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
