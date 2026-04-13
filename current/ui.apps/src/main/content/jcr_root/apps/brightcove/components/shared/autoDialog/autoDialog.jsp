@@ -72,6 +72,8 @@
 
         Resource custom_fields = metadataRes.getChild("brc_custom_fields");
         ValueMap custom_map = custom_fields != null ? custom_fields.adaptTo(ValueMap.class) : null;
+
+        String[] brcVariantsRaw = map.get("brc_variants", new String[0]);
 %>
 
     <div  class="aem-assets-metadata-form-column">
@@ -190,6 +192,45 @@
     </div>
     <div class="foundation-field-editable">
         <div  class="coral-Form-fieldwrapper foundation-field-edit"><label class="coral-Form-fieldlabel">Duration</label><input  class="coral-Form-field" disabled="" data-metaType="text" type="text" name="./jcr:content/metadata/brc_duration" value="<%=map.get("brc_duration","")%>" data-foundation-validation="" data-validation="" is="coral-textfield"></div>
+    </div>
+</div>
+
+<div class="aem-assets-metadata-form-column brc-variants-section" style="width:100%;margin-top:16px;">
+    <div class="coral-Form-fieldwrapper">
+        <label class="coral-Form-fieldlabel">Variants</label>
+        <div class="brc-variants-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <%
+                if (brcVariantsRaw.length == 0) {
+            %>
+            <span class="coral-Form-fielddescription">No variants configured.</span>
+            <%
+                } else {
+                    for (int vIdx = 0; vIdx < brcVariantsRaw.length; vIdx++) {
+                        String variantLang = "";
+                        try {
+                            JSONObject variantObj = new JSONObject(brcVariantsRaw[vIdx]);
+                            variantLang = variantObj.optString("language", "");
+                        } catch (Exception ex) { /* skip malformed entry */ }
+                        if (variantLang.isEmpty()) continue;
+            %>
+            <span class="brc-variant-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#e8f0fe;border-radius:14px;font-size:12px;">
+                <span class="brc-variant-language"><%=variantLang%></span>
+                <button is="coral-button" variant="minimal" size="S"
+                        class="brc-edit-variant-btn"
+                        data-language="<%=variantLang%>"
+                        data-variant-index="<%=vIdx%>"
+                        data-video-id="<%=brcid%>"
+                        type="button">Edit</button>
+            </span>
+            <%
+                    }
+                }
+            %>
+        </div>
+        <button is="coral-button" variant="secondary" size="S"
+                class="brc-add-variant-btn"
+                data-video-id="<%=brcid%>"
+                type="button">+ Add Variant</button>
     </div>
 </div>
 <%
