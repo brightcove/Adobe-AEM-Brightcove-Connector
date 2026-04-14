@@ -59,6 +59,7 @@
 
         clearForm(dlg);
         dlg.querySelector("#brc-variant-language").removeAttribute("readonly");
+        dlg.querySelector("#brc-variant-language").removeAttribute("disabled");
 
         showDialog(dlg);
     }
@@ -80,6 +81,7 @@
         var langField = dlg.querySelector("#brc-variant-language");
         langField.value = language;
         langField.setAttribute("readonly", "readonly");
+        langField.setAttribute("disabled", "disabled");
 
         var variants = getVariantsData();
         var variant  = null;
