@@ -811,6 +811,7 @@ public class CmsAPI {
         if (authToken != null) {
             Map<String, String> headers = new HashMap<String, String>();
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
+            headers.put(Constants.CONTENT_TYPE_HEADER, "application/json");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants";
             try {
                 String response = account.platform.postAPI(targetURL, variantBody.toPrettyString(), headers);
