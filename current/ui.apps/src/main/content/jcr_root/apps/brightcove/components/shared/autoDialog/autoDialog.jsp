@@ -202,7 +202,7 @@
     </div>
 </div>
 
-<div class="aem-assets-metadata-form-column brc-variants-section" style="width:100%;margin-top:16px;">
+<div class="aem-assets-metadata-form-column brc-variants-section" data-asset-path="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(asset_res.getPath())%>" style="width:100%;margin-top:16px;">
     <div class="coral-Form-fieldwrapper">
         <label class="coral-Form-fieldlabel">Variants</label>
         <div class="brc-variants-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
