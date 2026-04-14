@@ -227,6 +227,7 @@
                         data-language="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(variantLang)%>"
                         data-variant-index="<%=vIdx%>"
                         data-video-id="<%=brcid%>"
+                        data-account-id="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(map.get("brc_account_id",""))%>"
                         type="button">Edit</button>
             </span>
             <%
@@ -237,6 +238,7 @@
         <button is="coral-button" variant="secondary" size="S"
                 class="brc-add-variant-btn"
                 data-video-id="<%=brcid%>"
+                data-account-id="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(map.get("brc_account_id",""))%>"
                 type="button">+ Add Variant</button>
     </div>
 </div>
