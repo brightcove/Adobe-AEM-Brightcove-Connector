@@ -241,7 +241,7 @@
     </div>
 </div>
 
-<coral-dialog id="brc-variant-dialog" closable="on">
+<coral-dialog id="brc-variant-dialog" closable="on" size="L">
     <coral-dialog-header>Variant</coral-dialog-header>
     <coral-dialog-content>
         <div class="coral-Form coral-Form--vertical" style="padding:0;">
