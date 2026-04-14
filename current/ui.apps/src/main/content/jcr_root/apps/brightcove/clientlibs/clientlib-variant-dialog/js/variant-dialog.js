@@ -1,9 +1,10 @@
 (function (document, $) {
     "use strict";
 
-    var currentMode;    // 'add' or 'edit'
+    var currentMode;      // 'add' or 'edit'
     var currentVideoId;
-    var currentLanguage; // only used in edit mode
+    var currentAccountId;
+    var currentLanguage;  // only used in edit mode
 
     // ── Data helpers ──────────────────────────────────────────────────────────
 
@@ -48,12 +49,13 @@
 
     // ── Open add ──────────────────────────────────────────────────────────────
 
-    function openAddDialog(videoId) {
+    function openAddDialog(videoId, accountId) {
         var dlg = document.getElementById("brc-variant-dialog");
         if (!dlg) return;
 
-        currentMode    = "add";
-        currentVideoId = videoId;
+        currentMode      = "add";
+        currentVideoId   = videoId;
+        currentAccountId = accountId;
 
         dlg.querySelector("coral-dialog-header").textContent = "Add Variant";
 
@@ -66,13 +68,14 @@
 
     // ── Open edit ─────────────────────────────────────────────────────────────
 
-    function openEditDialog(videoId, language) {
+    function openEditDialog(videoId, accountId, language) {
         var dlg = document.getElementById("brc-variant-dialog");
         if (!dlg) return;
 
-        currentMode     = "edit";
-        currentVideoId  = videoId;
-        currentLanguage = language;
+        currentMode      = "edit";
+        currentVideoId   = videoId;
+        currentAccountId = accountId;
+        currentLanguage  = language;
 
         dlg.querySelector("coral-dialog-header").textContent = "Edit Variant";
 
@@ -129,6 +132,7 @@
             type: "POST",
             data: {
                 a:             currentMode === "add" ? "add_variant" : "update_variant",
+                account_id:    currentAccountId,
                 videoId:       currentVideoId,
                 language:      language,
                 name:          name,
@@ -137,14 +141,20 @@
                 custom_fields: JSON.stringify(customFields)
             },
             success: function (data) {
-                if (data && data.error && data.error !== null && data.error !== 0) {
+                // executePost puts the HTTP status code in data.error on success (200/201).
+                // Only treat it as a real error if it's a string (Brightcove error_code)
+                // or a number >= 400.
+                var errorVal = data && data.error;
+                var isError  = errorVal != null && errorVal !== 0 &&
+                               errorVal !== 200 && errorVal !== 201;
+                if (isError) {
                     showError(dlg, "Save failed. Check the language code and try again.");
                     return;
                 }
                 dlg.hide();
                 var variants = getVariantsData();
                 if (currentMode === "add") {
-                    addBadgeToDOM(language, currentVideoId);
+                    addBadgeToDOM(language, currentVideoId, currentAccountId);
                     variants.push({ language: language, name: name,
                         description: description, long_description: longDesc,
                         custom_fields: customFields });
@@ -169,7 +179,7 @@
 
     // ── DOM update after add ──────────────────────────────────────────────────
 
-    function addBadgeToDOM(language, videoId) {
+    function addBadgeToDOM(language, videoId, accountId) {
         var list = document.querySelector(".brc-variants-list");
         if (!list) return;
 
@@ -191,12 +201,13 @@
         editBtn.setAttribute("is", "coral-button");
         editBtn.setAttribute("variant", "minimal");
         editBtn.setAttribute("size", "S");
-        editBtn.className          = "brc-edit-variant-btn";
-        editBtn.dataset.language   = language;
+        editBtn.className            = "brc-edit-variant-btn";
+        editBtn.dataset.language     = language;
         editBtn.dataset.variantIndex = String(idx);
-        editBtn.dataset.videoId    = videoId;
-        editBtn.type               = "button";
-        editBtn.textContent        = "Edit";
+        editBtn.dataset.videoId      = videoId;
+        editBtn.dataset.accountId    = accountId;
+        editBtn.type                 = "button";
+        editBtn.textContent          = "Edit";
         badge.appendChild(editBtn);
 
         list.appendChild(badge);
@@ -206,12 +217,12 @@
 
     // Add variant
     $(document).on("click", ".brc-add-variant-btn", function () {
-        openAddDialog(this.dataset.videoId);
+        openAddDialog(this.dataset.videoId, this.dataset.accountId);
     });
 
     // Edit variant
     $(document).on("click", ".brc-edit-variant-btn", function () {
-        openEditDialog(this.dataset.videoId, this.dataset.language);
+        openEditDialog(this.dataset.videoId, this.dataset.accountId, this.dataset.language);
     });
 
     // Save (inside dialog)
