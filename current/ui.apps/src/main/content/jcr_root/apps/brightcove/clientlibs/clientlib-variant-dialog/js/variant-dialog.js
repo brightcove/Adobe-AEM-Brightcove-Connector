@@ -170,9 +170,34 @@
                     }
                 }
                 setVariantsData(variants);
+                persistVariantsToJcr(variants);
             },
             error: function () {
                 showError(dlg, "An error occurred. Please try again.");
+            }
+        });
+    }
+
+    // ── JCR persistence ───────────────────────────────────────────────────────
+
+    function persistVariantsToJcr(variants) {
+        var section = document.querySelector(".brc-variants-section");
+        if (!section || !section.dataset.assetPath) return;
+
+        // Sling POST multi-value String[]: send each element as a separate
+        // brc_variants param alongside the @TypeHint hint.
+        // traditional:true prevents jQuery from appending [0],[1] indices.
+        Granite.$.ajax({
+            url: section.dataset.assetPath + "/jcr:content/metadata",
+            type: "POST",
+            traditional: true,
+            data: {
+                "brc_variants":          variants.map(function (v) { return JSON.stringify(v); }),
+                "brc_variants@TypeHint": "String[]"
+            },
+            error: function () {
+                // Non-fatal — the change already exists in Brightcove and
+                // JCR will be updated on the next scheduled sync.
             }
         });
     }
