@@ -229,6 +229,12 @@
                         data-video-id="<%=brcid%>"
                         data-account-id="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(map.get("brc_account_id",""))%>"
                         type="button">Edit</button>
+                <button is="coral-button" variant="minimal" size="S"
+                        class="brc-delete-variant-btn"
+                        data-language="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(variantLang)%>"
+                        data-video-id="<%=brcid%>"
+                        data-account-id="<%=org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(map.get("brc_account_id",""))%>"
+                        type="button">Delete</button>
             </span>
             <%
                     }
