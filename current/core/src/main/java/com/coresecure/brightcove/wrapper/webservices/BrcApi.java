@@ -729,8 +729,20 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = addVariant(request);
         } else if ("update_variant".equals(requestedAPI)) {
             result = updateVariant(request);
+        } else if ("delete_variant".equals(requestedAPI)) {
+            result = deleteVariant(request);
         } else {
             result.put(Constants.ERROR, 404);
+        }
+        return result;
+    }
+
+    private ObjectNode deleteVariant(SlingHttpServletRequest request) throws IOException {
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        String videoId  = request.getParameter("videoId");
+        String language = request.getParameter("language");
+        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
+            result = brAPI.cms.deleteVariant(videoId, language);
         }
         return result;
     }

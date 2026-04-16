@@ -202,6 +202,57 @@
         });
     }
 
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    function handleDelete(videoId, accountId, language) {
+        if (!window.confirm("Delete the \"" + language + "\" variant? This cannot be undone.")) return;
+
+        Granite.$.ajax({
+            url: "/bin/brightcove/api.json",
+            type: "POST",
+            data: {
+                a:          "delete_variant",
+                account_id: accountId,
+                videoId:    videoId,
+                language:   language
+            },
+            success: function (data) {
+                var errorVal = data && data.error;
+                var isError  = errorVal != null && errorVal !== 0 &&
+                               errorVal !== 200 && errorVal !== 204;
+                if (isError) {
+                    window.alert("Delete failed. Please try again.");
+                    return;
+                }
+                // Remove badge from DOM
+                var list = document.querySelector(".brc-variants-list");
+                if (list) {
+                    var badges = list.querySelectorAll(".brc-variant-badge");
+                    for (var i = 0; i < badges.length; i++) {
+                        var langEl = badges[i].querySelector(".brc-variant-language");
+                        if (langEl && langEl.textContent === language) {
+                            badges[i].remove();
+                            break;
+                        }
+                    }
+                    if (list.querySelectorAll(".brc-variant-badge").length === 0) {
+                        var empty = document.createElement("span");
+                        empty.className   = "coral-Form-fielddescription";
+                        empty.textContent = "No variants configured.";
+                        list.appendChild(empty);
+                    }
+                }
+                // Update in-memory store and persist to JCR
+                var variants = getVariantsData().filter(function (v) { return v.language !== language; });
+                setVariantsData(variants);
+                persistVariantsToJcr(variants);
+            },
+            error: function () {
+                window.alert("An error occurred. Please try again.");
+            }
+        });
+    }
+
     // ── DOM update after add ──────────────────────────────────────────────────
 
     function addBadgeToDOM(language, videoId, accountId) {
@@ -235,6 +286,18 @@
         editBtn.textContent          = "Edit";
         badge.appendChild(editBtn);
 
+        var delBtn = document.createElement("button");
+        delBtn.setAttribute("is", "coral-button");
+        delBtn.setAttribute("variant", "minimal");
+        delBtn.setAttribute("size", "S");
+        delBtn.className         = "brc-delete-variant-btn";
+        delBtn.dataset.language  = language;
+        delBtn.dataset.videoId   = videoId;
+        delBtn.dataset.accountId = accountId;
+        delBtn.type              = "button";
+        delBtn.textContent       = "Delete";
+        badge.appendChild(delBtn);
+
         list.appendChild(badge);
     }
 
@@ -248,6 +311,11 @@
     // Edit variant
     $(document).on("click", ".brc-edit-variant-btn", function () {
         openEditDialog(this.dataset.videoId, this.dataset.accountId, this.dataset.language);
+    });
+
+    // Delete variant
+    $(document).on("click", ".brc-delete-variant-btn", function () {
+        handleDelete(this.dataset.videoId, this.dataset.accountId, this.dataset.language);
     });
 
     // Save (inside dialog)
