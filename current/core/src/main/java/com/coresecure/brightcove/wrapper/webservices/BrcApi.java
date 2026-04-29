@@ -741,8 +741,23 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String videoId  = request.getParameter("videoId");
         String language = request.getParameter("language");
-        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
+        if (videoId == null || videoId.isEmpty() || language == null || language.isEmpty()) {
+            result.put(Constants.ERROR, 400);
+            return result;
+        }
+        try {
             result = brAPI.cms.deleteVariant(videoId, language);
+        } catch (Exception e) {
+            LOGGER.error("deleteVariant call failed", e);
+        }
+        if (result == null) result = JsonNodeFactory.instance.objectNode();
+        // executeDelete injects `error_code` (not `error`) on 4xx and returns an
+        // empty body on 204 success. Normalize so the JS client's `data.error`
+        // check can distinguish success from failure.
+        if (result.has("error_code")) {
+            result.put(Constants.ERROR, result.get("error_code").asText());
+        } else {
+            result.put(Constants.ERROR, 204);
         }
         return result;
     }
@@ -779,23 +794,42 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String videoId = request.getParameter("videoId");
         String language = request.getParameter("language");
-        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
-            ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
-            String name = request.getParameter(Constants.NAME);
-            if (name != null) variantBody.put(Constants.NAME, name);
-            String description = request.getParameter(Constants.DESCRIPTION);
-            if (description != null) variantBody.put(Constants.DESCRIPTION, description);
-            String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
-            if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
-            String customFieldsJson = request.getParameter("custom_fields");
-            if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
-                try {
-                    variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
-                } catch (Exception e) {
-                    variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
-                }
+        if (videoId == null || videoId.isEmpty() || language == null || language.isEmpty()) {
+            result.put(Constants.ERROR, 400);
+            return result;
+        }
+        ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
+        String name = request.getParameter(Constants.NAME);
+        if (name != null) variantBody.put(Constants.NAME, name);
+        String description = request.getParameter(Constants.DESCRIPTION);
+        if (description != null) variantBody.put(Constants.DESCRIPTION, description);
+        String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
+        if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
+        String customFieldsJson = request.getParameter("custom_fields");
+        if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
+            try {
+                variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
+            } catch (Exception e) {
+                variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
             }
+        }
+        try {
             result = brAPI.cms.updateVariant(videoId, language, variantBody);
+        } catch (Exception e) {
+            LOGGER.error("updateVariant call failed", e);
+        }
+        if (result == null) result = JsonNodeFactory.instance.objectNode();
+        // executePatch (unlike executePost) does not inject an `error` field, so
+        // PATCH errors would otherwise look like success to the JS client. Brightcove
+        // returns the updated variant body (with `language`/`id`) on 200; failure
+        // surfaces either as `error_code` or as an empty body when parsing failed.
+        if (result.has("error_code")) {
+            result.put(Constants.ERROR, result.get("error_code").asText());
+        } else if (result.has("language") || result.has("id")) {
+            result.put(Constants.ERROR, 200);
+        } else {
+            result.put(Constants.ERROR, 502);
+            if (!result.has("error_message")) result.put("error_message", "Update failed");
         }
         return result;
     }
