@@ -91,6 +91,13 @@
                                                             <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
                                                         </svg>
                                                     </button>
+                                                    <div id="bulkActionBar" class="brc-bulk-bar" hidden>
+                                                        <span class="brc-bulk-bar-divider" aria-hidden="true"></span>
+                                                        <span class="brc-bulk-bar-count"><span id="bulkCount">0</span> selected</span>
+                                                        <button type="button" id="bulkCreatePlaylist" class="brc-bulk-bar-btn">Create Playlist</button>
+                                                        <button type="button" id="bulkMoveToFolder" class="brc-bulk-bar-btn menuToggle">Move to Folder</button>
+                                                        <button type="button" id="bulkClear" class="brc-bulk-bar-clear">Clear</button>
+                                                    </div>
                                                 </div>
                                                 <div class="brc-title-row-right">
                                                     <div id="searchDiv" class="brc-pill-search">
@@ -183,6 +190,10 @@
                                             <div class="brc-table-wrapper">
                                                 <div id="tableSpinner" class="brc-table-spinner" hidden>
                                                     <span class="brc-spinner" aria-hidden="true"></span>
+                                                </div>
+                                                <div id="emptyState" class="brc-empty-state" hidden>
+                                                    <p id="emptyStateTitle" class="brc-empty-state-title">No videos match your search or filters</p>
+                                                    <p id="emptyStateHint" class="brc-empty-state-hint">Try clearing the search or adjusting your filters.</p>
                                                 </div>
                                             <table id="tblMainList" cellpadding="3" cellspacing="0">
                                                 <thead>

@@ -392,6 +392,88 @@ betty-titlebar {
   border-color: #d6d4cc;
 }
 
+/* Bulk action bar (BCON-141, Frame C) */
+.brc-bulk-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 6px;
+}
+
+.brc-bulk-bar[hidden] {
+  display: none;
+}
+
+.brc-bulk-bar-divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: #e8e6df;
+  margin: 0 4px;
+}
+
+.brc-bulk-bar-count {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+}
+
+.brc-bulk-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  background: #fff;
+  background-image: none;
+  background-color: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  color: #1a1a18;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  margin: 0;
+  line-height: 32px;
+}
+
+.brc-bulk-bar-btn:hover {
+  background: #f7f6f2;
+  background-color: #f7f6f2;
+  color: #1a1a18;
+}
+
+.brc-bulk-bar-clear {
+  background: transparent;
+  background-image: none;
+  background-color: transparent;
+  border: none;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  padding: 0 4px;
+  margin: 0;
+}
+
+.brc-bulk-bar-clear:hover {
+  color: #1a1a18;
+  background: transparent;
+  background-color: transparent;
+}
+
 /* Pill search */
 .brc-pill-search {
   display: inline-flex;
@@ -600,6 +682,30 @@ betty-titlebar {
 
 @keyframes brc-spin {
   to { transform: rotate(360deg); }
+}
+
+/* Empty-state message (BCON-141) */
+.brc-empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-empty-state[hidden] {
+  display: none;
+}
+
+.brc-empty-state-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a18;
+  margin: 0 0 6px;
+}
+
+.brc-empty-state-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
 }
 
 a.home {
@@ -1328,9 +1434,44 @@ table.tblConsole #tbData td:nth-child(2) {
   color: #1a1a18;
 }
 
-#tbData tr.select {
+#tbData tr.select,
+#tbData tr.is-selected {
   background-color: #f0efea;
   color: #1a1a18;
+}
+
+/* Custom checkbox styling for the videos table (BCON-141, Frame C) */
+#tblMainList input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #c8c7c2;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  margin: 0;
+  position: relative;
+  padding: 0;
+}
+
+#tblMainList input[type="checkbox"]:checked {
+  background: #1a1a18;
+  border-color: #1a1a18;
+}
+
+#tblMainList input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 4px;
+  height: 8px;
+  border-right: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
+  transform: rotate(45deg);
 }
 
 #playerDiv.overlay.ui-draggable {

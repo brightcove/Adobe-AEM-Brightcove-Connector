@@ -396,9 +396,29 @@ $(function () {
         for (var i = 2; i < l; i++) {
             if (true == inputTags[i].checked) {
                 paging.selectedVideos.push(inputTags[i]);
+                $(inputTags[i]).closest('tr').addClass('is-selected');
+            } else {
+                $(inputTags[i]).closest('tr').removeClass('is-selected');
             }
         }
-        $('.butDiv').toggle(paging.selectedVideos.length > 0);
+        var n = paging.selectedVideos.length;
+        $('#bulkCount').text(n);
+        if (window.brcCurrentView === 'videos' && n > 0) {
+            $('#bulkActionBar').removeAttr('hidden');
+        } else {
+            $('#bulkActionBar').attr('hidden', '');
+        }
+        // Original .butDiv kept for the playlist drill-down view (Remove From Playlist).
+        $('.butDiv').toggle(window.brcCurrentView === 'playlist' && n > 0);
+    });
+
+    $('#bulkCreatePlaylist').on('click', function () { createPlaylistBox(); });
+    $('#bulkMoveToFolder').on('click', function () { moveVideoToFolder(); });
+    $('#bulkClear').on('click', function () {
+        $('#tbData input[type="checkbox"]').prop('checked', false);
+        $('#checkToggle').prop('checked', false);
+        $('#tbData tr').removeClass('is-selected');
+        $('body').trigger('brc:checked');
     });
 
     $('body').on('click', '.variant', function(event) {
@@ -863,6 +883,11 @@ function sort(object) {
 }
 function buildMainVideoList(title) {
 
+    window.brcCurrentView = 'videos';
+    paging.selectedVideos = [];
+    $('#bulkActionBar').attr('hidden', '');
+    $('#bulkCount').text(0);
+
     //Wipe out the old results
     $("#tbData").empty();
     if (!$("#nameCol").hasClass("ASC") && !$("#nameCol").hasClass("DESC") && !$("#nameCol").hasClass("NONE")) {
@@ -898,7 +923,7 @@ function buildMainVideoList(title) {
             "</td><td>"
             + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear() + "\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "</td></tr>"
@@ -923,14 +948,22 @@ function buildMainVideoList(title) {
     //if there are videos, show the metadata window, else hide it
     if (oCurrentVideoList.length > 0) {
         if (window.selectedVideoId) showMetaDataByVideoID(window.selectedVideoId);
+        $('#emptyState').attr('hidden', '');
     }
     else {
         closeBox("tdMeta");
+        var hasFilter = (typeof searchVal !== 'undefined' && searchVal && searchVal !== 'Search Videos');
+        $('#emptyStateTitle').text(hasFilter ? 'No videos match your search' : 'No videos found');
+        $('#emptyStateHint').text(hasFilter ? 'Try clearing the search or adjusting your filters.' : 'Sync the database or add videos in Brightcove.');
+        $('#emptyState').removeAttr('hidden');
     }
     hideTableSpinner();
 }
 
 function buildPlaylistList() {
+
+    window.brcCurrentView = 'playlists';
+    $('#bulkActionBar').attr('hidden', '');
 
     //Wipe out the old results
     $("#tbData").empty();
@@ -966,7 +999,7 @@ function buildPlaylistList() {
             "</a></td><td>\
                 <center>---</center>\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
@@ -983,6 +1016,15 @@ function buildPlaylistList() {
     }, function () {
         $(this).removeClass("hover");
     });
+
+    if (oCurrentPlaylistList.length > 0) {
+        $('#emptyState').attr('hidden', '');
+    } else {
+        var hasFilter = (typeof searchVal !== 'undefined' && searchVal && searchVal !== 'Search Playlists');
+        $('#emptyStateTitle').text(hasFilter ? 'No playlists match your search' : 'No playlists found');
+        $('#emptyStateHint').text(hasFilter ? 'Try clearing the search.' : 'Create a playlist in Brightcove to see it here.');
+        $('#emptyState').removeAttr('hidden');
+    }
 
     hideTableSpinner();
 }
@@ -1013,6 +1055,9 @@ function createSubPlaylist() {
 }
 
 function showPlaylist() {
+    window.brcCurrentView = 'playlist';
+    $('#bulkActionBar').attr('hidden', '');
+
     //Wipe out the old results
     $("#tbData").empty();
 
@@ -1044,7 +1089,7 @@ function showPlaylist() {
             "</td><td>"
             + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear() + "\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "</td></tr>"
@@ -2190,6 +2235,7 @@ function toggleSelect(check) {
     } else {
         checkNone();
     }
+    $('body').trigger('brc:checked');
 }
 
 function checkAll() {
