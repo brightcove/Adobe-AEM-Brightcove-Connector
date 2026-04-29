@@ -286,7 +286,9 @@
             <div class="coral-Form-fieldwrapper">
                 <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%><%=dlgRequired ? " *":""%></b></label>
                 <coral-select class="coral-Form-field brc-variant-cf" data-cf-id="<%=dlgFieldId%>">
+                    <% if (!dlgRequired) { %>
                     <coral-select-item value=""></coral-select-item>
+                    <% } %>
                     <% for (int dlgX = 0; dlgX < dlgEnums.length(); dlgX++) { %>
                     <coral-select-item value="<%=dlgEnums.getString(dlgX)%>"><%=dlgEnums.getString(dlgX)%></coral-select-item>
                     <% } %>
