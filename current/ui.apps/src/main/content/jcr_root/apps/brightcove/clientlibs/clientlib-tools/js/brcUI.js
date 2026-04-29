@@ -1016,13 +1016,12 @@ function showPlaylist() {
     //Wipe out the old results
     $("#tbData").empty();
 
-    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length + " videos";
-    //$("#divVideoCount").html(oCurrentVideoList.length + " videos");
-    document.getElementById('nameCol').innerHTML = "Video Name";
+    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length;
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = oCurrentPlaylistList.name;
     document.getElementById('search').value = "Search Videos";
     $('#searchClear').hide();
-    document.getElementById('searchDiv').style.display = "inline"
+    document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
 
     document.getElementById('checkToggle').style.display = "inline"
@@ -2129,13 +2128,12 @@ function doPageList(total, type) {
 	if (type !== "Playlists") {
 	    if (total > paging.size) {
 	        var numOpt = Math.ceil(total / paging.size);
-	        var select = document.getElementsByName("selPageN");
 	        var options = "";
 	        for (var i = 0; i < numOpt; i++) {
 	            options += '<option style="width:100%" id="' + i + '">';
 	            if (paging.generic == i) {
 	                num = (numOpt - 1 == i) ? (total - i * paging.size) : paging.size;
-	                document.getElementById('divVideoCount').innerHTML = num + ' ' + type + ' (of ' + total + ')';
+	                document.getElementById('divVideoCount').innerHTML = num;
 	            }
 	            if (numOpt - 1 == i) {
 	                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + total + ' )</option>';
@@ -2152,12 +2150,9 @@ function doPageList(total, type) {
 	            }
 	        });
 	        $("div[name=pageDiv]").show();
-	        document.getElementById('tdOne').appendChild(document.getElementById('searchDiv'));
 	    } else {
-	        document.getElementById('divVideoCount').innerHTML = total + ' ' + type + ' (of ' + total + ' )';
+	        document.getElementById('divVideoCount').innerHTML = total;
 	        $("div[name=pageDiv]").hide();
-	        //If there's no page selector, move the search bar down so it doesn't stick out ofplace
-	        document.getElementById('tdTwo').appendChild(document.getElementById('searchDiv'));
 	    }
 	}
 }

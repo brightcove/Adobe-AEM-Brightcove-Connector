@@ -18,6 +18,12 @@ body {
   z-index:999999;
 }
 
+/* AEM injects a <betty-titlebar> above tool-page content; hide it so our
+   own .brc-header is the only top-of-page chrome. */
+betty-titlebar {
+  display: none !important;
+}
+
 /* ---- BCON-121: Header revamp ---- */
 .brc-header {
   position: relative;
