@@ -89,6 +89,21 @@ $(function () {
         window.location.reload();
     });
 
+    $('.brc-tab').on('click', function () {
+        var $tab = $(this);
+        if ($tab.hasClass('is-active')) return;
+
+        searchVal = '';
+        $('.brc-tab').removeClass('is-active').attr('aria-selected', 'false');
+        $tab.addClass('is-active').attr('aria-selected', 'true');
+
+        if ($tab.attr('id') === 'allVideos') {
+            Load(getAllVideosURL());
+        } else if ($tab.attr('id') === 'allPlaylists') {
+            Load(getAllPlaylistsURL());
+        }
+    });
+
     $('.butDiv').hide();
 
     $('body').on('click', function(event) {

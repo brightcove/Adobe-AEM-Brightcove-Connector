@@ -27,10 +27,8 @@
                 <!--Navbar-->
                 <header class="brc-header">
                     <div class="brc-tabs" role="tablist">
-                        <button type="button" id="allVideos" class="brc-tab is-active" role="tab" aria-selected="true"
-                                onclick='searchVal="";document.querySelectorAll(".brc-tab").forEach(function(t){t.classList.remove("is-active");t.setAttribute("aria-selected","false");});this.classList.add("is-active");this.setAttribute("aria-selected","true");Load(getAllVideosURL());'>Videos</button>
-                        <button type="button" id="allPlaylists" class="brc-tab" role="tab" aria-selected="false"
-                                onclick='searchVal="";document.querySelectorAll(".brc-tab").forEach(function(t){t.classList.remove("is-active");t.setAttribute("aria-selected","false");});this.classList.add("is-active");this.setAttribute("aria-selected","true");Load(getAllPlaylistsURL());'>Playlists</button>
+                        <button type="button" id="allVideos" class="brc-tab is-active" role="tab" aria-selected="true">Videos</button>
+                        <button type="button" id="allPlaylists" class="brc-tab" role="tab" aria-selected="false">Playlists</button>
                     </div>
                     <h1 class="brc-title">Brightcove Admin</h1>
                     <div class="brc-header-actions">
