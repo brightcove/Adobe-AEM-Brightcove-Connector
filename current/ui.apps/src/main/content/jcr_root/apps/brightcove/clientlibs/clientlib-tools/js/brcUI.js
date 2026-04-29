@@ -1980,18 +1980,14 @@ function loadStart()
 function loadEnd()
 {
     $('html,body').scrollTop(0);
-    $("#syncdbutton").css("color", "#333333");
-    $("#syncdbutton").html('SYNC DATABASE');
-    $("#syncdbutton").prop('disabled', false);
     $("#loading").slideUp("fast");
     $(".loading").hide();
 }
 
 function syncStart()
 {
-    $("#syncdbutton").css("color", "#6D8CAE");
-    $("#syncdbutton").html('LOADING SYNC');
-    $("#syncdbutton").prop('disabled', true);
+    $("#syncdbutton").addClass('is-loading').prop('disabled', true);
+    $("#syncdbutton .brc-sync-btn-label").text('Loading sync');
     $("#loading").slideDown("fast");
     $(".loading").show();
 
@@ -2002,6 +1998,8 @@ function syncStart()
 
 function syncEnd() {
     $(".syncingMsg").fadeOut();
+    $("#syncdbutton").removeClass('is-loading').prop('disabled', false);
+    $("#syncdbutton .brc-sync-btn-label").text('Sync database');
     loadEnd();
     $(".loadingMsg").hide();
     $(".loading").hide();
