@@ -79,7 +79,9 @@
     for (int bvIdx = 0; bvIdx < brcVariantsRaw.length; bvIdx++) {
         if (bvIdx > 0) out.print(",");
         String bv = brcVariantsRaw[bvIdx];
-        out.print((bv != null && !bv.isEmpty()) ? bv : "{}");
+        // Escape `</` so a variant value containing `</script>` cannot break
+        // out of this script tag. `\/` is valid JSON; the parser reads `</`.
+        out.print((bv != null && !bv.isEmpty()) ? bv.replace("</", "<\\/") : "{}");
     }
 %>]</script>
 
