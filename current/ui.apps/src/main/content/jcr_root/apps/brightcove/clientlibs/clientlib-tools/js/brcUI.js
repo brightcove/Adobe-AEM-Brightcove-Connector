@@ -860,8 +860,8 @@ function buildMainVideoList(title) {
         $("#nameCol").addClass("ASC").attr("data-sortType", "");
     }
     // Display video count
-    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length + " videos";
-    document.getElementById('nameCol').innerHTML = "Video Name<span class='order'></span>";
+    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length;
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = title;
     document.getElementById('search').value = searchVal ? searchVal : "Search Videos";
     $('#searchClear').toggle(!!searchVal && searchVal !== 'Search Videos');
@@ -925,8 +925,8 @@ function buildPlaylistList() {
     $("#trHeader th.sortable").removeClass("NONE").removeClass("ASC").removeClass("DESC");
 
     // Display Playlist count
-    document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length + " playlists";
-    document.getElementById('nameCol').innerHTML = "Playlist Name";
+    document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length;
+    document.getElementById('nameCol').innerHTML = "Name";
     document.getElementById('headTitle').innerHTML = "All Playlists";
     document.getElementById('search_pl').value = searchVal ? searchVal : "Search Playlists";
     $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');

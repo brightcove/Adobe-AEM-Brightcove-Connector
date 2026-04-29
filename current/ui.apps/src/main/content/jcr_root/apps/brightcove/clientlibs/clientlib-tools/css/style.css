@@ -581,10 +581,6 @@ table.tblConsole {
   border-style: none;
 }
 
-tr.trCenterHeader {
-  background-color: #fff;
-}
-
 #tblMainList {
   overflow: auto;
   table-layout: auto;
@@ -1149,19 +1145,11 @@ div.hLine {
 
 
 tr.trCenterHeader {
-  background-color: #C3DDF6;
+  background-color: #fff;
 }
 
-#headTitle {
-  padding: 10px 10px 0 10px;
-  text-transform: uppercase;
-}
-
-#divVideoCount {
-  padding: 0 10px 10px 10px;
-  font-size: 12px;
-  text-transform: uppercase;
-}
+/* #headTitle and #divVideoCount styling lives on .brc-list-title and
+   .brc-count-badge; keep these id selectors out of the way. */
 
 td.tdMetadata, th#trHeader {
   padding: 0 20px;
@@ -1237,24 +1225,68 @@ tr.hover {
 }
 
 #trHeader .tdMainTableHead {
-  background-color: #080886;
-  color: #fff;
-  padding: 5px;
+  background-color: #fff;
+  color: #1a1a18;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 12px;
+  height: 44px;
   border: 0;
-  border-bottom: 1px solid #fff;
+  border-top: 1px solid #e8e6df;
+  border-bottom: 1px solid #e8e6df;
+  text-transform: none;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#trHeader .tdMainTableHead#checkCol {
+  width: 36px;
+  padding: 0 12px;
 }
 
 table.tblConsole {
   background-color: #fff;
-  color: #3b3b3b;
+  color: #1a1a18;
   font-size: 13px;
   width: 100%;
   border-style: none;
 }
 
+table.tblConsole #tbData tr {
+  height: 52px;
+}
+
 table.tblConsole #tbData td {
-  border-bottom: 1px solid #eee;
-  line-height: 1.8;
+  border-bottom: 1px solid #f0efea;
+  padding: 0 12px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+table.tblConsole #tbData td:nth-child(2) {
+  font-weight: 500;
+}
+
+/* Existing oddLine / evenLine zebra-stripe rules conflict with the
+   new flat table — neutralise both back to white. */
+#tbData tr.oddLine,
+#tbData tr.evenLine {
+  background-color: #fff;
+}
+
+#tbData tr.hover {
+  background-color: #f7f6f2;
+  color: #1a1a18;
+}
+
+#tbData tr.select {
+  background-color: #f0efea;
+  color: #1a1a18;
 }
 
 #playerDiv.overlay.ui-draggable {
@@ -1319,20 +1351,22 @@ div.delConfPop {
   width: 600px;
 }
 
-th.sortable.ASC span.order {
-  background: url("../img/asc.png") right center no-repeat;
-  padding-right: 20px;
+th.sortable {
+  cursor: pointer;
 }
 
-th.sortable.DESC span.order {
-  background: url("../img/desc.png") right center no-repeat;
-  padding-right: 20px;
+th.sortable .order::after {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #c8c7c2;
+  vertical-align: middle;
 }
 
-th.sortable.NONE span.order {
-  background: url("../img/none.png") right center no-repeat;
-  padding-right: 20px;
-}
+th.sortable.ASC .order::after  { content: '↑'; color: #6b7280; }
+th.sortable.DESC .order::after { content: '↓'; color: #6b7280; }
+th.sortable.NONE .order::after { content: '↕'; color: #c8c7c2; }
 
 img.optionsIcon {
   width: 28px;
