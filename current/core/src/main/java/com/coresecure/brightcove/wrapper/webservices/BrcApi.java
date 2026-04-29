@@ -751,13 +751,15 @@ public class BrcApi extends SlingAllMethodsServlet {
             LOGGER.error("deleteVariant call failed", e);
         }
         if (result == null) result = JsonNodeFactory.instance.objectNode();
-        // executeDelete injects `error_code` (not `error`) on 4xx and returns an
-        // empty body on 204 success. Normalize so the JS client's `data.error`
-        // check can distinguish success from failure.
+        // executeDelete injects `error_code` (not `error`) on 4xx; CmsAPI.deleteVariant
+        // sets `error: 204` on real Brightcove success. Anything else (empty {}) means
+        // no call was actually attempted (auth/exception) — treat as failure rather
+        // than reporting a phantom delete to the JS client.
         if (result.has("error_code")) {
             result.put(Constants.ERROR, result.get("error_code").asText());
-        } else {
-            result.put(Constants.ERROR, 204);
+        } else if (!result.has(Constants.ERROR)) {
+            result.put(Constants.ERROR, 502);
+            result.put("error_message", "Delete failed");
         }
         return result;
     }
@@ -766,26 +768,40 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String videoId = request.getParameter("videoId");
         String language = request.getParameter("language");
-        if (videoId != null && !videoId.isEmpty() && language != null && !language.isEmpty()) {
-            ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
-            variantBody.put("language", language);
-            String name = request.getParameter(Constants.NAME);
-            if (name != null) variantBody.put(Constants.NAME, name);
-            String description = request.getParameter(Constants.DESCRIPTION);
-            if (description != null) variantBody.put(Constants.DESCRIPTION, description);
-            String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
-            if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
-            String customFieldsJson = request.getParameter("custom_fields");
-            if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
-                try {
-                    variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
-                } catch (Exception e) {
-                    variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
-                }
-            } else {
+        if (videoId == null || videoId.isEmpty() || language == null || language.isEmpty()) {
+            result.put(Constants.ERROR, 400);
+            return result;
+        }
+        ObjectNode variantBody = JsonNodeFactory.instance.objectNode();
+        variantBody.put("language", language);
+        String name = request.getParameter(Constants.NAME);
+        if (name != null) variantBody.put(Constants.NAME, name);
+        String description = request.getParameter(Constants.DESCRIPTION);
+        if (description != null) variantBody.put(Constants.DESCRIPTION, description);
+        String longDescription = request.getParameter(Constants.LONG_DESCRIPTION);
+        if (longDescription != null) variantBody.put(Constants.LONG_DESCRIPTION, longDescription);
+        String customFieldsJson = request.getParameter("custom_fields");
+        if (customFieldsJson != null && !customFieldsJson.isEmpty()) {
+            try {
+                variantBody.set(Constants.CUSTOM_FIELDS, MAPPER.readTree(customFieldsJson));
+            } catch (Exception e) {
                 variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
             }
+        } else {
+            variantBody.set(Constants.CUSTOM_FIELDS, JsonNodeFactory.instance.objectNode());
+        }
+        try {
             result = brAPI.cms.addVariant(videoId, variantBody);
+        } catch (Exception e) {
+            LOGGER.error("addVariant call failed", e);
+        }
+        if (result == null) result = JsonNodeFactory.instance.objectNode();
+        // executePost injects `error` on success (200/201) and on 4xx. An empty {}
+        // means CmsAPI fell through (no auth token, internal exception) — surface
+        // as failure instead of letting the JS client treat it as success.
+        if (!result.has(Constants.ERROR)) {
+            result.put(Constants.ERROR, 502);
+            result.put("error_message", "Add failed");
         }
         return result;
     }

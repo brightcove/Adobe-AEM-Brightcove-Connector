@@ -851,7 +851,13 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants/" + language;
             try {
                 String response = account.platform.deleteAPI(targetURL, headers);
-                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+                if (response == null || response.isEmpty()) {
+                    // Brightcove returns 204 No Content on success — distinguish from
+                    // the auth-null / exception fall-through which also returns empty {}.
+                    json.put(Constants.ERROR, 204);
+                } else {
+                    json = JsonReader.readJsonFromString(response);
+                }
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
