@@ -819,8 +819,8 @@ function buildPlaylistList() {
     document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length + " playlists";
     document.getElementById('nameCol').innerHTML = "Playlist Name";
     document.getElementById('headTitle').innerHTML = "All Playlists";
-    document.getElementById('search_pl').value = "Search Playlists";
-    $('#searchClear_pl').hide();
+    document.getElementById('search_pl').value = searchVal ? searchVal : "Search Playlists";
+    $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "none";
     document.getElementById('searchDiv_pl').style.display = "inline";
