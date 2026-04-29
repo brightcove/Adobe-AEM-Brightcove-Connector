@@ -876,8 +876,9 @@ function buildMainVideoList(title) {
     document.getElementById('search').value = searchVal ? searchVal : "Search Videos";
     $('#searchClear').toggle(!!searchVal && searchVal !== 'Search Videos');
     document.getElementById('tdMeta').style.display = "none";
-    document.getElementById('searchDiv').style.display = "inline";
+    document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
+    $('#filterToggle').show();
 
     document.getElementById('checkToggle').style.display = "inline";
     $("span[name=buttonRow]").show();
@@ -943,8 +944,12 @@ function buildPlaylistList() {
     $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "none";
-    document.getElementById('searchDiv_pl').style.display = "inline";
+    document.getElementById('searchDiv_pl').style.display = "inline-flex";
     togglePlSearchHint(document.getElementById('selField_pl').value);
+    // Filter panel (LABELS / FOLDER / CLIPS ONLY) is video-only.
+    $('#filterToggle').hide();
+    $('#filterPanel').attr('hidden', '');
+    $('#filterToggle').attr('aria-expanded', 'false');
     document.getElementById('checkToggle').style.display = "none";
 	document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
