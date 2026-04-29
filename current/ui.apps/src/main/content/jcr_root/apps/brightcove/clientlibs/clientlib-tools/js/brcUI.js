@@ -49,6 +49,14 @@ $( document ).ready(function() {
     } catch (e) { /* sessionStorage unavailable — toast skipped */ }
 });
 
+function showTableSpinner() {
+    $('#tableSpinner').removeAttr('hidden');
+}
+
+function hideTableSpinner() {
+    $('#tableSpinner').attr('hidden', '');
+}
+
 function brcToast(message) {
     var existing = document.getElementById('brcToast');
     if (existing) existing.parentNode.removeChild(existing);
@@ -122,6 +130,8 @@ $(function () {
         searchVal = '';
         $('.brc-tab').removeClass('is-active').attr('aria-selected', 'false');
         $tab.addClass('is-active').attr('aria-selected', 'true');
+
+        showTableSpinner();
 
         if ($tab.attr('id') === 'allVideos') {
             Load(getAllVideosURL());
@@ -916,6 +926,7 @@ function buildMainVideoList(title) {
     else {
         closeBox("tdMeta");
     }
+    hideTableSpinner();
 }
 
 function buildPlaylistList() {
@@ -968,6 +979,7 @@ function buildPlaylistList() {
         $(this).removeClass("hover");
     });
 
+    hideTableSpinner();
 }
 function getPlaylist(idx) {
     oCurrentPlaylistList = oCurrentPlaylistList[idx];

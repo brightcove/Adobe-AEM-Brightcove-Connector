@@ -558,6 +558,44 @@ body {
   font-family: inherit;
 }
 
+/* Scoped table spinner (tab-switch loading) */
+.brc-table-wrapper {
+  position: relative;
+}
+
+.brc-table-spinner {
+  position: absolute;
+  top: 44px; /* below the sticky-style table header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.brc-table-spinner[hidden] {
+  display: none;
+}
+
+.brc-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(26, 26, 24, 0.15);
+  border-top-color: #1a1a18;
+  border-radius: 50%;
+  animation: brc-spin 0.8s linear infinite;
+}
+
+@keyframes brc-spin {
+  to { transform: rotate(360deg); }
+}
+
 a.home {
   cursor: pointer;
   display: block;
