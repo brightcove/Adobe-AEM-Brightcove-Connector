@@ -104,6 +104,56 @@ $(function () {
         }
     });
 
+    // Account switcher popover
+    $('#accountTrigger').on('click', function (e) {
+        e.stopPropagation();
+        var $popover = $('#accountPopover');
+        var willOpen = $popover.is('[hidden]');
+        if (willOpen) {
+            $popover.removeAttr('hidden');
+        } else {
+            $popover.attr('hidden', '');
+        }
+        $(this).attr('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    $('#accountTrigger').on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).trigger('click');
+        }
+    });
+
+    $(document).on('click', function (e) {
+        var $popover = $('#accountPopover');
+        if ($popover.is('[hidden]')) return;
+        if (!$(e.target).closest('#accountPopover, #accountTrigger').length) {
+            $popover.attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false');
+        }
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape' && !$('#accountPopover').is('[hidden]')) {
+            $('#accountPopover').attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false').focus();
+        }
+    });
+
+    $('.brc-account-row').on('click', function () {
+        var $row = $(this);
+        if ($row.hasClass('is-active')) {
+            $('#accountPopover').attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false');
+            return;
+        }
+        var accountId = $row.attr('data-account-id');
+        if (CQ && CQ.Ext) {
+            CQ.Ext.util.Cookies.set('brc_act', accountId);
+        }
+        window.location.reload();
+    });
+
     $('.butDiv').hide();
 
     $('body').on('click', function(event) {

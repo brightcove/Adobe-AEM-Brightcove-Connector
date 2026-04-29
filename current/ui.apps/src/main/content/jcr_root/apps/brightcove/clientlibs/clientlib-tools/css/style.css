@@ -175,6 +175,99 @@ body {
   line-height: 1;
 }
 
+/* Account popover (Frame E) */
+.brc-account-popover {
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  width: 240px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(26, 26, 24, 0.08);
+}
+
+.brc-account-popover[hidden] {
+  display: none;
+}
+
+.brc-account-popover-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: #f0efea;
+  border-bottom: 1px solid #e8e6df;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: #1a1a18;
+}
+
+.brc-account-popover-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.brc-account-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  background: #fff;
+  border: none;
+  border-top: 1px solid #e8e6df;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  text-shadow: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.brc-account-row:first-child {
+  border-top: none;
+}
+
+.brc-account-row:hover:not(.is-active) {
+  background: #f7f6f2;
+}
+
+.brc-account-row.is-active {
+  background: #f7f6f2;
+  cursor: default;
+  padding-bottom: 12px;
+}
+
+.brc-account-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a18;
+  line-height: 1.4;
+}
+
+.brc-account-row-id {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.brc-account-row-status {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
 a.home {
   cursor: pointer;
   display: block;

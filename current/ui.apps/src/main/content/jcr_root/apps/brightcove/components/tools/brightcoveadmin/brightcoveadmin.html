@@ -38,7 +38,7 @@
                             </svg>
                             <span>Sync database</span>
                         </button>
-                        <div class="brc-account-trigger" id="accountTrigger" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
+                        <div class="brc-account-trigger" id="accountTrigger" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false" aria-controls="accountPopover">
                             <div class="brc-account-info" data-sly-list.currentService="${adminPage.configurationServices}">
                                 <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
                                     <div class="brc-account-name">${currentService.accountAlias}</div>
@@ -46,6 +46,21 @@
                                 </sly>
                             </div>
                             <span class="brc-account-caret" aria-hidden="true">⌄</span>
+                        </div>
+                        <div class="brc-account-popover" id="accountPopover" role="menu" hidden>
+                            <div class="brc-account-popover-header">SWITCH ACCOUNT</div>
+                            <div class="brc-account-popover-list" data-sly-list.currentService="${adminPage.configurationServices}">
+                                <button type="button" class="brc-account-row${currentService.accountID == adminPage.selectedAccount ? ' is-active' : ''}"
+                                        data-account-id="${currentService.accountID}"
+                                        data-account-alias="${currentService.accountAlias}"
+                                        role="menuitem">
+                                    <div class="brc-account-row-name">${currentService.accountAlias}</div>
+                                    <div class="brc-account-row-id">${currentService.accountID}</div>
+                                    <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                        <div class="brc-account-row-status">✓ Active</div>
+                                    </sly>
+                                </button>
+                            </div>
                         </div>
                         <select data-sly-list.currentService="${adminPage.configurationServices}" id="selAccount" name="selAccount" hidden>
                             <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
