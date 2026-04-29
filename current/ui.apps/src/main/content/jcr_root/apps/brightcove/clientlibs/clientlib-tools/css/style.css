@@ -1,5 +1,5 @@
 body {
-  background-color: #c3ddf6;
+  background-color: #fff;
   font-family: adobe-clean,Helvetica,Arial,sans-serif;
 }
 
@@ -18,48 +18,161 @@ body {
   z-index:999999;
 }
 
-.navbar {
-  background: #080886;
+/* ---- BCON-121: Header revamp ---- */
+.brc-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f0efea;
+  border-bottom: 1px solid #e8e6df;
+  padding: 0 20px;
+  height: 68px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
 }
 
-.navbar-inner {
-  padding: 7px 20px;
-  border-radius: 0px;
-  background: #080886;
-  -webkit-border-radius: 0px;
-  -moz-border-radius: 0px;
-  border-radius: 0px;
-  -webkit-box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-  -moz-box-shadow: 0px 0px 10px rgba(0, 0, 0, .11);
-  -ms-box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-  box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-
+.brc-header *,
+.brc-header *::before,
+.brc-header *::after {
+  box-sizing: border-box;
 }
 
-.navbar .nav > li > a {
-  float: none;
-  padding: 9px 10px 11px;
-  line-height: 19px;
-  color: #fff;
-  text-decoration: none;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+.brc-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0efea;
+  border-radius: 10px;
+  padding: 4px 3px;
+  height: 40px;
+}
+
+.brc-tab {
+  background: transparent;
+  border: none;
+  padding: 0 13px;
+  height: 32px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+  border-radius: 8px;
   cursor: pointer;
-  text-transform: uppercase;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1;
+  text-shadow: none;
+  white-space: nowrap;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.brc-tab.is-active {
+  background: #fff;
+  border: 1px solid #e8e6df;
+  font-weight: 600;
+}
+
+.brc-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a18;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.brc-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Override the shared button-style block (#syncdbutton, .btn, etc.) for the new black-filled sync button. */
+#syncdbutton.brc-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  margin: 0;
+  background: #1a1a18;
+  background-image: none;
+  background-color: #1a1a18;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+}
+
+#syncdbutton.brc-sync-btn:hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
+  color: #fff;
+}
+
+.brc-sync-icon {
+  flex-shrink: 0;
+}
+
+.brc-account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 13px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 192px;
+  font-family: inherit;
+}
+
+.brc-account-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.brc-account-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brc-account-id {
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 400;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.navbar .nav > li > a:hover {
-  color: #ffffff;
-  text-decoration: none;
-  background-color: transparent;
-}
-
-.navbar .nav .active > a,
-.navbar .nav .active > a:hover {
-  color: #ffffff;
-  text-decoration: none;
-  background-color: rgba(255, 255, 255, 0.1);
+.brc-account-caret {
+  margin-left: auto;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1;
 }
 
 a.home {
@@ -427,11 +540,13 @@ div.hLine {
 
 #brightcove {
   position: relative;
-  margin: 20px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  margin: 0;
+  padding: 0;
   background: #fff;
-  top: 10px;
+}
+
+#divConsole {
+  padding: 0 20px 20px;
 }
 
 .foundation-layout-panel-content {

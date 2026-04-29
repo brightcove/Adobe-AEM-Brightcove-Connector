@@ -25,27 +25,40 @@
         <body>
             <div id="brightcove">
                 <!--Navbar-->
-                <div class="navbar">
-                    <div class="navbar-inner">
-                        <div class="container">
-                            <ul class="nav nav-pills visible-lg-inline-block">
-                                <li class="active">
-                                    <a id="allVideos" onclick='searchVal="";$(this).parent("li").parent("ul").children("li").attr("class","");$(this).parent("li").attr("class","active");Load(getAllVideosURL());'>All Videos</a>
-                                </li>
-                                <li>
-                                    <a id="allPlaylists" onclick='searchVal="";$(this).parent("li").parent("ul").children("li").attr("class","");$(this).parent("li").attr("class","active");Load(getAllPlaylistsURL())'>All Playlists</a>
-                                </li>
-                            </ul>
-                            <div class="pull-right">
-                                <div>
-                                    <button type="button" id="syncdbutton" alt="Brightcove Dataload" onClick="syncDB()">Sync Database</button>
-                                    <img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/logo-2022.svg" alt="Brightcove Console" width="125">
-                                </div>
-                            </div>
-
-                        </div>
+                <header class="brc-header">
+                    <div class="brc-tabs" role="tablist">
+                        <button type="button" id="allVideos" class="brc-tab is-active" role="tab" aria-selected="true"
+                                onclick='searchVal="";document.querySelectorAll(".brc-tab").forEach(function(t){t.classList.remove("is-active");t.setAttribute("aria-selected","false");});this.classList.add("is-active");this.setAttribute("aria-selected","true");Load(getAllVideosURL());'>Videos</button>
+                        <button type="button" id="allPlaylists" class="brc-tab" role="tab" aria-selected="false"
+                                onclick='searchVal="";document.querySelectorAll(".brc-tab").forEach(function(t){t.classList.remove("is-active");t.setAttribute("aria-selected","false");});this.classList.add("is-active");this.setAttribute("aria-selected","true");Load(getAllPlaylistsURL());'>Playlists</button>
                     </div>
-                </div>
+                    <h1 class="brc-title">Brightcove Admin</h1>
+                    <div class="brc-header-actions">
+                        <button type="button" id="syncdbutton" class="brc-sync-btn" alt="Brightcove Dataload" onClick="syncDB()">
+                            <svg class="brc-sync-icon" width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+                                <path d="M14 8a6 6 0 1 1-1.757-4.243M14 2v4h-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Sync database</span>
+                        </button>
+                        <div class="brc-account-trigger" id="accountTrigger" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
+                            <div class="brc-account-info" data-sly-list.currentService="${adminPage.configurationServices}">
+                                <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                    <div class="brc-account-name">${currentService.accountAlias}</div>
+                                    <div class="brc-account-id">${currentService.accountID}</div>
+                                </sly>
+                            </div>
+                            <span class="brc-account-caret" aria-hidden="true">⌄</span>
+                        </div>
+                        <select data-sly-list.currentService="${adminPage.configurationServices}" id="selAccount" name="selAccount" hidden>
+                            <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                <option value="${currentService.accountID}" class="selected" selected="selected">${currentService.accountAlias} (${currentService.accountID})</option>
+                            </sly>
+                            <sly data-sly-test="${currentService.accountID != adminPage.selectedAccount}">
+                                <option value="${currentService.accountID}">${currentService.accountAlias} (${currentService.accountID})</option>
+                            </sly>
+                        </select>
+                    </div>
+                </header>
                 <!--(end) Navbar-->
 
                 <div id="divConsole">
@@ -54,19 +67,6 @@
                             <!-- Start center column -->
                             <td width="75%" valign="top">
                                 <table id="listTable" width="100%" cellspacing="0" callpadding="0">
-                                    <tr>
-                                        <div id="accountDiv" style="float:right;padding:5px;
-                                        margin-bottom: 10px;">
-                                            <select data-sly-list.currentService="${adminPage.configurationServices}" id='selAccount' name="selAccount" style="position: relative;top: 5px;">
-                                                <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
-                                                    <option value="${currentService.accountID}" class="selected" selected="selected">${currentService.accountAlias} (${currentService.accountID})</option>
-                                                </sly>
-                                                <sly data-sly-test="${currentService.accountID != adminPage.selectedAccount}">
-                                                    <option value="${currentService.accountID}">${currentService.accountAlias} (${currentService.accountID})</option>
-                                                </sly>
-                                            </select>
-                                        </div>
-                                    </tr>
                                     <tr class="trCenterHeader">
                                         <td id="tdOne">
                                             <div class="result-count pull-left">
