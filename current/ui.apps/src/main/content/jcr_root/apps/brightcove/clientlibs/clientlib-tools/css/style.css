@@ -311,6 +311,253 @@ body {
   font-weight: 600;
 }
 
+/* ---- Title row + pill search + filter panel (Frames A/B) ---- */
+.brc-title-row {
+  display: flex;
+  align-items: center;
+  padding: 18px 0 10px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-title-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brc-title-row-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.brc-list-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a18;
+  text-transform: none;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.brc-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  background: #f0efea;
+  border-radius: 99px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: #1a1a18;
+  line-height: 1;
+}
+
+.brc-count-badge:empty {
+  display: none;
+}
+
+.brc-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  color: #1a1a18;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.brc-filter-btn:hover {
+  background: #f7f6f2;
+}
+
+.brc-filter-btn[aria-expanded="true"] {
+  background: #f0efea;
+  border-color: #d6d4cc;
+}
+
+/* Pill search */
+.brc-pill-search {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 99px;
+  padding: 0 6px 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  min-width: 280px;
+}
+
+.brc-pill-search-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #6b7280;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.brc-pill-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.brc-pill-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.brc-pill-search-input:focus {
+  outline: none;
+}
+
+.brc-pill-search-clear {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.brc-pill-search-clear:hover {
+  color: #1a1a18;
+}
+
+.brc-pill-search-field {
+  height: 28px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 4px;
+  margin-left: 4px;
+  cursor: pointer;
+  border-left: 1px solid #e8e6df;
+}
+
+#searchBut.brc-pill-search-go,
+#searchBut_pl.brc-pill-search-go {
+  height: 28px;
+  margin: 0 0 0 6px;
+  padding: 0 12px;
+  background: #1a1a18;
+  background-image: none;
+  background-color: #1a1a18;
+  border: none;
+  border-radius: 99px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  line-height: 28px;
+}
+
+#searchBut.brc-pill-search-go:hover,
+#searchBut_pl.brc-pill-search-go:hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
+  color: #fff;
+}
+
+/* Filter panel */
+.brc-filter-panel {
+  display: flex;
+  align-items: stretch;
+  gap: 40px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  padding: 13px 19px;
+  margin-bottom: 10px;
+  font-family: inherit;
+}
+
+.brc-filter-panel[hidden] {
+  display: none;
+}
+
+.brc-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.brc-filter-section:nth-child(2) {
+  flex: 1;
+  min-width: 300px;
+}
+
+.brc-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.77px;
+  text-transform: uppercase;
+  color: #1a1a18;
+}
+
+.brc-filter-select {
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+}
+
+.brc-filter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1a1a18;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.brc-filter-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.brc-pl-search-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: -4px 0 8px;
+  font-family: inherit;
+}
+
 a.home {
   cursor: pointer;
   display: block;

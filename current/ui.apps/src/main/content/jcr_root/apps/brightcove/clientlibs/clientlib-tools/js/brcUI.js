@@ -166,6 +166,18 @@ $(function () {
         }
     });
 
+    // Filter panel toggle
+    $('#filterToggle').on('click', function () {
+        var $panel = $('#filterPanel');
+        var willOpen = $panel.is('[hidden]');
+        if (willOpen) {
+            $panel.removeAttr('hidden');
+        } else {
+            $panel.attr('hidden', '');
+        }
+        $(this).attr('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
     $('.brc-account-row').on('click', function () {
         var $row = $(this);
         if ($row.hasClass('is-active')) {
