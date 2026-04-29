@@ -38,7 +38,33 @@ $( document ).ready(function() {
     {
         CQ.Ext.util.Cookies.set('brc_act', $("#selAccount").val());
     }
+
+    // If we just reloaded after switching accounts, surface a toast.
+    try {
+        var switchedAlias = window.sessionStorage && sessionStorage.getItem('brc_account_switched');
+        if (switchedAlias) {
+            sessionStorage.removeItem('brc_account_switched');
+            brcToast('Switched to ' + switchedAlias);
+        }
+    } catch (e) { /* sessionStorage unavailable — toast skipped */ }
 });
+
+function brcToast(message) {
+    var existing = document.getElementById('brcToast');
+    if (existing) existing.parentNode.removeChild(existing);
+    var $toast = $('<div class="brc-toast" id="brcToast" role="status" aria-live="polite">'
+        + '<span class="brc-toast-icon" aria-hidden="true">✓</span>'
+        + '<span class="brc-toast-msg"></span></div>');
+    $toast.find('.brc-toast-msg').text(message);
+    $('body').append($toast);
+    // Force reflow so the entry transition runs.
+    void $toast[0].offsetHeight;
+    $toast.addClass('is-visible');
+    setTimeout(function () {
+        $toast.removeClass('is-visible');
+        setTimeout(function () { $toast.remove(); }, 250);
+    }, 3000);
+}
 
 
 
@@ -148,9 +174,15 @@ $(function () {
             return;
         }
         var accountId = $row.attr('data-account-id');
+        var accountAlias = $row.attr('data-account-alias') || accountId;
         if (CQ && CQ.Ext) {
             CQ.Ext.util.Cookies.set('brc_act', accountId);
         }
+        try {
+            if (window.sessionStorage) {
+                sessionStorage.setItem('brc_account_switched', accountAlias);
+            }
+        } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
         window.location.reload();
     });
 

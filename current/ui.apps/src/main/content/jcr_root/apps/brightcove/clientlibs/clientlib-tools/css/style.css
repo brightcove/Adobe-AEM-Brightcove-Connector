@@ -268,6 +268,43 @@ body {
   margin-top: 4px;
 }
 
+/* Toast (account switch confirmation) */
+.brc-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #1a1a18;
+  color: #fff;
+  border-radius: 8px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition: opacity 0.18s ease, transform 0.22s ease;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.brc-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.brc-toast-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
 a.home {
   cursor: pointer;
   display: block;
