@@ -226,8 +226,14 @@ $(function () {
         }
         var accountId = $row.attr('data-account-id');
         var accountAlias = $row.attr('data-account-alias') || accountId;
+        // Set the brc_act cookie via CQ.Ext if available, otherwise fall
+        // back to document.cookie. Without this fallback the page would
+        // reload without the new cookie, leaving the user on the old
+        // account but showing a misleading "Switched to <alias>" toast.
         if (CQ && CQ.Ext) {
             CQ.Ext.util.Cookies.set('brc_act', accountId);
+        } else {
+            document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
         }
         try {
             if (window.sessionStorage) {
@@ -1180,9 +1186,13 @@ function showPlaylist() {
 
     if (oCurrentVideoList.length > 0) {
         showMetaData(0);
+        $('#emptyState').attr('hidden', '');
     }
     else {
         closeBox("tdMeta");
+        $('#emptyStateTitle').text('No videos in this playlist');
+        $('#emptyStateHint').text('Add videos to this playlist in Brightcove to see them here.');
+        $('#emptyState').removeAttr('hidden');
     }
 
 }
