@@ -1012,6 +1012,15 @@ function buildMainVideoList(title) {
         $('#emptyStateHint').text(hasFilter ? 'Try clearing the search or adjusting your filters.' : 'Sync the database or add videos in Brightcove.');
         $('#emptyState').removeAttr('hidden');
     }
+
+    // Re-apply the DOM-only clips filter if the checkbox is still active —
+    // any folder/label change rebuilds rows fresh and would otherwise show
+    // all videos despite the clips-only indicator still being on.
+    if ($('#filter_clips').is(':checked')) {
+        $('#tbData tr').hide();
+        $('#tbData tr.state-clip').show();
+    }
+
     hideTableSpinner();
 }
 
