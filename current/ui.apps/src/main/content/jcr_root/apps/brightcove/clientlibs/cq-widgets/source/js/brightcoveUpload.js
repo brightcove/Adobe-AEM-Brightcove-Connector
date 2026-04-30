@@ -49,15 +49,6 @@ function doFileUpload() {
 
 }
 
-/*function buildJSONRequest(form){
- if($CQ('#name').val() =="" || $CQ('#shortDescription').val() =="" || $CQ("#filePath").val() ==""){
- alert("Require Name, Short Description and File");
- return;
- }else{
- $CQ('#JSONRPC').val('{"method": "create_video", "params": {"video": {"name": "' + $CQ('#name').val() + '", "shortDescription": "' + $CQ('#shortDescription').val() + '"},"token": "c9hG9CFjGaY6mguNiD7BKaYBZ2YCrCdoMlgV1y8LRgKNKgl-38duog.."}}');
- }
- }*/
-
 function showModalWindow() {
     //transition effect
     $CQ("#tagBCUpload").html('<p><a id="tagHref" href="#bcUpload" onclick="hideModalWindow(); return false;">Close Upload Window</a></p>');
