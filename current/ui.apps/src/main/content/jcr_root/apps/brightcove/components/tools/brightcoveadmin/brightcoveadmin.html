@@ -95,7 +95,14 @@
                                                         <span class="brc-bulk-bar-divider" aria-hidden="true"></span>
                                                         <span class="brc-bulk-bar-count"><span id="bulkCount">0</span> selected</span>
                                                         <button type="button" id="bulkCreatePlaylist" class="brc-bulk-bar-btn">Create Playlist</button>
-                                                        <button type="button" id="bulkMoveToFolder" class="brc-bulk-bar-btn menuToggle">Move to Folder</button>
+                                                        <span class="brc-bulk-move-wrapper">
+                                                            <button type="button" id="bulkMoveToFolder" class="brc-bulk-bar-btn menuToggle">Move to Folder</button>
+                                                            <div class="folder-selector menu" data-bulk="true">
+                                                                <ul class="menu-options">
+                                                                    <li class="menu-option remove" data-folder-id="none">[No Folder]</li>
+                                                                </ul>
+                                                            </div>
+                                                        </span>
                                                         <button type="button" id="bulkClear" class="brc-bulk-bar-clear">Clear</button>
                                                     </div>
                                                 </div>

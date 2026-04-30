@@ -143,11 +143,22 @@ $(function () {
 
     $('.brc-tab').on('click', function () {
         var $tab = $(this);
-        if ($tab.hasClass('is-active')) return;
+        // No early-return on already-active: programmatic `.click()` callers
+        // (e.g. createPlaylistSubmit() jumping back to the playlist list after
+        // creation) need the Load() to fire even if the tab is visually active.
 
         searchVal = '';
         $('.brc-tab').removeClass('is-active').attr('aria-selected', 'false');
         $tab.addClass('is-active').attr('aria-selected', 'true');
+
+        // Reset the video-side filter UI when switching tabs so the
+        // active-filter dot doesn't lie about the unfiltered list we're
+        // about to load.
+        $('#label_list').val('all');
+        $('#fldr_list').val('all');
+        $('#filter_clips').prop('checked', false);
+        updateFilterIndicator();
+        $('#emptyState').attr('hidden', '');
 
         showTableSpinner();
 
@@ -264,6 +275,9 @@ $(function () {
         $('#fldr_list').val('all');
         $('#filter_clips').prop('checked', false);
         $('#tbData tr').show();
+        // Hide the clips-empty-state immediately so it doesn't linger
+        // alongside the now-visible rows while Load() is in flight.
+        $('#emptyState').attr('hidden', '');
         updateFilterIndicator();
         Load(getAllVideosURL());
     });
@@ -427,17 +441,19 @@ $(function () {
     })
 
     $('body').on('brc:checked', function(event) {
-        var inputTags = document.getElementById('listTable').getElementsByTagName('input');
+        // Scope to row checkboxes only — the legacy `getElementsByTagName('input')`
+        // walk picked up #search/#search_pl/#filter_clips after the BCON-121
+        // restructure put the filter panel inside #listTable, inflating selection
+        // counts and quietly toggling the clips filter on select-all.
         paging.selectedVideos = [];
-        var l = inputTags.length
-        for (var i = 2; i < l; i++) {
-            if (true == inputTags[i].checked) {
-                paging.selectedVideos.push(inputTags[i]);
-                $(inputTags[i]).closest('tr').addClass('is-selected');
+        $('#tbData input[type="checkbox"]').each(function () {
+            if (this.checked) {
+                paging.selectedVideos.push(this);
+                $(this).closest('tr').addClass('is-selected');
             } else {
-                $(inputTags[i]).closest('tr').removeClass('is-selected');
+                $(this).closest('tr').removeClass('is-selected');
             }
-        }
+        });
         var n = paging.selectedVideos.length;
         $('#bulkCount').text(n);
         if (window.brcCurrentView === 'videos' && n > 0) {
@@ -2094,6 +2110,9 @@ function loadEnd()
     $('html,body').scrollTop(0);
     $("#loading").slideUp("fast");
     $(".loading").hide();
+    // Defensive: ensure the scoped tab spinner clears on error paths too,
+    // not only on buildMainVideoList / buildPlaylistList success.
+    hideTableSpinner();
 }
 
 function syncStart()
@@ -2120,28 +2139,30 @@ function syncEnd() {
 
 
 function createPlaylistBox() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input'),
-        form = document.getElementById('createPlaylistForm'),
-        table = document.getElementById("createPlstVideoTable"),
-        idx = 1,
-        l = inputTags.length;
+    var form = document.getElementById('createPlaylistForm'),
+        idx = 1;
 
     form.playlist.value = '';
 
-    for (var i = 3; i < l; i++) {
-        if (inputTags[i].checked) {
-            $("#createPlstVideoTable").append(
-                '<tr ><td>' + oCurrentVideoList[i - 4].name +
-                '</td><td style="width: 25%;" >' + oCurrentVideoList[i - 4].id + '</td></tr>'
-            );
+    // Iterate row checkboxes directly. Each row checkbox's `id` attribute
+    // is the matching index in oCurrentVideoList (set by buildMainVideoList).
+    $('#tbData input[type="checkbox"]').each(function () {
+        if (!this.checked) return;
+        var videoIdx = parseInt(this.id, 10);
+        var v = oCurrentVideoList[videoIdx];
+        if (!v) return;
+        $("#createPlstVideoTable").append(
+            '<tr ><td>' + v.name +
+            '</td><td style="width: 25%;" >' + v.id + '</td></tr>'
+        );
 
-            if (1 != idx) {
-                form.playlist.value += ',';
-            }
-            form.playlist.value += oCurrentVideoList[i - 4].id;
-            idx++;
+        if (1 != idx) {
+            form.playlist.value += ',';
         }
-    }
+        form.playlist.value += v.id;
+        idx++;
+    });
+
     if (1 == idx) {
         alert("Please select at least one video to create a playlist.");
         return;
@@ -2247,25 +2268,12 @@ function changePage(num) {
 }
 
 function checkCheck() {
-    var count = 1;
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var checkedTags = [];
-    var selChek = document.getElementById('checkToggle');
-    var l = inputTags.length
-    for (var i = 2; i < l; i++) {
-        if (true == inputTags[i].checked) {
-            checkedTags.push(inputTags[i]);
-            count++;
-        } else if ((i - count) > 1) {//If one checkbox was skipped, then the total has to be < l, so uncheck selChek  and return.
-            selChek.checked = false;
-            return;
-        }
-    }
-    if (selChek.checked == true && count < l) {
-        selChek.checked = false;
-    } else if (false == selChek.checked && count >= l - 1) {
-        selChek.checked = true;
-    }
+    // Master #checkToggle reflects "are all row checkboxes checked?"
+    var $rows = $('#tbData input[type="checkbox"]');
+    var total = $rows.length;
+    var checked = $rows.filter(':checked').length;
+    document.getElementById('checkToggle').checked = (total > 0 && checked === total);
+    $('body').trigger('brc:checked');
 }
 
 function toggleSelect(check) {
@@ -2278,19 +2286,11 @@ function toggleSelect(check) {
 }
 
 function checkAll() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var l = inputTags.length;
-    for (var i = 2; i < l; i++) {
-        inputTags[i].checked = true;
-    }
+    $('#tbData input[type="checkbox"]').prop('checked', true);
 }
 
 function checkNone() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var l = inputTags.length;
-    for (var i = 2; i < l; i++) {
-        inputTags[i].checked = false;
-    }
+    $('#tbData input[type="checkbox"]').prop('checked', false);
 }
 
 //for example write functions are disabled, so display this message:

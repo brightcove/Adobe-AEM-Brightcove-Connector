@@ -2147,42 +2147,61 @@ body {
   position: relative;
 }
 
-.butDiv > span > div.menu {
+/* Folder-picker dropdown — used by both the legacy .butDiv (playlist
+   drill-down view) and the new bulk action bar (videos view). The
+   selectors used to be scoped to .butDiv, which broke the bulk version
+   when .butDiv was hidden — drop that scope. */
+.folder-selector.menu {
   display: none;
   position: absolute;
   left: 0;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
   min-width: 200px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  z-index: 100;
 }
 
-.butDiv > span > div.menu.open {
+.folder-selector.menu.open {
   display: block;
 }
 
-.butDiv > span > div.menu .menu-options {
+.folder-selector .menu-options {
   list-style: none;
   padding: 0.5rem 0;
   margin: 0;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option {
+.folder-selector .menu-options .menu-option {
   padding: 0.5rem 1rem 0.5rem 2.25rem;
   background: transparent url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder.svg) 0.5rem no-repeat;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option.remove {
+.folder-selector .menu-options .menu-option.remove {
   padding: 0.5rem 1rem 0.5rem 2.25rem;
   background: transparent url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-delete.svg) 0.5rem no-repeat;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option:hover {
+.folder-selector .menu-options .menu-option:hover {
   background: rgba(0, 0, 0, 0.1) url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-open.svg) 0.5rem no-repeat;
   cursor: pointer;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option.remove:hover {
+.folder-selector .menu-options .menu-option.remove:hover {
   background: rgba(0, 0, 0, 0.1) url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-delete.svg) 0.5rem no-repeat;
   cursor: pointer;
+}
+
+/* Position the bulk-bar dropdown directly under the trigger button. */
+.brc-bulk-move-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.brc-bulk-move-wrapper > .folder-selector.menu {
+  top: 100%;
+  margin-top: 4px;
 }
 
 #tbData span.playlist-actions {
