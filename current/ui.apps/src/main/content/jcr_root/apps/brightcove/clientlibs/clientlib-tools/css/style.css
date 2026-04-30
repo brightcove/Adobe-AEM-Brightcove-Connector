@@ -155,6 +155,11 @@ betty-titlebar {
   font-family: inherit;
 }
 
+.brc-account-trigger[aria-expanded="true"] {
+  background: #f7f6f2;
+  border-color: #d6d4cc;
+}
+
 .brc-account-info {
   display: flex;
   flex-direction: column;
@@ -504,6 +509,12 @@ betty-titlebar {
   font-size: 13px;
   color: #1a1a18;
   min-width: 280px;
+}
+
+/* Frame C: when the bulk action bar is visible, the pill search shrinks to
+   220px so both surfaces sit comfortably side-by-side. */
+.brc-title-row:has(#bulkActionBar:not([hidden])) .brc-pill-search {
+  min-width: 220px;
 }
 
 .brc-pill-search-icon {
