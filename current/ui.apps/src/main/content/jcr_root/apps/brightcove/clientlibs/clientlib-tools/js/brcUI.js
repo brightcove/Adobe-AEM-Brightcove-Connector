@@ -1450,6 +1450,13 @@ function syncDB()
         {
             syncEnd();
             data = $.parseJSON(data);
+        },
+        error: function () {
+            // Without this, a failed sync leaves #syncdbutton stuck in
+            // .is-loading + disabled forever (the old loadEnd() reset
+            // the button as a side effect; that side effect was removed
+            // when loadEnd stopped clobbering the new SVG/label markup).
+            syncEnd();
         }
     });
 }
