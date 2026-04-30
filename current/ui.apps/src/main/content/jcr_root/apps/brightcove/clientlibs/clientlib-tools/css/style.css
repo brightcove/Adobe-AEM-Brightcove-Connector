@@ -392,6 +392,23 @@ betty-titlebar {
   border-color: #d6d4cc;
 }
 
+/* Active-filter dot — added when any of label/folder/clips is non-default. */
+.brc-filter-btn.has-active-filters {
+  position: relative;
+}
+
+.brc-filter-btn.has-active-filters::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: #1a1a18;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+}
+
 /* Bulk action bar (BCON-141, Frame C) */
 .brc-bulk-bar {
   display: inline-flex;
@@ -637,6 +654,45 @@ betty-titlebar {
   width: 15px;
   height: 15px;
   margin: 0;
+}
+
+.brc-filter-section--clear {
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-items: flex-end;
+  justify-content: flex-end;
+  display: flex;
+}
+
+.brc-filter-clear-all {
+  background: transparent;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  padding: 6px 0;
+  margin: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  box-shadow: none;
+  filter: none;
+}
+
+.brc-filter-clear-all:hover {
+  color: #1a1a18;
+  background: transparent;
+  background-color: transparent;
+}
+
+.brc-filter-clear-all[hidden] {
+  display: none;
 }
 
 .brc-pl-search-hint {
@@ -1440,8 +1496,10 @@ table.tblConsole #tbData td:nth-child(2) {
   color: #1a1a18;
 }
 
-/* Custom checkbox styling for the videos table (BCON-141, Frame C) */
-#tblMainList input[type="checkbox"] {
+/* Custom checkbox styling — videos table (Frame C) and the
+   filter panel "Show only clips" toggle (Frame B). Same look. */
+#tblMainList input[type="checkbox"],
+.brc-filter-checkbox input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   width: 15px;
@@ -1456,12 +1514,14 @@ table.tblConsole #tbData td:nth-child(2) {
   padding: 0;
 }
 
-#tblMainList input[type="checkbox"]:checked {
+#tblMainList input[type="checkbox"]:checked,
+.brc-filter-checkbox input[type="checkbox"]:checked {
   background: #1a1a18;
   border-color: #1a1a18;
 }
 
-#tblMainList input[type="checkbox"]:checked::after {
+#tblMainList input[type="checkbox"]:checked::after,
+.brc-filter-checkbox input[type="checkbox"]:checked::after {
   content: '';
   display: block;
   position: absolute;

@@ -57,6 +57,24 @@ function hideTableSpinner() {
     $('#tableSpinner').attr('hidden', '');
 }
 
+// BCON-142: visual indicator + clear-all for the filter panel.
+function isAnyFilterActive() {
+    var l = $('#label_list').val();
+    var f = $('#fldr_list').val();
+    var c = $('#filter_clips').is(':checked');
+    return (l && l !== 'all') || (f && f !== 'all') || c;
+}
+
+function updateFilterIndicator() {
+    var active = isAnyFilterActive();
+    $('#filterToggle').toggleClass('has-active-filters', active);
+    if (active) {
+        $('#filterClearAll').removeAttr('hidden');
+    } else {
+        $('#filterClearAll').attr('hidden', '');
+    }
+}
+
 function brcToast(message) {
     var existing = document.getElementById('brcToast');
     if (existing) existing.parentNode.removeChild(existing);
@@ -229,6 +247,25 @@ $(function () {
             // display all
             $('#tbData tr').show();
         }
+        // Surface the empty state if the clips filter hides everything.
+        var visibleRows = $('#tbData tr:visible').length;
+        if (visibleRows === 0 && event.currentTarget.checked) {
+            $('#emptyStateTitle').text('No clips in this list');
+            $('#emptyStateHint').text('Uncheck "Show only clips" to see all videos.');
+            $('#emptyState').removeAttr('hidden');
+        } else {
+            $('#emptyState').attr('hidden', '');
+        }
+        updateFilterIndicator();
+    });
+
+    $('#filterClearAll').on('click', function () {
+        $('#label_list').val('all');
+        $('#fldr_list').val('all');
+        $('#filter_clips').prop('checked', false);
+        $('#tbData tr').show();
+        updateFilterIndicator();
+        Load(getAllVideosURL());
     });
 
     $('#tbData').on('click', '.edit-playlist', function(event) {
@@ -623,6 +660,7 @@ function loadFolders() {
             console.log('search videos by folder=' + selected);
             Load(getFolderListingUrl(selected));
         }
+        updateFilterIndicator();
     });
 
     // now make the API call to load the folder options
@@ -708,6 +746,7 @@ function loadLabels() {
             console.log('search videos by label=' + selected);
             Load(getLabelListingUrl(selected));
         }
+        updateFilterIndicator();
     });
 
     // now make the API call to load the folder options
