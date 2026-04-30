@@ -1019,6 +1019,11 @@ function buildMainVideoList(title) {
     if ($('#filter_clips').is(':checked')) {
         $('#tbData tr').hide();
         $('#tbData tr.state-clip').show();
+        if ($('#tbData tr:visible').length === 0 && oCurrentVideoList.length > 0) {
+            $('#emptyStateTitle').text('No clips in this list');
+            $('#emptyStateHint').text('Uncheck "Show only clips" to see all videos.');
+            $('#emptyState').removeAttr('hidden');
+        }
     }
 
     hideTableSpinner();
