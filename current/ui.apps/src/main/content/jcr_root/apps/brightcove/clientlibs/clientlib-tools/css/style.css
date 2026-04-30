@@ -1478,6 +1478,19 @@ table.tblConsole #tbData td:nth-child(2) {
   font-weight: 500;
 }
 
+/* Playlist rows wrap the name in an <a class="edit-playlist"> for click
+   handling — without this, browsers paint it as a hyperlink-blue underlined
+   link. Inherit the row color so playlist rows match the plain-text
+   styling of the video rows. */
+#tbData a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#tbData a:hover {
+  text-decoration: none;
+}
+
 /* Existing oddLine / evenLine zebra-stripe rules conflict with the
    new flat table — neutralise both back to white. */
 #tbData tr.oddLine,
