@@ -1,0 +1,20 @@
+/* BCON-130: Make the Video.js player fill the DAM asset details preview area.
+ * AEM initialises #dam_video with inline style="width:300px; height:0px" which
+ * causes the poster/video to render at ~160x90. !important is required to
+ * override those inline values.
+ * Do NOT override .vjs-tech positioning — Video.js manages its own internal
+ * layout and changing it from absolute causes the poster to double-render. */
+
+#dam_video.video-js {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    max-height: 100%;
+}
+
+/* Scale the poster to fill the player area without tiling */
+#dam_video .vjs-poster {
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}

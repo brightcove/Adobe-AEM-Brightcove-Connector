@@ -809,7 +809,10 @@ public class ServiceUtil {
             } else {
                 LOGGER.trace("setMapJSONArray() is using a generic array for " + key);
                 List<String> vals = new ArrayList<>();
-                for (int cnt = 0; cnt < objArray.size(); cnt++) vals.add(objArray.get(cnt).asText());
+                for (int cnt = 0; cnt < objArray.size(); cnt++) {
+                    com.fasterxml.jackson.databind.JsonNode el = objArray.get(cnt);
+                    vals.add(el.isValueNode() ? el.asText() : el.toString());
+                }
                 map.put(key, vals.toArray(new String[0]));
             }
         }catch (Exception e) {

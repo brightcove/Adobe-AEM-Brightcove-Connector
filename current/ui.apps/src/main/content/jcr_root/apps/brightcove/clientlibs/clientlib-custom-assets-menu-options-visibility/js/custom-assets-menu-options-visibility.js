@@ -42,6 +42,25 @@
 
     getCurrentUserInfo();
 
+    // BCON-130: Swap the low-res brc_thumbnail.png for the full-size brc_poster.png
+    // on the DAM asset details page. AEM's Video.js component hardcodes the thumbnail
+    // rendition as the poster; we poll until Video.js has rendered .vjs-poster and
+    // then update its background-image URL.
+    if (location.pathname.indexOf('/assetdetails.html/') === 0) {
+        var posterSwapInterval = setInterval(function () {
+            var vjsPoster = document.querySelector('#dam_video .vjs-poster');
+            if (vjsPoster) {
+                clearInterval(posterSwapInterval);
+                var bg = vjsPoster.style.backgroundImage || window.getComputedStyle(vjsPoster).backgroundImage;
+                if (bg && bg.indexOf('brc_thumbnail.png') !== -1) {
+                    vjsPoster.style.backgroundImage = bg.replace('brc_thumbnail.png', 'brc_poster.png');
+                }
+            }
+        }, 200);
+        // Stop polling after 15 seconds regardless
+        setTimeout(function () { clearInterval(posterSwapInterval); }, 15000);
+    }
+
     function processActionMenuItems(tile) {
 
         if (tile) {
