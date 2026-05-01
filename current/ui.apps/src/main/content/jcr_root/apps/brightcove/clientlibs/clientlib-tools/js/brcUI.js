@@ -641,7 +641,7 @@ function suggestVideosForPlaylist(data) {
 }
 
 function moveVideoToFolder() {
-    $('.folder-selector').toggleClass('open');
+    $('#bulkActionBar .folder-selector').toggleClass('open');
 }
 
 function getMoveVideoToFolderUrl(video_id, folder_id) {
@@ -948,6 +948,7 @@ function buildMainVideoList(title) {
     paging.selectedVideos = [];
     $('#bulkActionBar').attr('hidden', '');
     $('#bulkCount').text(0);
+    $('#checkToggle').prop('checked', false);
 
     //Wipe out the old results
     $("#tbData").empty();
