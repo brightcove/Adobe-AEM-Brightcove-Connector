@@ -98,6 +98,8 @@ function brcToast(message) {
 var $ACTIVE_TRACKS;
 var $sortable;
 var brc_admin = brc_admin || {};
+var _mtfAllFolders = [];
+var _mtfSelectedFolderId = null;
 
 
 //tUploadBar has the timer id for the upload progress bar, so it can be cancelled.  progressPos is used to keep track of the progress bar's position.
@@ -641,11 +643,123 @@ function suggestVideosForPlaylist(data) {
 }
 
 function moveVideoToFolder() {
-    var $sel = window.brcCurrentView === 'playlist'
-        ? $('.butDiv .folder-selector')
-        : $('#bulkActionBar .folder-selector');
-    $sel.toggleClass('open');
+    openMoveToFolderModal();
 }
+
+function openMoveToFolderModal() {
+    var count = paging.selectedVideos.length;
+    $('#mtfSubtitle').text(count + ' video' + (count !== 1 ? 's' : '') + ' selected');
+    $('#mtfSearch').val('');
+    _mtfSelectedFolderId = null;
+    $('#mtfMove').prop('disabled', true);
+
+    if (_mtfAllFolders.length > 0) {
+        renderMtfFolders(_mtfAllFolders);
+    } else {
+        $('#mtfFolderList').html('<li class="brc-mtf-empty">Loading\u2026</li>');
+        $.ajax({
+            type: 'GET',
+            url: '/bin/brightcove/api.js',
+            data: { a: 'list_folders', account_id: $('#selAccount').val(), callback: 'mtfFolderLoadCallback' },
+            async: true
+        });
+    }
+
+    $('body').addClass('brc-mtf-open');
+    $('#moveToFolderModal').removeAttr('hidden');
+}
+
+function mtfFolderLoadCallback(data) {
+    _mtfAllFolders = (data && data.items) ? data.items : [];
+    renderMtfFolders(_mtfAllFolders);
+}
+
+function closeMoveToFolderModal() {
+    $('#moveToFolderModal').attr('hidden', '');
+    $('body').removeClass('brc-mtf-open');
+    _mtfSelectedFolderId = null;
+}
+
+function renderMtfFolders(folders) {
+    var q = $('#mtfSearch').val().toLowerCase();
+    var filtered = q ? folders.filter(function (f) {
+        return f.name.toLowerCase().indexOf(q) !== -1;
+    }) : folders;
+
+    var $list = $('#mtfFolderList').empty();
+
+    if (filtered.length === 0) {
+        $list.html('<li class="brc-mtf-empty">No folders found.</li>');
+        return;
+    }
+
+    var folderSvg = '<svg class="brc-mtf-folder-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+        + '<path d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5H13.5A1 1 0 0 1 14.5 6V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z" stroke="#6b7280" stroke-width="1.25"/>'
+        + '</svg>';
+    var checkSvg = '<svg class="brc-mtf-check" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">'
+        + '<path d="M3 8l3.5 3.5L13 5" stroke="#1a1a18" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+        + '</svg>';
+
+    $.each(filtered, function (i, folder) {
+        var isSelected = folder.id === _mtfSelectedFolderId;
+        var $li = $('<li>')
+            .addClass('brc-mtf-list-item' + (isSelected ? ' is-selected' : ''))
+            .attr('data-folder-id', folder.id)
+            .append($(folderSvg))
+            .append($('<span class="brc-mtf-folder-name">').text(folder.name))
+            .append($(checkSvg));
+        $list.append($li);
+    });
+}
+
+$(function () {
+    $(document).on('click', '.brc-mtf-list-item', function () {
+        var folderId = $(this).data('folder-id');
+        if (_mtfSelectedFolderId === folderId) {
+            _mtfSelectedFolderId = null;
+            $(this).removeClass('is-selected');
+            $('#mtfMove').prop('disabled', true);
+        } else {
+            _mtfSelectedFolderId = folderId;
+            $('.brc-mtf-list-item').removeClass('is-selected');
+            $(this).addClass('is-selected');
+            $('#mtfMove').prop('disabled', false);
+        }
+    });
+
+    $('#mtfSearch').on('input', function () {
+        renderMtfFolders(_mtfAllFolders);
+    });
+
+    $('#mtfClose, #mtfCancel').on('click', function () {
+        closeMoveToFolderModal();
+    });
+
+    $('#moveToFolderModal').on('click', function (e) {
+        if (e.target === this) closeMoveToFolderModal();
+    });
+
+    $('#mtfMove').on('click', function () {
+        if ($(this).prop('disabled') || !_mtfSelectedFolderId) return;
+        var folderId = _mtfSelectedFolderId;
+        var accountId = $('#selAccount').val();
+        $.each(paging.selectedVideos, function (i, checkbox) {
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: {
+                    a: 'move_video_to_folder',
+                    folder: folderId,
+                    video: $(checkbox).val(),
+                    account_id: accountId
+                },
+                async: true
+            });
+        });
+        closeMoveToFolderModal();
+        $('#fldr_list').change();
+    });
+});
 
 function getMoveVideoToFolderUrl(video_id, folder_id) {
     loadStart();
@@ -708,6 +822,7 @@ function loadFolders() {
 function loadFolderCallback(data) {
     var $folder_select = $('#fldr_list');
     var $move_folder_list = $('.folder-selector .menu-options');
+    _mtfAllFolders = (data && data.items) ? data.items : [];
     $.each(data.items, function (i, n) {
         $folder_select
             .append($('<option>', { value : n.id }).text(n.name));

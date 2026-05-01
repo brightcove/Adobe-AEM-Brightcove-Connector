@@ -448,6 +448,30 @@
                         </div>
                     </div>
 
+                    <!-- Move to Folder Modal (BCON-146) -->
+                    <div id="moveToFolderModal" class="brc-mtf-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="mtfTitle">
+                        <div class="brc-mtf-container">
+                            <div class="brc-mtf-header">
+                                <div class="brc-mtf-title-group">
+                                    <h2 class="brc-mtf-title" id="mtfTitle">Move to Folder</h2>
+                                    <p class="brc-mtf-subtitle" id="mtfSubtitle"></p>
+                                </div>
+                                <button type="button" class="brc-mtf-close" id="mtfClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-mtf-search-wrap">
+                                <input type="text" id="mtfSearch" class="brc-mtf-search" placeholder="Search Folder" autocomplete="off">
+                            </div>
+                            <div class="brc-mtf-list-wrap">
+                                <div class="brc-mtf-list-header">All Videos</div>
+                                <ul class="brc-mtf-list" id="mtfFolderList"></ul>
+                            </div>
+                            <div class="brc-mtf-footer">
+                                <button type="button" class="brc-mtf-btn-cancel" id="mtfCancel">Cancel</button>
+                                <button type="button" class="brc-mtf-btn-move" id="mtfMove" disabled>Move</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!--Get Upload status-->
                     <div id='getUplStatus' style="display:none" class="overlay">
                         <center>Get Upload Status By VideoId
