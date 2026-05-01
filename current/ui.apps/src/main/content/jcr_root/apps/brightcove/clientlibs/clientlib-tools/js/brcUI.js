@@ -537,11 +537,11 @@ $(function () {
 
     $('#searchClear_pl').on('click', function() {
         document.getElementById('search_pl').value = '';
-        document.getElementById('selField_pl').value = 'find_playlist_by_name';
+        document.getElementById('selField_pl').value = 'every_field';
         $(this).hide();
-        togglePlSearchHint('find_playlist_by_name');
+        togglePlSearchHint('every_field');
         searchVal = '';
-        searchField = 'find_playlist_by_name';
+        searchField = 'every_field';
         Load(getAllPlaylistsURL());
     });
 
