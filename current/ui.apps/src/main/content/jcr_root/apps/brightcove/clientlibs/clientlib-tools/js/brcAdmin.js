@@ -111,9 +111,13 @@ function getFindPlaylistsURL() {
     paging.allPlaylists = (paging.currentFunction == getAllPlaylistsURL) ? paging.generic : paging.allPlaylists;
     paging.currentFunction = getAllPlaylistsURL;
     if (searchVal != "" && searchVal != "Search Playlists") {
-        if (searchField == "find_playlist_by_name") {
+        if (searchField == "every_field") {
             return apiLocation +
                 '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
+                + '&limit=' + paging.size + '&start=' + paging.allPlaylists
+        } else if (searchField == "find_playlist_by_name") {
+            return apiLocation +
+                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=name:' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         } else if (searchField == "find_playlist_by_id") {
             return apiLocation +
