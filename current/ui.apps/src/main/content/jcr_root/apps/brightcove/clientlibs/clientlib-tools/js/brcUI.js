@@ -641,7 +641,10 @@ function suggestVideosForPlaylist(data) {
 }
 
 function moveVideoToFolder() {
-    $('#bulkActionBar .folder-selector').toggleClass('open');
+    var $sel = window.brcCurrentView === 'playlist'
+        ? $('.butDiv .folder-selector')
+        : $('#bulkActionBar .folder-selector');
+    $sel.toggleClass('open');
 }
 
 function getMoveVideoToFolderUrl(video_id, folder_id) {

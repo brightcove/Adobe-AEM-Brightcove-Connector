@@ -1406,30 +1406,6 @@ input#search {
   height: 30px;
 }
 
-#searchClear,
-#searchClear_pl {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #999;
-  padding: 0;
-  line-height: 1;
-}
-
-#searchClear:hover,
-#searchClear_pl:hover {
-  color: #333;
-}
-
-input#search,
-input#search_pl {
-  padding-right: 20px;
-}
 
 tr.select {
   background-color: #5F9CE3;
