@@ -2606,10 +2606,16 @@ body.brc-mtf-open {
 /* ---- BCON-143: Video detail panel ---- */
 .brc-panel {
   padding: 0;
-  overflow-y: auto;
   font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
   color: #1a1a18;
   min-width: 220px;
+}
+
+.brc-panel-inner {
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .brc-panel-header {
