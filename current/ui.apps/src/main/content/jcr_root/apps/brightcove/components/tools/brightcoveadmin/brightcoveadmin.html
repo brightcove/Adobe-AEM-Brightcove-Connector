@@ -252,78 +252,70 @@
 
                             <!-- start right metadata column, fields filled in by showMetaData() -->
                             <!--Element Id's have the meta. prefix followed by the actual name of the Video object field.  This allows the fields to be easily compared.  See  metaSubmit()  -->
-                            <td id="tdMeta" valign="top" class="tdMetadata" style="display:none;">
-                                <br/>
-                                <span type="button" title="hide metadata" style="float:right;cursor: pointer;" onclick="closeBox('tdMeta')">x</span>
-                                <div id="divMeta.name" style="font-weight:bold"></div>
-                                <br/>Last Updated:
-                                <div id="divMeta.lastModifiedDate"></div>
-                                <hr/>
-                                <div id="divMeta.previewDiv">
-                                    <ul class="thumbnails list-unstyled">
-                                        <li class="span3">
-                                            <div class="thumbnail">
-                                                <img id="divMeta.videoStillURL" alt=" No Image " style="width:260px"/>
-                                                <a onClick="uploadPoster()" href="#"
-                                                   class="btn">Change Poster</a>
-                                            </div>
-                                        </li>
-                                        <li class="span2">
-                                            <div class="thumbnail">
-                                                <img id="divMeta.thumbnailURL" alt=" No Thumbnail " style="width:160px"/>
-                                                <a onClick="uploadThumbnail()" href="#"
-                                                   class="btn">Change Thumbnail</a>
-                                            </div>
-                                        </li>
+                            <td id="tdMeta" valign="top" class="tdMetadata brc-panel" style="display:none;">
 
-                                    </ul>
-
-                                    <!--Upload text track / Delete Track-->
-                                    <center id="trackarea">
-                                        <!--<span>Click Below to Remove Text Track</span><br>-->
-                                        <div id="divMeta.text_tracks">
-                                        </div>
-                                        <br/>
-                                        <button id="uploadtrackbutton" onClick="uploadtrack()" style="display:block">Upload New Text Track</button>
-                                        <br/>
-
-                                    </center>
-                                    <p><a href="#" onClick="doPreview(document.getElementById('divMeta.id').innerHTML)"
-                                          class="btn btn-primary btn-block">Video Preview</a>
-                                    </p>
+                                <!-- Panel header -->
+                                <div class="brc-panel-header">
+                                    <div>
+                                        <div class="brc-panel-title" id="divMeta.name"></div>
+                                        <div class="brc-panel-subtitle" id="divMeta.lastModifiedDate"></div>
+                                    </div>
+                                    <button class="brc-panel-close" type="button" onclick="closeBox('tdMeta')" aria-label="Close">&#x2715;</button>
                                 </div>
-                                <br/>Variants:
-                                <div id="divMeta.variants">N/A</div>
-                                <br/>Duration:
-                                <div id="divMeta.length"></div>
-                                <br/>Video ID:
-                                <div id="divMeta.id"></div>
-                                <br/>
-                                <hr>
-                                Short Description:
-                                <div id="divMeta.shortDescription"></div>
-                                <br/>Tags:
-                                <div id="divMeta.tags"></div>
-                                <br/>
-                                <span class="hdr-labels">
-                                    <span>Labels:</span>
-                                    <a href="#" onclick="editLabels(this); return false;">Edit</a>
-                                </span>
-                                <div id="divMeta.labels"></div>
-                                <br/>Related Link:
-                                <br/>
-                                <a id="divMeta.linkURL"></a>
-                                <br/>
-                                <br/>
 
-                                <div style="display:none" id="divMeta.linkText"></div>
-                                Economics:
-                                <div id="divMeta.economics"></div>
-                                <br/>Date Published:
-                                <div id="divMeta.publishedDate"></div>
-                                <br/>Reference ID:
-                                <div id="divMeta.referenceId"></div>
-                                <br/>
+                                <!-- IMAGES -->
+                                <div class="brc-panel-section">
+                                    <div class="brc-panel-section-title">IMAGES</div>
+                                    <div class="brc-panel-images">
+                                        <div class="brc-image-widget">
+                                            <div class="brc-image-preview" id="divMeta.posterPreview"></div>
+                                            <span class="brc-image-label">Poster</span>
+                                            <button class="brc-image-url-btn" id="posterUrlBtn" type="button" onclick="uploadPoster()">ENTER URL</button>
+                                        </div>
+                                        <div class="brc-image-widget">
+                                            <div class="brc-image-preview" id="divMeta.thumbPreview"></div>
+                                            <span class="brc-image-label">Thumbnail</span>
+                                            <button class="brc-image-url-btn" id="thumbUrlBtn" type="button" onclick="uploadThumbnail()">ENTER URL</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ACTIONS -->
+                                <div class="brc-panel-section" id="trackarea">
+                                    <div class="brc-panel-section-title">ACTIONS</div>
+                                    <div id="divMeta.text_tracks"></div>
+                                    <button class="brc-panel-action-btn" type="button" onclick="uploadtrack()">Upload New Text Track</button>
+                                    <button class="brc-panel-action-btn" type="button"
+                                            onclick="doPreview(document.getElementById('divMeta.id').innerHTML)">Video Preview</button>
+                                </div>
+
+                                <!-- VIDEO INFO -->
+                                <div class="brc-panel-section">
+                                    <div class="brc-panel-section-title">VIDEO INFO</div>
+                                    <table class="brc-panel-info-table">
+                                        <tr><td class="brc-info-label">Video ID</td><td id="divMeta.id"></td></tr>
+                                        <tr><td class="brc-info-label">Duration</td><td id="divMeta.length"></td></tr>
+                                        <tr><td class="brc-info-label">Variants</td><td id="divMeta.variants"></td></tr>
+                                        <tr><td class="brc-info-label">Published</td><td id="divMeta.publishedDate"></td></tr>
+                                        <tr><td class="brc-info-label">Economics</td><td id="divMeta.economics"></td></tr>
+                                        <tr><td class="brc-info-label">Reference ID</td><td id="divMeta.referenceId"></td></tr>
+                                        <tr><td class="brc-info-label">Folder</td><td id="divMeta.folder"></td></tr>
+                                        <tr><td class="brc-info-label">Short Description</td><td id="divMeta.shortDescription"></td></tr>
+                                        <tr><td class="brc-info-label">Tags</td><td id="divMeta.tags"></td></tr>
+                                        <tr><td class="brc-info-label">Related Link</td><td><a id="divMeta.linkURL"></a></td></tr>
+                                    </table>
+                                    <div style="display:none" id="divMeta.linkText"></div>
+                                </div>
+
+                                <!-- LABELS -->
+                                <div class="brc-panel-section brc-panel-section--last">
+                                    <div class="brc-panel-section-title">LABELS</div>
+                                    <div id="divMeta.labels" class="brc-label-pills"></div>
+                                    <input type="text" id="labelInput" class="brc-label-input" placeholder="Add label..." autocomplete="off">
+                                    <div class="brc-label-hint">Press Enter to add a label</div>
+                                    <button id="saveLabelsBtn" type="button" class="brc-save-labels-btn" onclick="saveLabels()">Save Labels</button>
+                                </div>
+
                             </td>
                         </tr>
                     </table>
@@ -614,6 +606,37 @@
                     </svg>-->
                 </div>
             </div>
+        <!-- Variant Details modal (BCON-143) -->
+        <div id="variantDetailsModal" class="brc-variant-modal" hidden>
+            <div class="brc-variant-modal-dialog">
+                <div class="brc-variant-modal-header">
+                    <span id="variantModalTitle" class="brc-variant-modal-title"></span>
+                    <button class="brc-variant-modal-close" type="button" aria-label="Close">&#x2715;</button>
+                </div>
+                <div class="brc-variant-modal-body">
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">VIDEO NAME</div>
+                        <div id="variantModalName"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">DESCRIPTION</div>
+                        <div id="variantModalDesc"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">LONG DESCRIPTION</div>
+                        <div id="variantModalLongDesc"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">CUSTOM FIELDS</div>
+                        <div id="variantModalCustomFields"></div>
+                    </div>
+                </div>
+                <div class="brc-variant-modal-footer">
+                    <button type="button" class="brc-save-labels-btn brc-variant-modal-ok">OK</button>
+                </div>
+            </div>
+        </div>
+
         </body>
     </sly>
 </html>

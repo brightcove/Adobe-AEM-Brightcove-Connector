@@ -817,18 +817,16 @@ td.tdMainMenu div {
 }
 
 td.tdMetadata {
-  padding: 0em 1em;
+  padding: 0;
   overflow: auto;
   background-color: #ffffff;
-  border-style: solid;
-  border-left-width: 1px;
-  border-left-color: #000000;
+  border-left: 1px solid #e8e6df;
   height: 100%;
-  color: grey
+  color: #1a1a18;
 }
 
 #tdMeta div {
-  color: black;
+  color: #1a1a18;
 }
 
 thead tr {
@@ -2603,6 +2601,336 @@ body.brc-mtf-open {
 .brc-mtf-btn-move:not([disabled]):hover {
   background: #2a2a26;
   background-color: #2a2a26;
+}
+
+/* ---- BCON-143: Video detail panel ---- */
+.brc-panel {
+  padding: 0;
+  overflow-y: auto;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  color: #1a1a18;
+  min-width: 220px;
+}
+
+.brc-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f0efea;
+}
+
+.brc-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  line-height: 1.4;
+}
+
+.brc-panel-subtitle {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.brc-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.brc-panel-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0efea;
+}
+
+.brc-panel-section--last {
+  border-bottom: none;
+}
+
+.brc-panel-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.77px;
+  text-transform: uppercase;
+  color: #1a1a18;
+  margin-bottom: 12px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+/* Image widgets */
+.brc-panel-images {
+  display: flex;
+  gap: 12px;
+}
+
+.brc-image-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.brc-image-preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #E8E6DE;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.brc-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brc-image-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.brc-image-url-btn {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #1a1a18;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.brc-image-url-btn:hover {
+  background: #f7f6f2;
+}
+
+/* Action buttons */
+.brc-panel-action-btn {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #1a1a18;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 8px;
+  font-family: inherit;
+}
+
+.brc-panel-action-btn:last-child {
+  margin-bottom: 0;
+}
+
+.brc-panel-action-btn:hover {
+  background: #f7f6f2;
+}
+
+/* Video info table */
+.brc-panel-info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.brc-panel-info-table td {
+  padding: 7px 0;
+  border-bottom: 1px solid #f0efea;
+  font-size: 13px;
+  color: #1a1a18;
+  vertical-align: top;
+}
+
+.brc-panel-info-table tr:last-child td {
+  border-bottom: none;
+}
+
+.brc-info-label {
+  font-weight: 500;
+  width: 40%;
+  padding-right: 8px;
+}
+
+/* Variants in panel */
+.brc-variant-link {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: #1a1a18;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.brc-variant-link:hover {
+  text-decoration: underline;
+}
+
+/* Label pills */
+.brc-label-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.brc-label-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #1a1a18;
+}
+
+.brc-label-pill-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.brc-label-input {
+  width: 100%;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a18;
+  box-sizing: border-box;
+}
+
+.brc-label-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 4px 0 10px;
+}
+
+.brc-save-labels-btn {
+  display: block;
+  width: 100%;
+  background: #1a1a18;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.brc-save-labels-btn:hover {
+  background: #2a2a26;
+}
+
+/* Variant Details modal */
+.brc-variant-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brc-variant-modal[hidden] {
+  display: none;
+}
+
+.brc-variant-modal-dialog {
+  background: #fff;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90vw;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.brc-variant-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.brc-variant-modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a18;
+}
+
+.brc-variant-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  padding: 0;
+  line-height: 1;
+}
+
+.brc-variant-section {
+  margin-bottom: 14px;
+}
+
+.brc-variant-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: #1a1a18;
+  margin-bottom: 4px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-variant-section > div:last-child {
+  font-size: 13px;
+  color: #1a1a18;
+}
+
+.brc-variant-cf-table {
+  width: 100%;
+}
+
+.brc-variant-cf-table td {
+  font-size: 13px;
+  color: #1a1a18;
+  padding: 2px 8px 2px 0;
+  vertical-align: top;
+}
+
+.brc-variant-modal-footer {
+  margin-top: 20px;
 }
 
 /* ---------- END NEW CSS --------------- */
