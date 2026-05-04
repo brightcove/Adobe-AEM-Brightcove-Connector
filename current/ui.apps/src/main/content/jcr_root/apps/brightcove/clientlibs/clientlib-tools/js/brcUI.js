@@ -714,7 +714,7 @@ function renderMtfFolders(folders) {
 
 $(function () {
     $(document).on('click', '.brc-mtf-list-item', function () {
-        var folderId = $(this).data('folder-id');
+        var folderId = $(this).attr('data-folder-id');
         if (_mtfSelectedFolderId === folderId) {
             _mtfSelectedFolderId = null;
             $(this).removeClass('is-selected');
