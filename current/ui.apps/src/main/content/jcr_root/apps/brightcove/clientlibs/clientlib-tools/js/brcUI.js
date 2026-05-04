@@ -1419,12 +1419,19 @@ $(document).on('keydown', '#labelInput', function(e) {
 function saveLabels() {
     var videoId = $('#divMeta\\.id').text().trim();
     if (!videoId) return;
+    var savedLabels = _currentLabels.slice();
     $.ajax({
         type: 'GET',
         url: '/bin/brightcove/api.js',
-        data: $.param({ a: 'update_labels', labels: _currentLabels, videoId: videoId }, true),
+        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
         async: true,
-        success: function() { brcToast('Labels saved'); }
+        success: function() {
+            var idx = parseInt($('tr.select').attr('id'), 10);
+            if (!isNaN(idx) && oCurrentVideoList[idx]) {
+                oCurrentVideoList[idx].labels = savedLabels;
+            }
+            brcToast('Labels saved');
+        }
     });
 }
 function showMetaDataByVideoID(idx) {
