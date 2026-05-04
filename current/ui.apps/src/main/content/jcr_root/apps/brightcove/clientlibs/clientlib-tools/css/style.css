@@ -2605,5 +2605,373 @@ body.brc-mtf-open {
   background-color: #2a2a26;
 }
 
+/* ---------- Edit Playlist Modal ---------- */
+
+.brc-ep-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 24, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.brc-ep-overlay[hidden] {
+  display: none !important;
+}
+
+.brc-ep-container {
+  width: 560px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+.brc-ep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  flex-shrink: 0;
+}
+
+.brc-ep-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a18;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.brc-ep-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+}
+
+.brc-ep-close:hover {
+  background: #f3f4f6;
+  color: #1a1a18;
+}
+
+.brc-ep-divider {
+  height: 1px;
+  background: #f0efea;
+  flex-shrink: 0;
+}
+
+.brc-ep-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d0cc transparent;
+}
+
+.brc-ep-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.brc-ep-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.brc-ep-body::-webkit-scrollbar-thumb {
+  background: #d1d0cc;
+  border-radius: 3px;
+}
+
+.brc-ep-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brc-ep-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brc-ep-drag-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.brc-ep-input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid #e8e6df;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1a1a18;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.brc-ep-input:focus {
+  border-color: #1a1a18;
+}
+
+.brc-ep-videos-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brc-ep-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid #e8e6df;
+  border-radius: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #fff;
+  display: none;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d0cc transparent;
+}
+
+.brc-ep-search-results.is-visible {
+  display: block;
+}
+
+.brc-ep-search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.brc-ep-search-results::-webkit-scrollbar-thumb {
+  background: #d1d0cc;
+  border-radius: 3px;
+}
+
+.brc-ep-search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1a1a18;
+  cursor: pointer;
+  border-bottom: 1px solid #f0efea;
+}
+
+.brc-ep-search-result-item:last-child {
+  border-bottom: none;
+}
+
+.brc-ep-search-result-item:hover {
+  background: #f7f6f2;
+}
+
+.brc-ep-search-result-item.is-added {
+  color: #9ca3af;
+  cursor: default;
+}
+
+.brc-ep-search-result-item.is-added:hover {
+  background: none;
+}
+
+.brc-ep-search-result-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brc-ep-search-result-id {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.brc-ep-search-empty {
+  padding: 14px;
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  list-style: none;
+}
+
+.brc-ep-playlist-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid #e8e6df;
+  border-radius: 8px;
+  min-height: 60px;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d0cc transparent;
+}
+
+.brc-ep-playlist-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.brc-ep-playlist-items::-webkit-scrollbar-thumb {
+  background: #d1d0cc;
+  border-radius: 3px;
+}
+
+.brc-ep-playlist-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1a1a18;
+  border-bottom: 1px solid #f0efea;
+  gap: 10px;
+}
+
+.brc-ep-playlist-item:last-child {
+  border-bottom: none;
+}
+
+.brc-ep-playlist-item.sortable-ghost {
+  opacity: 0.4;
+  background: #f0efea;
+}
+
+.brc-ep-item-handle {
+  cursor: grab;
+  color: #c8c7c2;
+  font-size: 15px;
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+.brc-ep-item-handle:active {
+  cursor: grabbing;
+}
+
+.brc-ep-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brc-ep-item-delete {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  flex-shrink: 0;
+  line-height: 1;
+  font-size: 14px;
+  border-radius: 4px;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+}
+
+.brc-ep-item-delete:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.brc-ep-item-delete[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.brc-ep-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #f0efea;
+  flex-shrink: 0;
+}
+
+.brc-ep-btn-cancel {
+  height: 40px;
+  padding: 0 20px;
+  background: transparent;
+  background-image: none;
+  background-color: transparent;
+  border: 1.5px solid #e8e6df;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a18;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+  margin: 0;
+}
+
+.brc-ep-btn-cancel:hover {
+  background: #f7f6f2;
+  background-color: #f7f6f2;
+}
+
+.brc-ep-btn-update {
+  height: 40px;
+  padding: 0 20px;
+  background: #c8c7c2;
+  background-image: none;
+  background-color: #c8c7c2;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  cursor: default;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+  margin: 0;
+}
+
+.brc-ep-btn-update:not([disabled]) {
+  background: #1a1a18;
+  background-color: #1a1a18;
+  cursor: pointer;
+}
+
+.brc-ep-btn-update:not([disabled]):hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
+}
+
 /* ---------- END NEW CSS --------------- */
 

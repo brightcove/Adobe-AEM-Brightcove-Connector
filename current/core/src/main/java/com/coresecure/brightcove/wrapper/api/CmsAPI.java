@@ -293,6 +293,11 @@ public class CmsAPI {
 
     //PatchAPI
     public ObjectNode updatePlaylist(String playlistId, String[] videos) {
+        return updatePlaylist(playlistId, videos, null);
+    }
+
+    //PatchAPI — supports optional name update and null videos (for smart playlists)
+    public ObjectNode updatePlaylist(String playlistId, String[] videos, String name) {
         ObjectNode json = JsonNodeFactory.instance.objectNode();
         TokenObj authToken = account.getLoginToken();
         if (authToken != null) {
@@ -303,11 +308,16 @@ public class CmsAPI {
             try {
                 LOGGER.debug("targetURL: {}", targetURL);
                 ObjectNode request = JsonNodeFactory.instance.objectNode();
-                ArrayNode videoArray = JsonNodeFactory.instance.arrayNode();
-                for (String item : videos) {
-                    videoArray.add(item);
+                if (videos != null) {
+                    ArrayNode videoArray = JsonNodeFactory.instance.arrayNode();
+                    for (String item : videos) {
+                        videoArray.add(item);
+                    }
+                    request.set("video_ids", videoArray);
                 }
-                request.set("video_ids", videoArray);
+                if (name != null && !name.isEmpty()) {
+                    request.put("name", name);
+                }
                 LOGGER.info("updatePlaylistParams: {}", request.toPrettyString());
                 String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);

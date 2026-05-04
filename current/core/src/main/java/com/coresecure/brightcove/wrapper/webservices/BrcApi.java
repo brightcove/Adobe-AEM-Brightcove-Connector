@@ -438,12 +438,14 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        if ( (request.getParameter("videos") != null) && (request.getParameter("playlistId") != null) ) {
-            String[] videos = request.getParameterValues("videos");
-            String playlistId = request.getParameter("playlistId");
-            result = brAPI.cms.updatePlaylist(playlistId, videos);
+        String playlistId = request.getParameter("playlistId");
+        String playlistName = request.getParameter("playlistName");
+        String[] videos = request.getParameterValues("videos");
+        // Allow name-only updates (smart playlists) — videos may be null
+        boolean hasName = (playlistName != null && !playlistName.isEmpty());
+        if (playlistId != null && (videos != null || hasName)) {
+            result = brAPI.cms.updatePlaylist(playlistId, videos, playlistName);
         }
-
         return result;
     }
 

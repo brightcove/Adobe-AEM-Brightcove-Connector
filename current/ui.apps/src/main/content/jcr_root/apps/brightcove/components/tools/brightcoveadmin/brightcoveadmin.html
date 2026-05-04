@@ -472,6 +472,38 @@
                         </div>
                     </div>
 
+                    <!-- Edit Playlist Modal -->
+                    <div id="editPlaylistModal" class="brc-ep-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="epTitle">
+                        <div class="brc-ep-container">
+                            <div class="brc-ep-header">
+                                <h2 class="brc-ep-title" id="epTitle">Edit Playlist</h2>
+                                <button type="button" class="brc-ep-close" id="epClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-ep-body">
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="epPlaylistName">Playlist Name</label>
+                                    <input type="text" id="epPlaylistName" class="brc-ep-input" placeholder="Playlist name" autocomplete="off">
+                                </div>
+                                <div class="brc-ep-videos-section" id="epVideosSection">
+                                    <div class="brc-ep-field-group">
+                                        <label class="brc-ep-label">Add Videos</label>
+                                        <input type="text" id="epVideoSearch" class="brc-ep-input" placeholder="Search by name or ID" autocomplete="off">
+                                        <ul class="brc-ep-search-results" id="epSearchResults"></ul>
+                                    </div>
+                                    <div class="brc-ep-field-group">
+                                        <label class="brc-ep-label">In Playlist <span class="brc-ep-drag-hint">Drag to reorder</span></label>
+                                        <ul class="brc-ep-playlist-items" id="epPlaylistItems"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="brc-ep-footer">
+                                <button type="button" class="brc-ep-btn-cancel" id="epCancel">Cancel</button>
+                                <button type="button" class="brc-ep-btn-update" id="epUpdate" disabled>Update Playlist</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!--Get Upload status-->
                     <div id='getUplStatus' style="display:none" class="overlay">
                         <center>Get Upload Status By VideoId
