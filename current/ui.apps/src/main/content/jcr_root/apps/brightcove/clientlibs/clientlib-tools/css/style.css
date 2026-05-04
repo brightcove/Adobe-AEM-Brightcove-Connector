@@ -1,5 +1,5 @@
 body {
-  background-color: #c3ddf6;
+  background-color: #fff;
   font-family: adobe-clean,Helvetica,Arial,sans-serif;
 }
 
@@ -18,48 +18,761 @@ body {
   z-index:999999;
 }
 
-.navbar {
-  background: #080886;
+/* AEM injects a <betty-titlebar> above tool-page content; hide it so our
+   own .brc-header is the only top-of-page chrome. */
+betty-titlebar {
+  display: none !important;
 }
 
-.navbar-inner {
-  padding: 7px 20px;
-  border-radius: 0px;
-  background: #080886;
-  -webkit-border-radius: 0px;
-  -moz-border-radius: 0px;
-  border-radius: 0px;
-  -webkit-box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-  -moz-box-shadow: 0px 0px 10px rgba(0, 0, 0, .11);
-  -ms-box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-  box-shadow: 0px 2px 10px rgba(0, 0, 0, .11);
-
+/* ---- BCON-121: Header revamp ---- */
+.brc-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f0efea;
+  border-bottom: 1px solid #e8e6df;
+  padding: 0 20px;
+  height: 68px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
 }
 
-.navbar .nav > li > a {
-  float: none;
-  padding: 9px 10px 11px;
-  line-height: 19px;
-  color: #fff;
-  text-decoration: none;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+.brc-header *,
+.brc-header *::before,
+.brc-header *::after {
+  box-sizing: border-box;
+}
+
+.brc-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0efea;
+  border-radius: 10px;
+  padding: 4px 3px;
+  height: 40px;
+}
+
+.brc-tab {
+  background: transparent;
+  border: none;
+  padding: 0 13px;
+  height: 32px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+  border-radius: 8px;
   cursor: pointer;
-  text-transform: uppercase;
-  font-size: 11px;
-  font-weight: bold;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1;
+  text-shadow: none;
+  white-space: nowrap;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.navbar .nav > li > a:hover {
-  color: #ffffff;
-  text-decoration: none;
+.brc-tab.is-active {
+  background: #fff;
+  border: 1px solid #e8e6df;
+  font-weight: 600;
+}
+
+.brc-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a18;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.brc-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Override the shared button-style block (#syncdbutton, .btn, etc.) for the new black-filled sync button. */
+#syncdbutton.brc-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  margin: 0;
+  background: #1a1a18;
+  background-image: none;
+  background-color: #1a1a18;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+}
+
+#syncdbutton.brc-sync-btn:hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
+  color: #fff;
+}
+
+#syncdbutton.brc-sync-btn.is-loading,
+#syncdbutton.brc-sync-btn[disabled] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.brc-sync-icon {
+  flex-shrink: 0;
+}
+
+.brc-account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 13px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 192px;
+  font-family: inherit;
+}
+
+.brc-account-trigger[aria-expanded="true"] {
+  background: #f7f6f2;
+  border-color: #d6d4cc;
+}
+
+.brc-account-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.brc-account-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brc-account-id {
+  font-size: 11px;
+  font-weight: 400;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brc-account-caret {
+  margin-left: auto;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+/* Account popover (Frame E) */
+.brc-account-popover {
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  width: 240px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(26, 26, 24, 0.08);
+}
+
+.brc-account-popover[hidden] {
+  display: none;
+}
+
+.brc-account-popover-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: #f0efea;
+  border-bottom: 1px solid #e8e6df;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: #1a1a18;
+}
+
+.brc-account-popover-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.brc-account-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  background: #fff;
+  border: none;
+  border-top: 1px solid #e8e6df;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  text-shadow: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.brc-account-row:first-child {
+  border-top: none;
+}
+
+.brc-account-row:hover:not(.is-active) {
+  background: #f7f6f2;
+}
+
+.brc-account-row.is-active {
+  background: #f7f6f2;
+  cursor: default;
+  padding-bottom: 12px;
+}
+
+.brc-account-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a18;
+  line-height: 1.4;
+}
+
+.brc-account-row-id {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.brc-account-row-status {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* Toast (account switch confirmation) */
+.brc-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #1a1a18;
+  color: #fff;
+  border-radius: 8px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition: opacity 0.18s ease, transform 0.22s ease;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.brc-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.brc-toast-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* ---- Title row + pill search + filter panel (Frames A/B) ---- */
+.brc-title-row {
+  display: flex;
+  align-items: center;
+  padding: 18px 0 10px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-title-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brc-title-row-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.brc-list-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a18;
+  text-transform: none;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.brc-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  background: #f0efea;
+  border-radius: 99px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: #1a1a18;
+  line-height: 1;
+}
+
+.brc-count-badge:empty {
+  display: none;
+}
+
+.brc-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  color: #1a1a18;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.brc-filter-btn:hover {
+  background: #f7f6f2;
+}
+
+.brc-filter-btn[aria-expanded="true"] {
+  background: #f0efea;
+  border-color: #d6d4cc;
+}
+
+/* Active-filter dot — added when any of label/folder/clips is non-default. */
+.brc-filter-btn.has-active-filters {
+  position: relative;
+}
+
+.brc-filter-btn.has-active-filters::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: #1a1a18;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+}
+
+/* Bulk action bar (BCON-141, Frame C) */
+.brc-bulk-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 6px;
+}
+
+.brc-bulk-bar[hidden] {
+  display: none;
+}
+
+.brc-bulk-bar-divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: #e8e6df;
+  margin: 0 4px;
+}
+
+.brc-bulk-bar-count {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+}
+
+.brc-bulk-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  background: #fff;
+  background-image: none;
+  background-color: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  color: #1a1a18;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  margin: 0;
+  line-height: 32px;
+}
+
+.brc-bulk-bar-btn:hover {
+  background: #f7f6f2;
+  background-color: #f7f6f2;
+  color: #1a1a18;
+}
+
+.brc-bulk-bar-clear {
+  background: transparent;
+  background-image: none;
+  background-color: transparent;
+  border: none;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  padding: 0 4px;
+  margin: 0;
+}
+
+.brc-bulk-bar-clear:hover {
+  color: #1a1a18;
+  background: transparent;
   background-color: transparent;
 }
 
-.navbar .nav .active > a,
-.navbar .nav .active > a:hover {
-  color: #ffffff;
-  text-decoration: none;
-  background-color: rgba(255, 255, 255, 0.1);
+/* Pill search */
+.brc-pill-search {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 99px;
+  padding: 0 6px 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  min-width: 280px;
+}
+
+/* Frame C: when the bulk action bar is visible, the pill search shrinks to
+   220px so both surfaces sit comfortably side-by-side. */
+.brc-title-row:has(#bulkActionBar:not([hidden])) .brc-pill-search {
+  min-width: 220px;
+}
+
+.brc-pill-search-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #6b7280;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.brc-pill-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.brc-pill-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.brc-pill-search-input:focus {
+  outline: none;
+}
+
+.brc-pill-search-clear {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.brc-pill-search-clear:hover {
+  color: #1a1a18;
+}
+
+.brc-pill-search-field {
+  height: 28px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: #6b7280;
+  padding: 0 4px;
+  margin-left: 4px;
+  cursor: pointer;
+  border-left: 1px solid #e8e6df;
+}
+
+#searchBut.brc-pill-search-go,
+#searchBut_pl.brc-pill-search-go {
+  height: 28px;
+  margin: 0 0 0 6px;
+  padding: 0 12px;
+  background: #1a1a18;
+  background-image: none;
+  background-color: #1a1a18;
+  border: none;
+  border-radius: 99px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  line-height: 28px;
+}
+
+#searchBut.brc-pill-search-go:hover,
+#searchBut_pl.brc-pill-search-go:hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
+  color: #fff;
+}
+
+/* Filter panel */
+.brc-filter-panel {
+  display: flex;
+  align-items: stretch;
+  gap: 40px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  padding: 13px 19px;
+  margin-bottom: 10px;
+  font-family: inherit;
+}
+
+.brc-filter-panel[hidden] {
+  display: none;
+}
+
+.brc-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.brc-filter-section:nth-child(2) {
+  flex: 1;
+  min-width: 300px;
+}
+
+.brc-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.77px;
+  text-transform: uppercase;
+  color: #1a1a18;
+}
+
+.brc-filter-select {
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+}
+
+.brc-filter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1a1a18;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.brc-filter-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.brc-filter-section--clear {
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-items: flex-end;
+  justify-content: flex-end;
+  display: flex;
+}
+
+.brc-filter-clear-all {
+  background: transparent;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  text-shadow: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  padding: 6px 0;
+  margin: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  box-shadow: none;
+  filter: none;
+}
+
+.brc-filter-clear-all:hover {
+  color: #1a1a18;
+  background: transparent;
+  background-color: transparent;
+}
+
+.brc-filter-clear-all[hidden] {
+  display: none;
+}
+
+.brc-pl-search-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin: -4px 0 8px;
+  font-family: inherit;
+}
+
+/* Scoped table spinner (tab-switch loading) */
+.brc-table-wrapper {
+  position: relative;
+}
+
+.brc-table-spinner {
+  position: absolute;
+  top: 44px; /* below the sticky-style table header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.brc-table-spinner[hidden] {
+  display: none;
+}
+
+.brc-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(26, 26, 24, 0.15);
+  border-top-color: #1a1a18;
+  border-radius: 50%;
+  animation: brc-spin 0.8s linear infinite;
+}
+
+@keyframes brc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty-state message (BCON-141) */
+.brc-empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-empty-state[hidden] {
+  display: none;
+}
+
+.brc-empty-state-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a18;
+  margin: 0 0 6px;
+}
+
+.brc-empty-state-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
 }
 
 a.home {
@@ -83,10 +796,6 @@ table.tblConsole {
   font-size: 16px;
   width: 100%;
   border-style: none;
-}
-
-tr.trCenterHeader {
-  background-color: #fff;
 }
 
 #tblMainList {
@@ -427,11 +1136,13 @@ div.hLine {
 
 #brightcove {
   position: relative;
-  margin: 20px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  margin: 0;
+  padding: 0;
   background: #fff;
-  top: 10px;
+}
+
+#divConsole {
+  padding: 0 20px 20px;
 }
 
 .foundation-layout-panel-content {
@@ -651,19 +1362,11 @@ div.hLine {
 
 
 tr.trCenterHeader {
-  background-color: #C3DDF6;
+  background-color: #fff;
 }
 
-#headTitle {
-  padding: 10px 10px 0 10px;
-  text-transform: uppercase;
-}
-
-#divVideoCount {
-  padding: 0 10px 10px 10px;
-  font-size: 12px;
-  text-transform: uppercase;
-}
+/* #headTitle and #divVideoCount styling lives on .brc-list-title and
+   .brc-count-badge; keep these id selectors out of the way. */
 
 td.tdMetadata, th#trHeader {
   padding: 0 20px;
@@ -703,6 +1406,7 @@ input#search {
   height: 30px;
 }
 
+
 tr.select {
   background-color: #5F9CE3;
   color: #fff;
@@ -714,24 +1418,120 @@ tr.hover {
 }
 
 #trHeader .tdMainTableHead {
-  background-color: #080886;
-  color: #fff;
-  padding: 5px;
+  background-color: #fff;
+  color: #1a1a18;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 12px;
+  height: 44px;
   border: 0;
-  border-bottom: 1px solid #fff;
+  border-top: 1px solid #e8e6df;
+  border-bottom: 1px solid #e8e6df;
+  text-transform: none;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#trHeader .tdMainTableHead#checkCol {
+  width: 36px;
+  padding: 0 12px;
 }
 
 table.tblConsole {
   background-color: #fff;
-  color: #3b3b3b;
+  color: #1a1a18;
   font-size: 13px;
   width: 100%;
   border-style: none;
 }
 
+table.tblConsole #tbData tr {
+  height: 52px;
+}
+
 table.tblConsole #tbData td {
-  border-bottom: 1px solid #eee;
-  line-height: 1.8;
+  border-bottom: 1px solid #f0efea;
+  padding: 0 12px;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a18;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+table.tblConsole #tbData td:nth-child(2) {
+  font-weight: 500;
+}
+
+/* Playlist rows wrap the name in an <a class="edit-playlist"> for click
+   handling — without this, browsers paint it as a hyperlink-blue underlined
+   link. Inherit the row color so playlist rows match the plain-text
+   styling of the video rows. */
+#tbData a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#tbData a:hover {
+  text-decoration: none;
+}
+
+/* Existing oddLine / evenLine zebra-stripe rules conflict with the
+   new flat table — neutralise both back to white. */
+#tbData tr.oddLine,
+#tbData tr.evenLine {
+  background-color: #fff;
+}
+
+#tbData tr.hover {
+  background-color: #f7f6f2;
+  color: #1a1a18;
+}
+
+#tbData tr.select,
+#tbData tr.is-selected {
+  background-color: #f0efea;
+  color: #1a1a18;
+}
+
+/* Custom checkbox styling — videos table (Frame C) and the
+   filter panel "Show only clips" toggle (Frame B). Same look. */
+#tblMainList input[type="checkbox"],
+.brc-filter-checkbox input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #c8c7c2;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  margin: 0;
+  position: relative;
+  padding: 0;
+}
+
+#tblMainList input[type="checkbox"]:checked,
+.brc-filter-checkbox input[type="checkbox"]:checked {
+  background: #1a1a18;
+  border-color: #1a1a18;
+}
+
+#tblMainList input[type="checkbox"]:checked::after,
+.brc-filter-checkbox input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 4px;
+  height: 8px;
+  border-right: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
+  transform: rotate(45deg);
 }
 
 #playerDiv.overlay.ui-draggable {
@@ -796,20 +1596,22 @@ div.delConfPop {
   width: 600px;
 }
 
-th.sortable.ASC span.order {
-  background: url("../img/asc.png") right center no-repeat;
-  padding-right: 20px;
+th.sortable {
+  cursor: pointer;
 }
 
-th.sortable.DESC span.order {
-  background: url("../img/desc.png") right center no-repeat;
-  padding-right: 20px;
+th.sortable .order::after {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #c8c7c2;
+  vertical-align: middle;
 }
 
-th.sortable.NONE span.order {
-  background: url("../img/none.png") right center no-repeat;
-  padding-right: 20px;
-}
+th.sortable.ASC .order::after  { content: '↑'; color: #6b7280; }
+th.sortable.DESC .order::after { content: '↓'; color: #6b7280; }
+th.sortable.NONE .order::after { content: '↕'; color: #c8c7c2; }
 
 img.optionsIcon {
   width: 28px;
@@ -1321,42 +2123,61 @@ body {
   position: relative;
 }
 
-.butDiv > span > div.menu {
+/* Folder-picker dropdown — used by both the legacy .butDiv (playlist
+   drill-down view) and the new bulk action bar (videos view). The
+   selectors used to be scoped to .butDiv, which broke the bulk version
+   when .butDiv was hidden — drop that scope. */
+.folder-selector.menu {
   display: none;
   position: absolute;
   left: 0;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
   min-width: 200px;
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  z-index: 100;
 }
 
-.butDiv > span > div.menu.open {
+.folder-selector.menu.open {
   display: block;
 }
 
-.butDiv > span > div.menu .menu-options {
+.folder-selector .menu-options {
   list-style: none;
   padding: 0.5rem 0;
   margin: 0;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option {
+.folder-selector .menu-options .menu-option {
   padding: 0.5rem 1rem 0.5rem 2.25rem;
   background: transparent url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder.svg) 0.5rem no-repeat;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option.remove {
+.folder-selector .menu-options .menu-option.remove {
   padding: 0.5rem 1rem 0.5rem 2.25rem;
   background: transparent url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-delete.svg) 0.5rem no-repeat;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option:hover {
+.folder-selector .menu-options .menu-option:hover {
   background: rgba(0, 0, 0, 0.1) url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-open.svg) 0.5rem no-repeat;
   cursor: pointer;
 }
 
-.butDiv > span > div.menu .menu-options .menu-option.remove:hover {
+.folder-selector .menu-options .menu-option.remove:hover {
   background: rgba(0, 0, 0, 0.1) url(/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/folder-delete.svg) 0.5rem no-repeat;
   cursor: pointer;
+}
+
+/* Position the bulk-bar dropdown directly under the trigger button. */
+.brc-bulk-move-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.brc-bulk-move-wrapper > .folder-selector.menu {
+  top: 100%;
+  margin-top: 4px;
 }
 
 #tbData span.playlist-actions {
@@ -1507,6 +2328,281 @@ body {
   position: relative;
   top: 3px;
   margin-right: .2rem;
+}
+
+/* ---- BCON-146: Move to Folder Modal ---- */
+
+.brc-mtf-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 24, 0.6);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brc-mtf-overlay[hidden] {
+  display: none;
+}
+
+body.brc-mtf-open {
+  overflow: hidden;
+}
+
+.brc-mtf-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(26, 26, 24, 0.18);
+}
+
+.brc-mtf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 24px 20px;
+  flex-shrink: 0;
+}
+
+.brc-mtf-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brc-mtf-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a18;
+  line-height: 1.2;
+  font-family: inherit;
+}
+
+.brc-mtf-subtitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.brc-mtf-close {
+  background: none;
+  background-image: none;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+}
+
+.brc-mtf-close:hover {
+  color: #1a1a18;
+  background: #f0efea;
+  background-color: #f0efea;
+}
+
+.brc-mtf-search-wrap {
+  padding: 0 20px 16px;
+  flex-shrink: 0;
+}
+
+.brc-mtf-search {
+  width: 100%;
+  height: 40px;
+  border: 1.5px solid #e8e6df;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.brc-mtf-search::placeholder {
+  color: #9ca3af;
+}
+
+.brc-mtf-search:focus {
+  border-color: #c8c7c2;
+  outline: none;
+}
+
+.brc-mtf-list-wrap {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #e8e6df transparent;
+}
+
+.brc-mtf-list-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+
+.brc-mtf-list-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.brc-mtf-list-wrap::-webkit-scrollbar-thumb {
+  background: #e8e6df;
+  border-radius: 4px;
+}
+
+.brc-mtf-list-header {
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a18;
+  background: #f7f6f2;
+  border-top: 1px solid #f0efea;
+  border-bottom: 1px solid #f0efea;
+}
+
+.brc-mtf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.brc-mtf-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0efea;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a1a18;
+}
+
+.brc-mtf-list-item:last-child {
+  border-bottom: none;
+}
+
+.brc-mtf-list-item:hover {
+  background: #f7f6f2;
+}
+
+.brc-mtf-list-item.is-selected {
+  background: #f7f6f2;
+}
+
+.brc-mtf-folder-icon {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.brc-mtf-folder-name {
+  flex: 1;
+}
+
+.brc-mtf-check {
+  flex-shrink: 0;
+  visibility: hidden;
+  color: #1a1a18;
+}
+
+.brc-mtf-list-item.is-selected .brc-mtf-check {
+  visibility: visible;
+}
+
+.brc-mtf-empty {
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  list-style: none;
+}
+
+.brc-mtf-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #f0efea;
+  flex-shrink: 0;
+}
+
+.brc-mtf-btn-cancel {
+  height: 40px;
+  padding: 0 20px;
+  background: transparent;
+  background-image: none;
+  background-color: transparent;
+  border: 1.5px solid #e8e6df;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a18;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+  margin: 0;
+}
+
+.brc-mtf-btn-cancel:hover {
+  background: #f7f6f2;
+  background-color: #f7f6f2;
+}
+
+.brc-mtf-btn-move {
+  height: 40px;
+  padding: 0 20px;
+  background: #c8c7c2;
+  background-image: none;
+  background-color: #c8c7c2;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  cursor: default;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+  margin: 0;
+}
+
+.brc-mtf-btn-move:not([disabled]) {
+  background: #1a1a18;
+  background-color: #1a1a18;
+  cursor: pointer;
+}
+
+.brc-mtf-btn-move:not([disabled]):hover {
+  background: #2a2a26;
+  background-color: #2a2a26;
 }
 
 /* ---------- END NEW CSS --------------- */

@@ -38,7 +38,59 @@ $( document ).ready(function() {
     {
         CQ.Ext.util.Cookies.set('brc_act', $("#selAccount").val());
     }
+
+    // If we just reloaded after switching accounts, surface a toast.
+    try {
+        var switchedAlias = window.sessionStorage && sessionStorage.getItem('brc_account_switched');
+        if (switchedAlias) {
+            sessionStorage.removeItem('brc_account_switched');
+            brcToast('Switched to ' + switchedAlias);
+        }
+    } catch (e) { /* sessionStorage unavailable — toast skipped */ }
 });
+
+function showTableSpinner() {
+    $('#tableSpinner').removeAttr('hidden');
+}
+
+function hideTableSpinner() {
+    $('#tableSpinner').attr('hidden', '');
+}
+
+// BCON-142: visual indicator + clear-all for the filter panel.
+function isAnyFilterActive() {
+    var l = $('#label_list').val();
+    var f = $('#fldr_list').val();
+    var c = $('#filter_clips').is(':checked');
+    return (l && l !== 'all') || (f && f !== 'all') || c;
+}
+
+function updateFilterIndicator() {
+    var active = isAnyFilterActive();
+    $('#filterToggle').toggleClass('has-active-filters', active);
+    if (active) {
+        $('#filterClearAll').removeAttr('hidden');
+    } else {
+        $('#filterClearAll').attr('hidden', '');
+    }
+}
+
+function brcToast(message) {
+    var existing = document.getElementById('brcToast');
+    if (existing) existing.parentNode.removeChild(existing);
+    var $toast = $('<div class="brc-toast" id="brcToast" role="status" aria-live="polite">'
+        + '<span class="brc-toast-icon" aria-hidden="true">✓</span>'
+        + '<span class="brc-toast-msg"></span></div>');
+    $toast.find('.brc-toast-msg').text(message);
+    $('body').append($toast);
+    // Force reflow so the entry transition runs.
+    void $toast[0].offsetHeight;
+    $toast.addClass('is-visible');
+    setTimeout(function () {
+        $toast.removeClass('is-visible');
+        setTimeout(function () { $toast.remove(); }, 250);
+    }, 3000);
+}
 
 
 
@@ -46,6 +98,8 @@ $( document ).ready(function() {
 var $ACTIVE_TRACKS;
 var $sortable;
 var brc_admin = brc_admin || {};
+var _mtfAllFolders = [];
+var _mtfSelectedFolderId = null;
 
 
 //tUploadBar has the timer id for the upload progress bar, so it can be cancelled.  progressPos is used to keep track of the progress bar's position.
@@ -89,6 +143,108 @@ $(function () {
         window.location.reload();
     });
 
+    $('.brc-tab').on('click', function () {
+        var $tab = $(this);
+        // No early-return on already-active: programmatic `.click()` callers
+        // (e.g. createPlaylistSubmit() jumping back to the playlist list after
+        // creation) need the Load() to fire even if the tab is visually active.
+
+        searchVal = '';
+        $('.brc-tab').removeClass('is-active').attr('aria-selected', 'false');
+        $tab.addClass('is-active').attr('aria-selected', 'true');
+
+        // Reset the video-side filter UI when switching tabs so the
+        // active-filter dot doesn't lie about the unfiltered list we're
+        // about to load.
+        $('#label_list').val('all');
+        $('#fldr_list').val('all');
+        $('#filter_clips').prop('checked', false);
+        updateFilterIndicator();
+        $('#emptyState').attr('hidden', '');
+
+        showTableSpinner();
+
+        if ($tab.attr('id') === 'allVideos') {
+            Load(getAllVideosURL());
+        } else if ($tab.attr('id') === 'allPlaylists') {
+            Load(getAllPlaylistsURL());
+        }
+    });
+
+    // Account switcher popover
+    $('#accountTrigger').on('click', function (e) {
+        e.stopPropagation();
+        var $popover = $('#accountPopover');
+        var willOpen = $popover.is('[hidden]');
+        if (willOpen) {
+            $popover.removeAttr('hidden');
+        } else {
+            $popover.attr('hidden', '');
+        }
+        $(this).attr('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    $('#accountTrigger').on('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $(this).trigger('click');
+        }
+    });
+
+    $(document).on('click', function (e) {
+        var $popover = $('#accountPopover');
+        if ($popover.is('[hidden]')) return;
+        if (!$(e.target).closest('#accountPopover, #accountTrigger').length) {
+            $popover.attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false');
+        }
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape' && !$('#accountPopover').is('[hidden]')) {
+            $('#accountPopover').attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false').focus();
+        }
+    });
+
+    // Filter panel toggle
+    $('#filterToggle').on('click', function () {
+        var $panel = $('#filterPanel');
+        var willOpen = $panel.is('[hidden]');
+        if (willOpen) {
+            $panel.removeAttr('hidden');
+        } else {
+            $panel.attr('hidden', '');
+        }
+        $(this).attr('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    $('.brc-account-row').on('click', function () {
+        var $row = $(this);
+        if ($row.hasClass('is-active')) {
+            $('#accountPopover').attr('hidden', '');
+            $('#accountTrigger').attr('aria-expanded', 'false');
+            return;
+        }
+        var accountId = $row.attr('data-account-id');
+        var accountAlias = $row.attr('data-account-alias') || accountId;
+        // Set the brc_act cookie via CQ.Ext if available, otherwise fall
+        // back to document.cookie. Without this fallback the page would
+        // reload without the new cookie, leaving the user on the old
+        // account but showing a misleading "Switched to <alias>" toast.
+        if (CQ && CQ.Ext) {
+            CQ.Ext.util.Cookies.set('brc_act', accountId);
+        } else {
+            document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
+        }
+        try {
+            if (window.sessionStorage) {
+                sessionStorage.setItem('brc_account_switched', accountAlias);
+            }
+        } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
+        window.location.reload();
+    });
+
     $('.butDiv').hide();
 
     $('body').on('click', function(event) {
@@ -110,6 +266,28 @@ $(function () {
             // display all
             $('#tbData tr').show();
         }
+        // Surface the empty state if the clips filter hides everything.
+        var visibleRows = $('#tbData tr:visible').length;
+        if (visibleRows === 0 && event.currentTarget.checked) {
+            $('#emptyStateTitle').text('No clips in this list');
+            $('#emptyStateHint').text('Uncheck "Show only clips" to see all videos.');
+            $('#emptyState').removeAttr('hidden');
+        } else {
+            $('#emptyState').attr('hidden', '');
+        }
+        updateFilterIndicator();
+    });
+
+    $('#filterClearAll').on('click', function () {
+        $('#label_list').val('all');
+        $('#fldr_list').val('all');
+        $('#filter_clips').prop('checked', false);
+        $('#tbData tr').show();
+        // Hide the clips-empty-state immediately so it doesn't linger
+        // alongside the now-visible rows while Load() is in flight.
+        $('#emptyState').attr('hidden', '');
+        updateFilterIndicator();
+        Load(getAllVideosURL());
     });
 
     $('#tbData').on('click', '.edit-playlist', function(event) {
@@ -271,15 +449,37 @@ $(function () {
     })
 
     $('body').on('brc:checked', function(event) {
-        var inputTags = document.getElementById('listTable').getElementsByTagName('input');
+        // Scope to row checkboxes only — the legacy `getElementsByTagName('input')`
+        // walk picked up #search/#search_pl/#filter_clips after the BCON-121
+        // restructure put the filter panel inside #listTable, inflating selection
+        // counts and quietly toggling the clips filter on select-all.
         paging.selectedVideos = [];
-        var l = inputTags.length
-        for (var i = 2; i < l; i++) {
-            if (true == inputTags[i].checked) {
-                paging.selectedVideos.push(inputTags[i]);
+        $('#tbData input[type="checkbox"]').each(function () {
+            if (this.checked) {
+                paging.selectedVideos.push(this);
+                $(this).closest('tr').addClass('is-selected');
+            } else {
+                $(this).closest('tr').removeClass('is-selected');
             }
+        });
+        var n = paging.selectedVideos.length;
+        $('#bulkCount').text(n);
+        if (window.brcCurrentView === 'videos' && n > 0) {
+            $('#bulkActionBar').removeAttr('hidden');
+        } else {
+            $('#bulkActionBar').attr('hidden', '');
         }
-        $('.butDiv').toggle(paging.selectedVideos.length > 0);
+        // Original .butDiv kept for the playlist drill-down view (Remove From Playlist).
+        $('.butDiv').toggle(window.brcCurrentView === 'playlist' && n > 0);
+    });
+
+    $('#bulkCreatePlaylist').on('click', function () { createPlaylistBox(); });
+    $('#bulkMoveToFolder').on('click', function () { moveVideoToFolder(); });
+    $('#bulkClear').on('click', function () {
+        $('#tbData input[type="checkbox"]').prop('checked', false);
+        $('#checkToggle').prop('checked', false);
+        $('#tbData tr').removeClass('is-selected');
+        $('body').trigger('brc:checked');
     });
 
     $('body').on('click', '.variant', function(event) {
@@ -316,6 +516,35 @@ $(function () {
                 function(dialog) {
                     dialog.hide();
                 });
+    });
+
+    // Clear search button — Videos
+    $('#search').on('input', function() {
+        $('#searchClear').toggle(this.value !== '' && this.value !== 'Search Videos');
+    });
+
+    $('#searchClear').on('click', function() {
+        document.getElementById('search').value = '';
+        document.getElementById('selField').value = 'every_field';
+        $(this).hide();
+        searchVal = '';
+        searchField = 'every_field';
+        Load(getAllVideosURL());
+    });
+
+    // Clear search button — Playlists
+    $('#search_pl').on('input', function() {
+        $('#searchClear_pl').toggle(this.value !== '' && this.value !== 'Search Playlists');
+    });
+
+    $('#searchClear_pl').on('click', function() {
+        document.getElementById('search_pl').value = '';
+        document.getElementById('selField_pl').value = 'every_field';
+        $(this).hide();
+        togglePlSearchHint('every_field');
+        searchVal = '';
+        searchField = 'every_field';
+        Load(getAllPlaylistsURL());
     });
 
 });
@@ -414,8 +643,123 @@ function suggestVideosForPlaylist(data) {
 }
 
 function moveVideoToFolder() {
-    $('.folder-selector').toggleClass('open');
+    openMoveToFolderModal();
 }
+
+function openMoveToFolderModal() {
+    var count = paging.selectedVideos.length;
+    $('#mtfSubtitle').text(count + ' video' + (count !== 1 ? 's' : '') + ' selected');
+    $('#mtfSearch').val('');
+    _mtfSelectedFolderId = null;
+    $('#mtfMove').prop('disabled', true);
+
+    if (_mtfAllFolders.length > 0) {
+        renderMtfFolders(_mtfAllFolders);
+    } else {
+        $('#mtfFolderList').html('<li class="brc-mtf-empty">Loading\u2026</li>');
+        $.ajax({
+            type: 'GET',
+            url: '/bin/brightcove/api.js',
+            data: { a: 'list_folders', account_id: $('#selAccount').val(), callback: 'mtfFolderLoadCallback' },
+            async: true
+        });
+    }
+
+    $('body').addClass('brc-mtf-open');
+    $('#moveToFolderModal').removeAttr('hidden');
+}
+
+function mtfFolderLoadCallback(data) {
+    _mtfAllFolders = (data && data.items) ? data.items : [];
+    renderMtfFolders(_mtfAllFolders);
+}
+
+function closeMoveToFolderModal() {
+    $('#moveToFolderModal').attr('hidden', '');
+    $('body').removeClass('brc-mtf-open');
+    _mtfSelectedFolderId = null;
+}
+
+function renderMtfFolders(folders) {
+    var q = $('#mtfSearch').val().toLowerCase();
+    var filtered = q ? folders.filter(function (f) {
+        return f.name.toLowerCase().indexOf(q) !== -1;
+    }) : folders;
+
+    var $list = $('#mtfFolderList').empty();
+
+    if (filtered.length === 0) {
+        $list.html('<li class="brc-mtf-empty">No folders found.</li>');
+        return;
+    }
+
+    var folderSvg = '<svg class="brc-mtf-folder-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">'
+        + '<path d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5H13.5A1 1 0 0 1 14.5 6V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z" stroke="#6b7280" stroke-width="1.25"/>'
+        + '</svg>';
+    var checkSvg = '<svg class="brc-mtf-check" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">'
+        + '<path d="M3 8l3.5 3.5L13 5" stroke="#1a1a18" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+        + '</svg>';
+
+    $.each(filtered, function (i, folder) {
+        var isSelected = folder.id === _mtfSelectedFolderId;
+        var $li = $('<li>')
+            .addClass('brc-mtf-list-item' + (isSelected ? ' is-selected' : ''))
+            .attr('data-folder-id', folder.id)
+            .append($(folderSvg))
+            .append($('<span class="brc-mtf-folder-name">').text(folder.name))
+            .append($(checkSvg));
+        $list.append($li);
+    });
+}
+
+$(function () {
+    $(document).on('click', '.brc-mtf-list-item', function () {
+        var folderId = $(this).attr('data-folder-id');
+        if (_mtfSelectedFolderId === folderId) {
+            _mtfSelectedFolderId = null;
+            $(this).removeClass('is-selected');
+            $('#mtfMove').prop('disabled', true);
+        } else {
+            _mtfSelectedFolderId = folderId;
+            $('.brc-mtf-list-item').removeClass('is-selected');
+            $(this).addClass('is-selected');
+            $('#mtfMove').prop('disabled', false);
+        }
+    });
+
+    $('#mtfSearch').on('input', function () {
+        renderMtfFolders(_mtfAllFolders);
+    });
+
+    $('#mtfClose, #mtfCancel').on('click', function () {
+        closeMoveToFolderModal();
+    });
+
+    $('#moveToFolderModal').on('click', function (e) {
+        if (e.target === this) closeMoveToFolderModal();
+    });
+
+    $('#mtfMove').on('click', function () {
+        if ($(this).prop('disabled') || !_mtfSelectedFolderId) return;
+        var folderId = _mtfSelectedFolderId;
+        var accountId = $('#selAccount').val();
+        $.each(paging.selectedVideos, function (i, checkbox) {
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: {
+                    a: 'move_video_to_folder',
+                    folder: folderId,
+                    video: $(checkbox).val(),
+                    account_id: accountId
+                },
+                async: true
+            });
+        });
+        closeMoveToFolderModal();
+        $('#fldr_list').change();
+    });
+});
 
 function getMoveVideoToFolderUrl(video_id, folder_id) {
     loadStart();
@@ -455,6 +799,7 @@ function loadFolders() {
             console.log('search videos by folder=' + selected);
             Load(getFolderListingUrl(selected));
         }
+        updateFilterIndicator();
     });
 
     // now make the API call to load the folder options
@@ -477,6 +822,7 @@ function loadFolders() {
 function loadFolderCallback(data) {
     var $folder_select = $('#fldr_list');
     var $move_folder_list = $('.folder-selector .menu-options');
+    _mtfAllFolders = (data && data.items) ? data.items : [];
     $.each(data.items, function (i, n) {
         $folder_select
             .append($('<option>', { value : n.id }).text(n.name));
@@ -540,6 +886,7 @@ function loadLabels() {
             console.log('search videos by label=' + selected);
             Load(getLabelListingUrl(selected));
         }
+        updateFilterIndicator();
     });
 
     // now make the API call to load the folder options
@@ -715,6 +1062,12 @@ function sort(object) {
 }
 function buildMainVideoList(title) {
 
+    window.brcCurrentView = 'videos';
+    paging.selectedVideos = [];
+    $('#bulkActionBar').attr('hidden', '');
+    $('#bulkCount').text(0);
+    $('#checkToggle').prop('checked', false);
+
     //Wipe out the old results
     $("#tbData").empty();
     if (!$("#nameCol").hasClass("ASC") && !$("#nameCol").hasClass("DESC") && !$("#nameCol").hasClass("NONE")) {
@@ -722,13 +1075,15 @@ function buildMainVideoList(title) {
         $("#nameCol").addClass("ASC").attr("data-sortType", "");
     }
     // Display video count
-    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length + " videos";
-    document.getElementById('nameCol').innerHTML = "Video Name<span class='order'></span>";
+    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length;
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = title;
     document.getElementById('search').value = searchVal ? searchVal : "Search Videos";
+    $('#searchClear').toggle(!!searchVal && searchVal !== 'Search Videos');
     document.getElementById('tdMeta').style.display = "none";
-    document.getElementById('searchDiv').style.display = "inline";
+    document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
+    $('#filterToggle').show();
 
     document.getElementById('checkToggle').style.display = "inline";
     $("span[name=buttonRow]").show();
@@ -748,7 +1103,7 @@ function buildMainVideoList(title) {
             "</td><td>"
             + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear() + "\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "</td></tr>"
@@ -773,26 +1128,55 @@ function buildMainVideoList(title) {
     //if there are videos, show the metadata window, else hide it
     if (oCurrentVideoList.length > 0) {
         if (window.selectedVideoId) showMetaDataByVideoID(window.selectedVideoId);
+        $('#emptyState').attr('hidden', '');
     }
     else {
         closeBox("tdMeta");
+        var hasFilter = (typeof searchVal !== 'undefined' && searchVal && searchVal !== 'Search Videos');
+        $('#emptyStateTitle').text(hasFilter ? 'No videos match your search' : 'No videos found');
+        $('#emptyStateHint').text(hasFilter ? 'Try clearing the search or adjusting your filters.' : 'Sync the database or add videos in Brightcove.');
+        $('#emptyState').removeAttr('hidden');
     }
+
+    // Re-apply the DOM-only clips filter if the checkbox is still active —
+    // any folder/label change rebuilds rows fresh and would otherwise show
+    // all videos despite the clips-only indicator still being on.
+    if ($('#filter_clips').is(':checked')) {
+        $('#tbData tr').hide();
+        $('#tbData tr.state-clip').show();
+        if ($('#tbData tr:visible').length === 0 && oCurrentVideoList.length > 0) {
+            $('#emptyStateTitle').text('No clips in this list');
+            $('#emptyStateHint').text('Uncheck "Show only clips" to see all videos.');
+            $('#emptyState').removeAttr('hidden');
+        }
+    }
+
+    hideTableSpinner();
 }
 
 function buildPlaylistList() {
+
+    window.brcCurrentView = 'playlists';
+    $('#bulkActionBar').attr('hidden', '');
 
     //Wipe out the old results
     $("#tbData").empty();
     $("#trHeader th.sortable").removeClass("NONE").removeClass("ASC").removeClass("DESC");
 
     // Display Playlist count
-    document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length + " playlists";
-    document.getElementById('nameCol').innerHTML = "Playlist Name";
+    document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length;
+    document.getElementById('nameCol').innerHTML = "Name";
     document.getElementById('headTitle').innerHTML = "All Playlists";
-    document.getElementById('search_pl').value = "Search Playlists";
+    document.getElementById('search_pl').value = searchVal ? searchVal : "Search Playlists";
+    $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');
     document.getElementById('tdMeta').style.display = "none";
     document.getElementById('searchDiv').style.display = "none";
-    document.getElementById('searchDiv_pl').style.display = "inline";
+    document.getElementById('searchDiv_pl').style.display = "inline-flex";
+    togglePlSearchHint(document.getElementById('selField_pl').value);
+    // Filter panel (LABELS / FOLDER / CLIPS ONLY) is video-only.
+    $('#filterToggle').hide();
+    $('#filterPanel').attr('hidden', '');
+    $('#filterToggle').attr('aria-expanded', 'false');
     document.getElementById('checkToggle').style.display = "none";
 	document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
@@ -809,7 +1193,7 @@ function buildPlaylistList() {
             "</a></td><td>\
                 <center>---</center>\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
@@ -827,6 +1211,16 @@ function buildPlaylistList() {
         $(this).removeClass("hover");
     });
 
+    if (oCurrentPlaylistList.length > 0) {
+        $('#emptyState').attr('hidden', '');
+    } else {
+        var hasFilter = (typeof searchVal !== 'undefined' && searchVal && searchVal !== 'Search Playlists');
+        $('#emptyStateTitle').text(hasFilter ? 'No playlists match your search' : 'No playlists found');
+        $('#emptyStateHint').text(hasFilter ? 'Try clearing the search.' : 'Create a playlist in Brightcove to see it here.');
+        $('#emptyState').removeAttr('hidden');
+    }
+
+    hideTableSpinner();
 }
 function getPlaylist(idx) {
     oCurrentPlaylistList = oCurrentPlaylistList[idx];
@@ -855,15 +1249,18 @@ function createSubPlaylist() {
 }
 
 function showPlaylist() {
+    window.brcCurrentView = 'playlist';
+    $('#bulkActionBar').attr('hidden', '');
+
     //Wipe out the old results
     $("#tbData").empty();
 
-    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length + " videos";
-    //$("#divVideoCount").html(oCurrentVideoList.length + " videos");
-    document.getElementById('nameCol').innerHTML = "Video Name";
+    document.getElementById('divVideoCount').innerHTML = oCurrentVideoList.length;
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = oCurrentPlaylistList.name;
     document.getElementById('search').value = "Search Videos";
-    document.getElementById('searchDiv').style.display = "inline"
+    $('#searchClear').hide();
+    document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
 
     document.getElementById('checkToggle').style.display = "inline"
@@ -886,7 +1283,7 @@ function showPlaylist() {
             "</td><td>"
             + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear() + "\
             </td><td>"
-            + ((n.reference_id) ? n.reference_id : '') +
+            + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
             "</td></tr>"
@@ -908,9 +1305,13 @@ function showPlaylist() {
 
     if (oCurrentVideoList.length > 0) {
         showMetaData(0);
+        $('#emptyState').attr('hidden', '');
     }
     else {
         closeBox("tdMeta");
+        $('#emptyStateTitle').text('No videos in this playlist');
+        $('#emptyStateHint').text('Add videos to this playlist in Brightcove to see them here.');
+        $('#emptyState').removeAttr('hidden');
     }
 
 }
@@ -1192,6 +1593,13 @@ function syncDB()
         {
             syncEnd();
             data = $.parseJSON(data);
+        },
+        error: function () {
+            // Without this, a failed sync leaves #syncdbutton stuck in
+            // .is-loading + disabled forever (the old loadEnd() reset
+            // the button as a side effect; that side effect was removed
+            // when loadEnd stopped clobbering the new SVG/label markup).
+            syncEnd();
         }
     });
 }
@@ -1850,18 +2258,17 @@ function loadStart()
 function loadEnd()
 {
     $('html,body').scrollTop(0);
-    $("#syncdbutton").css("color", "#333333");
-    $("#syncdbutton").html('SYNC DATABASE');
-    $("#syncdbutton").prop('disabled', false);
     $("#loading").slideUp("fast");
     $(".loading").hide();
+    // Defensive: ensure the scoped tab spinner clears on error paths too,
+    // not only on buildMainVideoList / buildPlaylistList success.
+    hideTableSpinner();
 }
 
 function syncStart()
 {
-    $("#syncdbutton").css("color", "#6D8CAE");
-    $("#syncdbutton").html('LOADING SYNC');
-    $("#syncdbutton").prop('disabled', true);
+    $("#syncdbutton").addClass('is-loading').prop('disabled', true);
+    $("#syncdbutton .brc-sync-btn-label").text('Loading sync');
     $("#loading").slideDown("fast");
     $(".loading").show();
 
@@ -1872,6 +2279,8 @@ function syncStart()
 
 function syncEnd() {
     $(".syncingMsg").fadeOut();
+    $("#syncdbutton").removeClass('is-loading').prop('disabled', false);
+    $("#syncdbutton .brc-sync-btn-label").text('Sync database');
     loadEnd();
     $(".loadingMsg").hide();
     $(".loading").hide();
@@ -1880,28 +2289,30 @@ function syncEnd() {
 
 
 function createPlaylistBox() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input'),
-        form = document.getElementById('createPlaylistForm'),
-        table = document.getElementById("createPlstVideoTable"),
-        idx = 1,
-        l = inputTags.length;
+    var form = document.getElementById('createPlaylistForm'),
+        idx = 1;
 
     form.playlist.value = '';
 
-    for (var i = 3; i < l; i++) {
-        if (inputTags[i].checked) {
-            $("#createPlstVideoTable").append(
-                '<tr ><td>' + oCurrentVideoList[i - 4].name +
-                '</td><td style="width: 25%;" >' + oCurrentVideoList[i - 4].id + '</td></tr>'
-            );
+    // Iterate row checkboxes directly. Each row checkbox's `id` attribute
+    // is the matching index in oCurrentVideoList (set by buildMainVideoList).
+    $('#tbData input[type="checkbox"]').each(function () {
+        if (!this.checked) return;
+        var videoIdx = parseInt(this.id, 10);
+        var v = oCurrentVideoList[videoIdx];
+        if (!v) return;
+        $("#createPlstVideoTable").append(
+            '<tr ><td>' + v.name +
+            '</td><td style="width: 25%;" >' + v.id + '</td></tr>'
+        );
 
-            if (1 != idx) {
-                form.playlist.value += ',';
-            }
-            form.playlist.value += oCurrentVideoList[i - 4].id;
-            idx++;
+        if (1 != idx) {
+            form.playlist.value += ',';
         }
-    }
+        form.playlist.value += v.id;
+        idx++;
+    });
+
     if (1 == idx) {
         alert("Please select at least one video to create a playlist.");
         return;
@@ -1972,13 +2383,12 @@ function doPageList(total, type) {
 	if (type !== "Playlists") {
 	    if (total > paging.size) {
 	        var numOpt = Math.ceil(total / paging.size);
-	        var select = document.getElementsByName("selPageN");
 	        var options = "";
 	        for (var i = 0; i < numOpt; i++) {
 	            options += '<option style="width:100%" id="' + i + '">';
 	            if (paging.generic == i) {
 	                num = (numOpt - 1 == i) ? (total - i * paging.size) : paging.size;
-	                document.getElementById('divVideoCount').innerHTML = num + ' ' + type + ' (of ' + total + ')';
+	                document.getElementById('divVideoCount').innerHTML = num;
 	            }
 	            if (numOpt - 1 == i) {
 	                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + total + ' )</option>';
@@ -1995,12 +2405,9 @@ function doPageList(total, type) {
 	            }
 	        });
 	        $("div[name=pageDiv]").show();
-	        document.getElementById('tdOne').appendChild(document.getElementById('searchDiv'));
 	    } else {
-	        document.getElementById('divVideoCount').innerHTML = total + ' ' + type + ' (of ' + total + ' )';
+	        document.getElementById('divVideoCount').innerHTML = total;
 	        $("div[name=pageDiv]").hide();
-	        //If there's no page selector, move the search bar down so it doesn't stick out ofplace
-	        document.getElementById('tdTwo').appendChild(document.getElementById('searchDiv'));
 	    }
 	}
 }
@@ -2011,25 +2418,12 @@ function changePage(num) {
 }
 
 function checkCheck() {
-    var count = 1;
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var checkedTags = [];
-    var selChek = document.getElementById('checkToggle');
-    var l = inputTags.length
-    for (var i = 2; i < l; i++) {
-        if (true == inputTags[i].checked) {
-            checkedTags.push(inputTags[i]);
-            count++;
-        } else if ((i - count) > 1) {//If one checkbox was skipped, then the total has to be < l, so uncheck selChek  and return.
-            selChek.checked = false;
-            return;
-        }
-    }
-    if (selChek.checked == true && count < l) {
-        selChek.checked = false;
-    } else if (false == selChek.checked && count >= l - 1) {
-        selChek.checked = true;
-    }
+    // Master #checkToggle reflects "are all row checkboxes checked?"
+    var $rows = $('#tbData input[type="checkbox"]');
+    var total = $rows.length;
+    var checked = $rows.filter(':checked').length;
+    document.getElementById('checkToggle').checked = (total > 0 && checked === total);
+    $('body').trigger('brc:checked');
 }
 
 function toggleSelect(check) {
@@ -2038,22 +2432,15 @@ function toggleSelect(check) {
     } else {
         checkNone();
     }
+    $('body').trigger('brc:checked');
 }
 
 function checkAll() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var l = inputTags.length;
-    for (var i = 2; i < l; i++) {
-        inputTags[i].checked = true;
-    }
+    $('#tbData input[type="checkbox"]').prop('checked', true);
 }
 
 function checkNone() {
-    var inputTags = document.getElementById('listTable').getElementsByTagName('input');
-    var l = inputTags.length;
-    for (var i = 2; i < l; i++) {
-        inputTags[i].checked = false;
-    }
+    $('#tbData input[type="checkbox"]').prop('checked', false);
 }
 
 //for example write functions are disabled, so display this message:

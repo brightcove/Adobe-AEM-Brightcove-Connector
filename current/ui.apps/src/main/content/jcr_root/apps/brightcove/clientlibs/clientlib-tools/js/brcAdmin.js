@@ -35,6 +35,10 @@
 var brc_admin = brc_admin || {},
     apiLocation = brc_admin.apiProxy; //This should be set to point to proxy.jsp on your server
 
+function togglePlSearchHint(field) {
+    var hint = document.getElementById('pl_search_hint');
+    if (hint) hint.style.display = (field === 'find_playlist_by_name') ? 'block' : 'none';
+}
 
 //Default Fields
 //specifying a subset of fields cuts down on the amount of data sent over the wire.  If you want to access another field, include it here.
@@ -107,7 +111,15 @@ function getFindPlaylistsURL() {
     paging.allPlaylists = (paging.currentFunction == getAllPlaylistsURL) ? paging.generic : paging.allPlaylists;
     paging.currentFunction = getAllPlaylistsURL;
     if (searchVal != "" && searchVal != "Search Playlists") {
-        if (searchField == "find_playlist_by_id") {
+        if (searchField == "every_field") {
+            return apiLocation +
+                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
+                + '&limit=' + paging.size + '&start=' + paging.allPlaylists
+        } else if (searchField == "find_playlist_by_name") {
+            return apiLocation +
+                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=name:' + searchVal
+                + '&limit=' + paging.size + '&start=' + paging.allPlaylists
+        } else if (searchField == "find_playlist_by_id") {
             return apiLocation +
                 '.js?isID=true&account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists

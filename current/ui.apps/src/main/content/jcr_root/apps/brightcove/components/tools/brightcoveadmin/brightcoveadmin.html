@@ -25,27 +25,53 @@
         <body>
             <div id="brightcove">
                 <!--Navbar-->
-                <div class="navbar">
-                    <div class="navbar-inner">
-                        <div class="container">
-                            <ul class="nav nav-pills visible-lg-inline-block">
-                                <li class="active">
-                                    <a id="allVideos" onclick='searchVal="";$(this).parent("li").parent("ul").children("li").attr("class","");$(this).parent("li").attr("class","active");Load(getAllVideosURL());'>All Videos</a>
-                                </li>
-                                <li>
-                                    <a id="allPlaylists" onclick='searchVal="";$(this).parent("li").parent("ul").children("li").attr("class","");$(this).parent("li").attr("class","active");Load(getAllPlaylistsURL())'>All Playlists</a>
-                                </li>
-                            </ul>
-                            <div class="pull-right">
-                                <div>
-                                    <button type="button" id="syncdbutton" alt="Brightcove Dataload" onClick="syncDB()">Sync Database</button>
-                                    <img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/logo-2022.svg" alt="Brightcove Console" width="125">
-                                </div>
-                            </div>
-
-                        </div>
+                <header class="brc-header">
+                    <div class="brc-tabs" role="tablist">
+                        <button type="button" id="allVideos" class="brc-tab is-active" role="tab" aria-selected="true">Videos</button>
+                        <button type="button" id="allPlaylists" class="brc-tab" role="tab" aria-selected="false">Playlists</button>
                     </div>
-                </div>
+                    <h1 class="brc-title">Brightcove Admin</h1>
+                    <div class="brc-header-actions">
+                        <button type="button" id="syncdbutton" class="brc-sync-btn" alt="Brightcove Dataload" onClick="syncDB()">
+                            <svg class="brc-sync-icon" width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+                                <path d="M14 8a6 6 0 1 1-1.757-4.243M14 2v4h-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="brc-sync-btn-label">Sync database</span>
+                        </button>
+                        <div class="brc-account-trigger" id="accountTrigger" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false" aria-controls="accountPopover">
+                            <div class="brc-account-info" data-sly-list.currentService="${adminPage.configurationServices}">
+                                <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                    <div class="brc-account-name">${currentService.accountAlias}</div>
+                                    <div class="brc-account-id">${currentService.accountID}</div>
+                                </sly>
+                            </div>
+                            <span class="brc-account-caret" aria-hidden="true">⌄</span>
+                        </div>
+                        <div class="brc-account-popover" id="accountPopover" role="menu" hidden>
+                            <div class="brc-account-popover-header">SWITCH ACCOUNT</div>
+                            <div class="brc-account-popover-list" data-sly-list.currentService="${adminPage.configurationServices}">
+                                <button type="button" class="brc-account-row${currentService.accountID == adminPage.selectedAccount ? ' is-active' : ''}"
+                                        data-account-id="${currentService.accountID}"
+                                        data-account-alias="${currentService.accountAlias}"
+                                        role="menuitem">
+                                    <div class="brc-account-row-name">${currentService.accountAlias}</div>
+                                    <div class="brc-account-row-id">${currentService.accountID}</div>
+                                    <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                        <div class="brc-account-row-status">✓ Active</div>
+                                    </sly>
+                                </button>
+                            </div>
+                        </div>
+                        <select data-sly-list.currentService="${adminPage.configurationServices}" id="selAccount" name="selAccount" hidden>
+                            <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
+                                <option value="${currentService.accountID}" class="selected" selected="selected">${currentService.accountAlias} (${currentService.accountID})</option>
+                            </sly>
+                            <sly data-sly-test="${currentService.accountID != adminPage.selectedAccount}">
+                                <option value="${currentService.accountID}">${currentService.accountAlias} (${currentService.accountID})</option>
+                            </sly>
+                        </select>
+                    </div>
+                </header>
                 <!--(end) Navbar-->
 
                 <div id="divConsole">
@@ -54,71 +80,97 @@
                             <!-- Start center column -->
                             <td width="75%" valign="top">
                                 <table id="listTable" width="100%" cellspacing="0" callpadding="0">
-                                    <tr>
-                                        <div id="accountDiv" style="float:right;padding:5px;
-                                        margin-bottom: 10px;">
-                                            <select data-sly-list.currentService="${adminPage.configurationServices}" id='selAccount' name="selAccount" style="position: relative;top: 5px;">
-                                                <sly data-sly-test="${currentService.accountID == adminPage.selectedAccount}">
-                                                    <option value="${currentService.accountID}" class="selected" selected="selected">${currentService.accountAlias} (${currentService.accountID})</option>
-                                                </sly>
-                                                <sly data-sly-test="${currentService.accountID != adminPage.selectedAccount}">
-                                                    <option value="${currentService.accountID}">${currentService.accountAlias} (${currentService.accountID})</option>
-                                                </sly>
-                                            </select>
-                                        </div>
-                                    </tr>
                                     <tr class="trCenterHeader">
                                         <td id="tdOne">
-                                            <div class="result-count pull-left">
-                                                <div id="headTitle" style="font-weight:bold">All Videos</div>
-                                                <div id="divVideoCount" ></div>
+                                            <div class="brc-title-row">
+                                                <div class="brc-title-row-left">
+                                                    <h2 id="headTitle" class="brc-list-title">All Videos</h2>
+                                                    <div id="divVideoCount" class="brc-count-badge"></div>
+                                                    <button type="button" id="filterToggle" class="brc-filter-btn" aria-expanded="false" aria-controls="filterPanel" title="Filter">
+                                                        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                                                            <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div id="bulkActionBar" class="brc-bulk-bar" hidden>
+                                                        <span class="brc-bulk-bar-divider" aria-hidden="true"></span>
+                                                        <span class="brc-bulk-bar-count"><span id="bulkCount">0</span> selected</span>
+                                                        <button type="button" id="bulkCreatePlaylist" class="brc-bulk-bar-btn">Create Playlist</button>
+                                                        <span class="brc-bulk-move-wrapper">
+                                                            <button type="button" id="bulkMoveToFolder" class="brc-bulk-bar-btn menuToggle">Move to Folder</button>
+                                                            <div class="folder-selector menu" data-bulk="true">
+                                                                <ul class="menu-options">
+                                                                    <li class="menu-option remove" data-folder-id="none">[No Folder]</li>
+                                                                </ul>
+                                                            </div>
+                                                        </span>
+                                                        <button type="button" id="bulkClear" class="brc-bulk-bar-clear">Clear</button>
+                                                    </div>
+                                                </div>
+                                                <div class="brc-title-row-right">
+                                                    <div id="searchDiv" class="brc-pill-search">
+                                                        <span class="brc-pill-search-icon" aria-hidden="true">
+                                                            <svg width="14" height="14" viewBox="0 0 16 16">
+                                                                <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                                                <path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                            </svg>
+                                                        </span>
+                                                        <input id="search" class="brc-pill-search-input" type="text" placeholder="Search video by name or ID" value="Search Videos" onClick="if(this.value==='Search Videos') this.value='';">
+                                                        <button type="button" id="searchClear" class="brc-pill-search-clear" style="display:none;" aria-label="Clear search">&#x2715;</button>
+                                                        <select id="selField" name="selField" class="brc-pill-search-field">
+                                                            <option value="every_field">Every field</option>
+                                                            <option value="name">Name</option>
+                                                            <option value="reference_id">Reference ID</option>
+                                                            <option value="tags">Tags</option>
+                                                            <option value="text">Text</option>
+                                                        </select>
+                                                        <button id="searchBut" class="brc-pill-search-go"
+                                                                onClick="searchVal=document.getElementById('search').value;searchField=document.getElementById('selField').value;Load(searchVideoURL())">Search</button>
+                                                    </div>
+                                                    <div id="searchDiv_pl" class="brc-pill-search" style="display:none;">
+                                                        <span class="brc-pill-search-icon" aria-hidden="true">
+                                                            <svg width="14" height="14" viewBox="0 0 16 16">
+                                                                <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                                                <path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                            </svg>
+                                                        </span>
+                                                        <input id="search_pl" class="brc-pill-search-input" type="text" placeholder="Search playlist by name or ID" value="Search Playlists" onClick="if(this.value==='Search Playlists') this.value='';">
+                                                        <button type="button" id="searchClear_pl" class="brc-pill-search-clear" style="display:none;" aria-label="Clear search">&#x2715;</button>
+                                                        <select id="selField_pl" name="selField_pl" class="brc-pill-search-field" onchange="togglePlSearchHint(this.value)">
+                                                            <option value="every_field">Every field</option>
+                                                            <option value="find_playlist_by_name">Name</option>
+                                                            <option value="find_playlist_by_id">Playlist ID</option>
+                                                            <option value="find_playlist_by_reference_id">Reference ID</option>
+                                                        </select>
+                                                        <button id="searchBut_pl" class="brc-pill-search-go"
+                                                                onClick="searchVal=document.getElementById('search_pl').value;searchField=document.getElementById('selField_pl').value;Load(getFindPlaylistsURL())">Search</button>
+                                                    </div>
+                                                </div>
                                             </div>
-
-                                            <div id="searchDiv" style="float:right;padding:5px">
-
-                                                <label class="filter_clips" for="filter_clips" style="display: inline-block; margin-right: 5px;">
-                                                    <input type="checkbox" id="filter_clips">
-                                                    <span style="position: relative;top: -2px; margin-left: 2px;">Show Only Clips</span>
-                                                </label>
-
-                                                <select id='label_list' name="label_list" >
-                                                    <option value="all">All Labels</option>
-                                                </select>
-
-                                                <select id='fldr_list' name="fldr_list" >
-                                                    <option value="all">All Folders</option>
-                                                </select>
-
-                                                <input id="search" type="text" value="Search Video" onClick="this.value=''">
-                                                <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
-                                                <select id='selField' name="selField" >
-                                                    <option value="every_field">In Every Field</option>
-                                                    <option value="name">In Name</option>
-                                                    <option value="reference_id">In Reference ID</option>
-                                                    <option value="tags">In Tags</option>
-                                                    <option value="text">In Text</option>
-                                                </select>
-                                                <button id="searchBut"
-                                                        onClick="searchVal=document.getElementById('search').value;searchField=document.getElementById('selField').value;Load(searchVideoURL())">
-                                                    Search
-                                                </button>
+                                            <div id="filterPanel" class="brc-filter-panel" hidden>
+                                                <div class="brc-filter-section">
+                                                    <div class="brc-filter-label">LABELS</div>
+                                                    <select id="label_list" name="label_list" class="brc-filter-select">
+                                                        <option value="all">All Labels</option>
+                                                    </select>
+                                                </div>
+                                                <div class="brc-filter-section">
+                                                    <div class="brc-filter-label">FOLDER</div>
+                                                    <select id="fldr_list" name="fldr_list" class="brc-filter-select">
+                                                        <option value="all">All Folders</option>
+                                                    </select>
+                                                </div>
+                                                <div class="brc-filter-section">
+                                                    <div class="brc-filter-label">CLIPS ONLY</div>
+                                                    <label class="brc-filter-checkbox" for="filter_clips">
+                                                        <input type="checkbox" id="filter_clips">
+                                                        <span>Show only clips</span>
+                                                    </label>
+                                                </div>
+                                                <div class="brc-filter-section brc-filter-section--clear">
+                                                    <button type="button" id="filterClearAll" class="brc-filter-clear-all" hidden>Clear all filters</button>
+                                                </div>
                                             </div>
-                                            <div id="searchDiv_pl" style="float:right;padding:5px;display:none;">
-                                                <!--<button id="searchBut" class="btn-create-playlist">
-                                                    Create Playlist
-                                                </button>-->
-                                                <input id="search_pl" type="text" value="Search Playlists" onClick="this.value=''"
-                                                       style="position: relative;top: 5px; height: 30px; margin-left: 15px;">
-                                                <!--Store the search query in searchBut.value so we can use it as the title of the page once the results are returned.  See searchVideoCallBack -->
-                                                <select id='selField_pl' name="selField_pl" style="position: relative;top: 5px;">
-                                                    <option value="find_playlist_by_id">In Playlist ID</option>
-                                                    <option value="find_playlist_by_reference_id">In Reference ID</option>
-                                                </select>
-                                                <button id="searchBut" onClick="searchVal=document.getElementById('search_pl').value;searchField=document.getElementById('selField_pl').value;Load(getFindPlaylistsURL())">
-                                                    Search
-                                                </button>
-                                            </div>
-
+                                            <div id="pl_search_hint" class="brc-pl-search-hint" style="display:none;">Matches whole words only (e.g. "Smart" finds "Smart Playlist")</div>
                                         </td>
                                     </tr>
 
@@ -146,18 +198,27 @@
                                         <td>
                                             <!-- Start Main list -->
                                             <!-- buildMainVideoList, buildPlaylistList and showPlaylist populate this section, -->
+                                            <div class="brc-table-wrapper">
+                                                <div id="tableSpinner" class="brc-table-spinner" hidden>
+                                                    <span class="brc-spinner" aria-hidden="true"></span>
+                                                </div>
+                                                <div id="emptyState" class="brc-empty-state" hidden>
+                                                    <p id="emptyStateTitle" class="brc-empty-state-title">No videos match your search or filters</p>
+                                                    <p id="emptyStateHint" class="brc-empty-state-hint">Try clearing the search or adjusting your filters.</p>
+                                                </div>
                                             <table id="tblMainList" cellpadding="3" cellspacing="0">
                                                 <thead>
                                                 <tr id="trHeader">
                                                     <th id="checkCol" class="tdMainTableHead" style="border-right:0px;color:#e5e5e5;font-size:1px"><input type="checkbox" onclick="toggleSelect(this)" id="checkToggle"/>?</th>
-                                                    <th id="nameCol" class="tdMainTableHead sortable ASC" style="border-left:0px" data-sortType="" data-sortBy="name" onclick="sort(this)">Video Name <span class='order'></span></th>
+                                                    <th id="nameCol" class="tdMainTableHead sortable ASC" style="border-left:0px" data-sortType="" data-sortBy="name" onclick="sort(this)">Name<span class='order'></span></th>
                                                     <th id="lastUpdated" class="tdMainTableHead sortable NONE" data-sortType="-" data-sortBy="updated_at" onclick="sort(this)">Last Updated <span class='order'></span></th>
-                                                    <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="reference_id" onclick="sort(this)">Reference Id <span class='order'></span></th>
-                                                    <th class="tdMainTableHead">ID</th>
+                                                    <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="reference_id" onclick="sort(this)">Reference ID <span class='order'></span></th>
+                                                    <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="id" onclick="sort(this)">ID <span class='order'></span></th>
                                                 </tr>
                                                 </thead>
                                                 <tbody id="tbData"></tbody>
                                             </table>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -383,6 +444,30 @@
                             <div class="pml-dialog_footer">
                                 <button class="btn btn-primary">Confirm</button>
                                 <button class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Move to Folder Modal (BCON-146) -->
+                    <div id="moveToFolderModal" class="brc-mtf-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="mtfTitle">
+                        <div class="brc-mtf-container">
+                            <div class="brc-mtf-header">
+                                <div class="brc-mtf-title-group">
+                                    <h2 class="brc-mtf-title" id="mtfTitle">Move to Folder</h2>
+                                    <p class="brc-mtf-subtitle" id="mtfSubtitle"></p>
+                                </div>
+                                <button type="button" class="brc-mtf-close" id="mtfClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-mtf-search-wrap">
+                                <input type="text" id="mtfSearch" class="brc-mtf-search" placeholder="Search Folder" autocomplete="off">
+                            </div>
+                            <div class="brc-mtf-list-wrap">
+                                <div class="brc-mtf-list-header">All Folders</div>
+                                <ul class="brc-mtf-list" id="mtfFolderList"></ul>
+                            </div>
+                            <div class="brc-mtf-footer">
+                                <button type="button" class="brc-mtf-btn-cancel" id="mtfCancel">Cancel</button>
+                                <button type="button" class="brc-mtf-btn-move" id="mtfMove" disabled>Move</button>
                             </div>
                         </div>
                     </div>
