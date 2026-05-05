@@ -446,10 +446,11 @@ public class BrcApi extends SlingAllMethodsServlet {
         String playlistId = request.getParameter("playlistId");
         String playlistName = request.getParameter("playlistName");
         String[] videos = request.getParameterValues("videos");
+        boolean clearVideos = "true".equals(request.getParameter("clearVideos"));
         // Allow name-only updates (smart playlists) — videos may be null
         boolean hasName = (playlistName != null && !playlistName.isEmpty());
-        if (playlistId != null && (videos != null || hasName)) {
-            result = brAPI.cms.updatePlaylist(playlistId, videos, playlistName);
+        if (playlistId != null && (videos != null || clearVideos || hasName)) {
+            result = brAPI.cms.updatePlaylist(playlistId, clearVideos ? new String[0] : videos, playlistName);
         }
         return result;
     }

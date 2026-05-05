@@ -101,6 +101,16 @@ var brc_admin = brc_admin || {};
 var _mtfAllFolders = [];
 var _mtfSelectedFolderId = null;
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Edit Playlist modal state
 var _epPlaylistId   = null;
 var _epPlaylistType = null;
@@ -1192,6 +1202,10 @@ function epRemoveAndSave(videoId) {
     epSavePlaylist(false);
 }
 
+function epSetSaving(saving) {
+    $('#epUpdate, #epCancel').prop('disabled', saving);
+}
+
 function epSavePlaylist(showToast) {
     var playlistName = $('#epPlaylistName').val().trim();
     var isSmart = (_epPlaylistType !== 'EXPLICIT');
@@ -1202,8 +1216,15 @@ function epSavePlaylist(showToast) {
         playlistName: playlistName
     };
     if (!isSmart) {
-        playlistData['videos'] = epVideoIds();
+        var ids = epVideoIds();
+        if (ids.length === 0) {
+            playlistData['clearVideos'] = true;
+        } else {
+            playlistData['videos'] = ids;
+        }
     }
+
+    epSetSaving(true);
 
     $.ajax({
         type: 'GET',
@@ -1214,7 +1235,12 @@ function epSavePlaylist(showToast) {
             if (showToast) {
                 closeEditPlaylistModal();
                 brcToast('Playlist updated');
+            } else {
+                epSetSaving(false);
             }
+        },
+        error: function() {
+            epSetSaving(false);
         }
     });
 }
