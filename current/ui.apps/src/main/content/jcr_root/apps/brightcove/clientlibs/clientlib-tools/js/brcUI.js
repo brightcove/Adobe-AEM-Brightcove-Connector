@@ -774,9 +774,13 @@ $(function () {
         closeEditPlaylistModal();
     });
 
-    // Overlay backdrop click
+    // Overlay backdrop click closes modal; any click outside the search field/results closes the suggestions
     $('#editPlaylistModal').on('click', function (e) {
         if (e.target === this) closeEditPlaylistModal();
+        if (!$(e.target).closest('#epVideoSearch, #epSearchResults').length) {
+            $('#epVideoSearch').val('');
+            $('#epSearchResults').empty().removeClass('is-visible');
+        }
     });
 
     // Playlist name input — enable/disable Update button
@@ -1119,7 +1123,7 @@ function epRenderPlaylistItems() {
         var $item = $('<li class="brc-ep-playlist-item">' +
             '<span class="brc-ep-item-handle" title="Drag to reorder">&#9776;</span>' +
             '<span class="brc-ep-item-name" title="' + v.name + '">' + v.name + '</span>' +
-            '<button type="button" class="brc-ep-item-delete" data-video-id="' + v.id + '" title="Remove">&#x2715;</button>' +
+            '<button type="button" class="brc-ep-item-delete" data-video-id="' + v.id + '" title="Remove"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/trash_can.png" alt="Remove" /></button>' +
             '</li>');
         $list.append($item);
     });
@@ -1208,8 +1212,8 @@ function epSavePlaylist(showToast) {
         async: true,
         success: function() {
             if (showToast) {
+                closeEditPlaylistModal();
                 brcToast('Playlist updated');
-                setTimeout(function() { closeEditPlaylistModal(); }, 3000);
             }
         }
     });

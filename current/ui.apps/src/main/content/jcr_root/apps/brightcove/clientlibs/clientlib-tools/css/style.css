@@ -2887,19 +2887,30 @@ body.brc-mtf-open {
   border: none;
   padding: 2px 4px;
   cursor: pointer;
-  color: #9ca3af;
   flex-shrink: 0;
   line-height: 1;
-  font-size: 14px;
   border-radius: 4px;
   box-shadow: none;
   filter: none;
   text-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brc-ep-item-delete img {
+  width: 16px;
+  height: 16px;
+  display: block;
+  opacity: 0.5;
 }
 
 .brc-ep-item-delete:hover {
-  color: #ef4444;
   background: #fee2e2;
+}
+
+.brc-ep-item-delete:hover img {
+  opacity: 1;
 }
 
 .brc-ep-item-delete[disabled] {
