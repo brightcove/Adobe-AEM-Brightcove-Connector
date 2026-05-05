@@ -1522,6 +1522,18 @@ function showMetaDataByVideoID(idx) {
                     document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "<tr class='texttrackrow "+defTrack+"'><td class=\"tg-baqh \">" + cur.label + "</td><td  class=\"tg-baqh\">" + cur.srclang + "</td><td  class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td> </tr>";
                 }
             }
+            $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
+
+            _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
+            renderLabelPills();
+            $('#labelInput').val('');
+
+            var vidIdx = 0;
+            for (var i = 0; i < oCurrentVideoList.length; i++) {
+                if (String(oCurrentVideoList[i].id) === String(v.id)) { vidIdx = i; break; }
+            }
+            showVariants(v, vidIdx);
+
             $("#tdMeta").show();
         },
         error: function () {
@@ -2244,7 +2256,6 @@ function metaEdit() {
     var sec = String((Math.floor(v.length * .001)) % 60); //The number of seconds not part of a whole minute
     sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
 
-    document.getElementById('meta.preview').value = document.getElementById('divMeta.previewDiv').value;
     document.getElementById('meta.length').innerHTML = Math.floor(v.length / 60000) + ":" + sec;
     document.getElementById('tdmeta.id').innerHTML = v.id;
     document.getElementById('meta.id').value = v.id;
