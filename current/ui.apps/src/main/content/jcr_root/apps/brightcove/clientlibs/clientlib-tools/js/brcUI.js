@@ -1439,15 +1439,15 @@ function buildPlaylistList() {
         $("#tbData").append(
             "<tr style=\"cursor:pointer;\" id=\"" + i + "\">\
             <td>\
-            </td><td><a href=\"#\" data-playlist-id=\"" + n.id + "\" data-playlist-name=\"" + (n.name || '').replace(/"/g, '&quot;') + "\" data-playlist-type=\"" + (n.type || '') + "\" class=\"edit-playlist\">"
-            + n.name +
+            </td><td><a href=\"#\" data-playlist-id=\"" + n.id + "\" data-playlist-name=\"" + escapeHtml(n.name) + "\" data-playlist-type=\"" + n.type + "\" class=\"edit-playlist\">"
+            + escapeHtml(n.name) +
             "</a></td><td>\
                 <center>---</center>\
             </td><td>"
             + ((n.reference_id) ? n.reference_id : '—') +
             "</td><td>"
             + n.id +
-            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
+            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + escapeHtml(n.name) + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
             "</td></tr>"
         );
     });
