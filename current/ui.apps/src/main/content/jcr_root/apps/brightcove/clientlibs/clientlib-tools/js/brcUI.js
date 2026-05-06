@@ -100,6 +100,7 @@ var $sortable;
 var brc_admin = brc_admin || {};
 var _mtfAllFolders = [];
 var _mtfSelectedFolderId = null;
+var _currentLabels = [];
 
 
 //tUploadBar has the timer id for the upload progress bar, so it can be cancelled.  progressPos is used to keep track of the progress bar's position.
@@ -482,40 +483,38 @@ $(function () {
         $('body').trigger('brc:checked');
     });
 
-    $('body').on('click', '.variant', function(event) {
-        event.preventDefault();
-        var variantId = $(event.target).attr('data-variant-id');
-        var videoId = $(event.target).attr('data-video-idx');
-        var variant = oCurrentVideoList[videoId].variants[variantId];
+    $('body').on('click', '.brc-variant-link', function() {
+        var variantId = parseInt($(this).attr('data-variant-id'), 10);
+        var videoId   = parseInt($(this).attr('data-video-idx'), 10);
+        var variant   = oCurrentVideoList[videoId].variants[variantId];
 
-        var content = "<div>";
-        content += "<p><strong>Video Name:</strong><br />" + variant.language + "</p>";
+        $('#variantModalTitle').text('Variant Details — ' + variant.language);
+        $('#variantModalName').text(variant.language || '—');
+        $('#variantModalDesc').text(variant.description || '—');
+        $('#variantModalLongDesc').text(variant.long_description || '—');
 
-        if (variant.description)
-            content += "<p><strong>Description:</strong><br />" + variant.description + "</p>";
-
-        if (variant.long_description)
-            content += "<p><strong>Long Description:</strong><br />" + variant.long_description + "</p>";
-
+        var $cf = $('#variantModalCustomFields').empty();
         if (variant.custom_fields && JSON.stringify(variant.custom_fields) !== '{}') {
-            content += "<p><strong>Custom Fields:</strong></p>";
-            for (const prop in variant.custom_fields) {
-                content += "<details open>"
-                content += "<summary>" + prop + "</summary>";
-                content += "<p>" + variant.custom_fields[prop] + "</p>";
-                content += "</details>";
+            var $table = $('<table class="brc-variant-cf-table">');
+            for (var prop in variant.custom_fields) {
+                $table.append(
+                    $('<tr>').append($('<td>').text(prop))
+                             .append($('<td>').text(variant.custom_fields[prop]))
+                );
             }
+            $cf.append($table);
+        } else {
+            $cf.text('—');
         }
 
-        content += "</div>";
+        $('#variantDetailsModal').removeAttr('hidden');
+    });
 
-        showPopup('Variant Details for Language: ' + variant.language,
-                content,
-                'OK',
-                '',
-                function(dialog) {
-                    dialog.hide();
-                });
+    $(document).on('click', '.brc-variant-modal-close, .brc-variant-modal-ok', function() {
+        $('#variantDetailsModal').attr('hidden', '');
+    });
+    $(document).on('click', '#variantDetailsModal', function(e) {
+        if ($(e.target).is('#variantDetailsModal')) $(this).attr('hidden', '');
     });
 
     // Clear search button — Videos
@@ -906,46 +905,6 @@ function loadLabels() {
     });
 }
 
-function editLabels(event) {
-    var data = {
-        videoId: document.getElementById('divMeta.previewDiv').value,
-        items: $(document.getElementById('divMeta.labels')).find('a').map(function() {
-            return $(this).text()
-          })
-          .get()
-    };
-    console.log(data.items);
-    var $search = $('<form autocomplete="off" class="label-add-input"><input type="text" placeholder="Search for a label to add" /><ul class="autocomplete list-unstyled"></ul></form>').prop('outerHTML');
-    var $message = $('<ul class="label-listing list-unstyled" data-label-id="'+data.videoId+'" id="edit-labels-sortable">');
-    data.items.forEach(function(item, index) {
-        $message
-            .append($('<li data-id="'+item+'"><span><span class="handle"></span>'+item+'</span><a href="#" data-label-id="'+item+'"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg" /></a></li>'));
-    });
-    showPopup('Edit Labels', $search + $message.prop('outerHTML'), 'Update', 'Cancel', function(event) {
-        var playlistData = {
-            a: 'update_labels',
-            labels: $('#edit-labels-sortable')
-                        .find('li')
-                        .map(function(item) { return $(this).text() }).get(),
-            videoId: data.videoId
-        };
-
-        $.ajax({
-            type: 'GET',
-            url: '/bin/brightcove/api.js',
-            data: $.param(playlistData, true),
-            async: true,
-            success: function (data)
-            {
-                location.reload();
-            }
-        });
-
-        event.hide();
-    }, null);
-    var el = document.getElementById("edit-labels-sortable");
-    $sortable = Sortable.create(el);
-}
 
 function callback(data) {
     // generic callback
@@ -1317,103 +1276,97 @@ function showPlaylist() {
 }
 
 function showVariants(v, idx) {
-    if (v) {
-
-        var elVariants = document.getElementById('divMeta.variants');
-
-        // immediately update the text if there are no variants present
-        if (!v.variants) {
-            elVariants.textContent = "No variants.";
-            return;
-        }
-
-        // now we show the variants
-        elVariants.innerHTML = '';
-        for (var x = 0; x < v.variants.length; x++) {
-            var link = '<a href="#" class="variant" data-variant-id="'
-                        + x + '" data-video-idx="' + idx + '">'
-                        + v.variants[x].language + '</a>';
-            elVariants.innerHTML += link;
-        }
+    var $container = $('#divMeta\\.variants').empty();
+    if (!v || !v.variants || v.variants.length === 0) {
+        $container.text('—');
+        return;
     }
+    v.variants.forEach(function(variant, i) {
+        $('<button>')
+            .addClass('brc-variant-link')
+            .attr('data-variant-id', i)
+            .attr('data-video-idx', idx)
+            .text(variant.language)
+            .appendTo($container);
+    });
 }
 
 function showMetaData(idx) {
-
-
-
     $("tr.select").removeClass("select");
     idx = oCurrentVideoList.length > idx ? idx : 0;
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
-
-    //CURRENTLY
     var v = oCurrentVideoList[idx];
-
-    console.log(v);
 
     showVariants(v, idx);
 
-    // Populate the metadata panel
+    // Panel header
     document.getElementById('divMeta.name').innerHTML = v.name;
-    document.getElementById('divMeta.thumbnailURL').src = v.thumbnailURL;
-    document.getElementById('divMeta.videoStillURL').src = (v.images != null && v.images.poster != null && v.images.poster.src != null) ? v.images.poster.src : "";
-    document.getElementById('divMeta.previewDiv').value = v.id;
     var modDate = new Date(v.updated_at);
-    document.getElementById('divMeta.lastModifiedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
+    document.getElementById('divMeta.lastModifiedDate').innerHTML = 'Updated ' + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
 
-    //v.length is the running time of the video in ms
-    var sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
-    sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
+    // Poster preview
+    var $posterPreview = $('#divMeta\\.posterPreview').empty();
+    var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
+    if (posterSrc) {
+        $posterPreview.append($('<img>').attr('src', posterSrc));
+        $('#posterUrlBtn').text('Change URL');
+    } else {
+        $posterPreview.append(_cameraIcon());
+        $('#posterUrlBtn').text('ENTER URL');
+    }
+
+    // Thumbnail preview
+    var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
+    var thumbSrc = v.thumbnailURL || null;
+    if (thumbSrc) {
+        $thumbPreview.append($('<img>').attr('src', thumbSrc));
+        $('#thumbUrlBtn').text('Change URL');
+    } else {
+        $thumbPreview.append(_cameraIcon());
+        $('#thumbUrlBtn').text('ENTER URL');
+    }
+
+    // Duration
+    var sec = String((Math.floor(v.duration * .001)) % 60);
+    sec.length < 2 ? sec = sec + "0" : sec;
     document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
     document.getElementById('divMeta.id').innerHTML = v.id;
     document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
 
-    //Construct the tag section:
+    // Tags
     var tagsObject = "";
     if ("" != v.tags) {
         var tags = v.tags.toString().split(',');
         for (var k = 0; k < tags.length; k++) {
-            if (k > 0) {
-                tagsObject += ', ';
-            }
+            if (k > 0) tagsObject += ', ';
             tagsObject += '<a style="cursor:pointer;color:blue;text-decoration:underline"' +
                 'onclick="searchVal=\'' + tags[k].replace(/\'/gi, "\\\'") + '\';Load(findByTag(\'' + tags[k] + '\'))" >' + tags[k] + '</a>';
         }
     }
     document.getElementById('divMeta.tags').innerHTML = tagsObject;
 
-    var labelsObject = "";
-    if (v.labels) {
-        var labels = v.labels.toString().split(',');
-        for (var k = 0; k < labels.length; k++) {
-            if (k > 0) {
-                labelsObject += ', ';
-            }
-            labelsObject += '<a href="#" style="cursor:pointer;color:blue;text-decoration:underline"' +
-                'onclick="triggerLabelClick(\'' + labels[k] + '\'); return false;" >' + labels[k] + '</a>';
-        }
-    }
-    document.getElementById('divMeta.labels').innerHTML = labelsObject;
+    // Labels — pill system
+    _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
+    renderLabelPills();
+    $('#labelInput').val('');
 
-    //if there's no link text use the linkURL as the text
+    // Link
     var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";
     var linkURL = (v.link != null && v.link.url != null) ? v.link.url : "";
     document.getElementById('divMeta.linkURL').innerHTML = linkText;
-
     document.getElementById('divMeta.linkURL').href = linkURL;
     document.getElementById('divMeta.linkText').innerHTML = linkText;
+
     document.getElementById('divMeta.economics').innerHTML = v.economics;
 
     modDate = new Date(v.published_at);
     document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
     document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
+    $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
-
-    //document.getElementById('divMeta.text_tracks').innerHTML = "<button>" +  v.toString() + "</button>";
-
-
+    // Text tracks
     $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
     var arr = v.text_tracks != null ? v.text_tracks : "";
     document.getElementById('divMeta.text_tracks').innerHTML = "";
@@ -1423,13 +1376,63 @@ function showMetaData(idx) {
         document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
         for (var x = 0; x < arr.length; x++) {
             var cur = arr[x];
-            var defTrack = "";
-            if (cur["default"]) {
-                defTrack = "default_track";
-            }
-            document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "<tr class='texttrackrow "+defTrack+"'><td class=\"tg-baqh \">" + cur.label + "</td><td  class=\"tg-baqh\">" + cur.srclang + "</td><td  class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td> </tr>";
+            var defTrack = cur["default"] ? "default_track" : "";
+            document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
         }
     }
+}
+
+function _cameraIcon() {
+    return $('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
+        '</svg>');
+}
+
+function renderLabelPills() {
+    var $container = $('#divMeta\\.labels').empty();
+    _currentLabels.forEach(function(label) {
+        var $pill = $('<span class="brc-label-pill">')
+            .append($('<span>').text(label))
+            .append(
+                $('<button class="brc-label-pill-remove" type="button" aria-label="Remove">').text('×')
+                    .on('click', function() {
+                        var i = _currentLabels.indexOf(label);
+                        if (i > -1) _currentLabels.splice(i, 1);
+                        $(this).closest('.brc-label-pill').remove();
+                    })
+            );
+        $container.append($pill);
+    });
+}
+
+$(document).on('keydown', '#labelInput', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var val = $(this).val().trim();
+    if (!val || _currentLabels.indexOf(val) > -1) return;
+    _currentLabels.push(val);
+    renderLabelPills();
+    $(this).val('');
+});
+
+function saveLabels() {
+    var videoId = $('#divMeta\\.id').text().trim();
+    if (!videoId) return;
+    var savedLabels = _currentLabels.slice();
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
+        async: true,
+        success: function() {
+            var idx = parseInt($('tr.select').attr('id'), 10);
+            if (!isNaN(idx) && oCurrentVideoList[idx]) {
+                oCurrentVideoList[idx].labels = savedLabels;
+            }
+            brcToast('Labels saved');
+        }
+    });
 }
 function showMetaDataByVideoID(idx) {
 
@@ -1449,11 +1452,20 @@ function showMetaDataByVideoID(idx) {
 
             // Populate the metadata panel
             document.getElementById('divMeta.name').innerHTML = v.name;
-            document.getElementById('divMeta.thumbnailURL').src = (v.images != null && v.images.thumbnail != null && v.images.thumbnail.src != null) ? v.images.thumbnail.src : "";
-            document.getElementById('divMeta.videoStillURL').src = (v.images != null && v.images.poster != null && v.images.poster.src != null) ? v.images.poster.src : "";
-            document.getElementById('divMeta.previewDiv').value = v.id;
             var modDate = new Date(v.updated_at);
-            document.getElementById('divMeta.lastModifiedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
+            document.getElementById('divMeta.lastModifiedDate').innerHTML = 'Updated ' + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
+
+            // Poster preview
+            var $posterPreview = $('#divMeta\\.posterPreview').empty();
+            var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
+            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('Change URL'); }
+            else { $posterPreview.append(_cameraIcon()); $('#posterUrlBtn').text('ENTER URL'); }
+
+            // Thumbnail preview
+            var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
+            var thumbSrc = (v.images && v.images.thumbnail && v.images.thumbnail.src) ? v.images.thumbnail.src : null;
+            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('Change URL'); }
+            else { $thumbPreview.append(_cameraIcon()); $('#thumbUrlBtn').text('ENTER URL'); }
 
             //v.length is the running time of the video in ms
             var sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
@@ -1510,6 +1522,18 @@ function showMetaDataByVideoID(idx) {
                     document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "<tr class='texttrackrow "+defTrack+"'><td class=\"tg-baqh \">" + cur.label + "</td><td  class=\"tg-baqh\">" + cur.srclang + "</td><td  class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td> </tr>";
                 }
             }
+            $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
+
+            _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
+            renderLabelPills();
+            $('#labelInput').val('');
+
+            var vidIdx = 0;
+            for (var i = 0; i < oCurrentVideoList.length; i++) {
+                if (String(oCurrentVideoList[i].id) === String(v.id)) { vidIdx = i; break; }
+            }
+            showVariants(v, vidIdx);
+
             $("#tdMeta").show();
         },
         error: function () {
@@ -1623,7 +1647,7 @@ function uploadPoster()
           '<div class="coral-Form-fieldwrapper">' +
           '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + document.getElementById('divMeta.videoStillURL').src + '"' +
+          'value="' + ($('#divMeta\\.posterPreview img').attr('src') || '') + '"' +
           '></div></form>'
         },
         footer: {
@@ -1645,11 +1669,12 @@ function uploadPoster()
                 url: apiLocation + '.js',
                 type: 'POST',
                 data: fields,
-                success: function ( data ){
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
+                success: function () {
+                    var url = $('#upload_poster_dialog_field_source').val();
+                    $('#divMeta\\.posterPreview').empty().append($('<img>').attr('src', url));
+                    $('#posterUrlBtn').text('Change URL');
                     dialog.hide();
-                    location.reload();
+                    brcToast('Poster updated');
                 },
                 error: function ( data )
                 {
@@ -1685,7 +1710,7 @@ function uploadThumbnail()
           '<div class="coral-Form-fieldwrapper">' +
           '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' +
           '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + document.getElementById('divMeta.thumbnailURL').src + '"' +
+          'value="' + ($('#divMeta\\.thumbPreview img').attr('src') || '') + '"' +
           '></div></form>'
         },
         footer: {
@@ -1707,11 +1732,12 @@ function uploadThumbnail()
                 url: apiLocation + '.js',
                 type: 'POST',
                 data: fields,
-                success: function ( data ){
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
+                success: function () {
+                    var url = $('#upload_thumbnail_dialog_field_source').val();
+                    $('#divMeta\\.thumbPreview').empty().append($('<img>').attr('src', url));
+                    $('#thumbUrlBtn').text('Change URL');
                     dialog.hide();
-                    location.reload();
+                    brcToast('Thumbnail updated');
                 },
                 error: function ( data )
                 {
@@ -2230,7 +2256,6 @@ function metaEdit() {
     var sec = String((Math.floor(v.length * .001)) % 60); //The number of seconds not part of a whole minute
     sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
 
-    document.getElementById('meta.preview').value = document.getElementById('divMeta.previewDiv').value;
     document.getElementById('meta.length').innerHTML = Math.floor(v.length / 60000) + ":" + sec;
     document.getElementById('tdmeta.id').innerHTML = v.id;
     document.getElementById('meta.id').value = v.id;
