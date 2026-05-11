@@ -465,8 +465,12 @@ $(function () {
         });
         var n = paging.selectedVideos.length;
         $('#bulkCount').text(n);
-        if (window.brcCurrentView === 'videos' && n > 0) {
+        var isVideos = window.brcCurrentView === 'videos';
+        var isPlaylists = window.brcCurrentView === 'playlists';
+        if ((isVideos || isPlaylists) && n > 0) {
             $('#bulkActionBar').removeAttr('hidden');
+            $('#bulkCreatePlaylist, .brc-bulk-move-wrapper').toggle(isVideos);
+            $('#bulkDeletePlaylists').toggle(isPlaylists);
         } else {
             $('#bulkActionBar').attr('hidden', '');
         }
@@ -476,6 +480,36 @@ $(function () {
 
     $('#bulkCreatePlaylist').on('click', function () { createPlaylistBox(); });
     $('#bulkMoveToFolder').on('click', function () { moveVideoToFolder(); });
+    $('#bulkDeletePlaylists').on('click', function () {
+        var $checked = $('#tbData input[type="checkbox"]:checked');
+        var count = $checked.length;
+        if (!count) return;
+        var names = $checked.map(function () { return $(this).attr('data-playlist-name'); }).get().join(', ');
+        var ids   = $checked.map(function () { return $(this).val(); }).get();
+        showPopup(
+            'Delete ' + count + ' Playlist' + (count > 1 ? 's' : ''),
+            'Are you sure you want to delete: ' + names + '?',
+            'Delete',
+            'Cancel',
+            function (dialog) {
+                dialog.hide();
+                var remaining = ids.length;
+                ids.forEach(function (id) {
+                    $.ajax({
+                        type: 'GET',
+                        url: '/bin/brightcove/api.js',
+                        data: { a: 'delete_playlist', playlist: id },
+                        async: true,
+                        success: function () {
+                            remaining--;
+                            if (remaining === 0) { Load(getAllPlaylistsURL()); }
+                        }
+                    });
+                });
+            },
+            function () {}
+        );
+    });
     $('#bulkClear').on('click', function () {
         $('#tbData input[type="checkbox"]').prop('checked', false);
         $('#checkToggle').prop('checked', false);
@@ -1016,7 +1050,17 @@ function sort(object) {
         $(object).toggleClass(newSortClass(oldSortType));
         $(object).removeClass("NONE");
         $(object).attr("data-sortType", sortType);
-        Load(getAllVideosURLOrdered(sortBy, sortType));
+        if (window.brcCurrentView === 'playlists') {
+            var asc = sortType === '';
+            oCurrentPlaylistList.sort(function (a, b) {
+                var av = a[sortBy] != null ? String(a[sortBy]) : '';
+                var bv = b[sortBy] != null ? String(b[sortBy]) : '';
+                return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+            });
+            buildPlaylistList();
+        } else {
+            Load(getAllVideosURLOrdered(sortBy, sortType));
+        }
     }
 }
 function buildMainVideoList(title) {
@@ -1116,15 +1160,21 @@ function buildMainVideoList(title) {
 function buildPlaylistList() {
 
     window.brcCurrentView = 'playlists';
+    paging.selectedVideos = [];
     $('#bulkActionBar').attr('hidden', '');
+    $('#bulkCount').text(0);
+    $('#checkToggle').prop('checked', false);
 
     //Wipe out the old results
     $("#tbData").empty();
-    $("#trHeader th.sortable").removeClass("NONE").removeClass("ASC").removeClass("DESC");
+    if (!$("#nameCol").hasClass("ASC") && !$("#nameCol").hasClass("DESC") && !$("#nameCol").hasClass("NONE")) {
+        $("#trHeader th.sortable").addClass("NONE");
+        $("#nameCol").removeClass("NONE").addClass("ASC").attr("data-sortType", "");
+    }
 
     // Display Playlist count
     document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length;
-    document.getElementById('nameCol').innerHTML = "Name";
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = "All Playlists";
     document.getElementById('search_pl').value = searchVal ? searchVal : "Search Playlists";
     $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');
@@ -1136,28 +1186,43 @@ function buildPlaylistList() {
     $('#filterToggle').hide();
     $('#filterPanel').attr('hidden', '');
     $('#filterToggle').attr('aria-expanded', 'false');
-    document.getElementById('checkToggle').style.display = "none";
-	document.getElementById('pagination').style.display = "none";
+    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
 
-
     //For each retrieved playlist, add a row to the table
+    var modDate = new Date();
     $.each(oCurrentPlaylistList, function (i, n) {
-        $("#tbData").append(
-            "<tr style=\"cursor:pointer;\" id=\"" + i + "\">\
-            <td>\
-            </td><td><a href\"#\" data-playlist-id=\"" + n.id + "\" class=\"edit-playlist\">"
-            + n.name +
-            "</a></td><td>\
-                <center>---</center>\
-            </td><td>"
-            + ((n.reference_id) ? n.reference_id : '—') +
-            "</td><td>"
-            + n.id +
-            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + n.name + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
-            "</td></tr>"
+        modDate = new Date(n.updated_at);
+        var $row = $('<tr>', { 'id': i, style: 'cursor:pointer;' });
+        $row.append(
+            $('<td>').append(
+                $('<input>', {
+                    type: 'checkbox',
+                    value: n.id,
+                    'data-playlist-name': n.name,
+                    onclick: 'checkCheck()'
+                })
+            )
         );
+        $row.append(
+            $('<td>').append(
+                $('<button>', {
+                    type: 'button',
+                    class: 'edit-playlist brc-playlist-name-btn',
+                    'data-playlist-id': n.id
+                }).text(n.name)
+            )
+        );
+        $row.append(
+            $('<td>').text(
+                (modDate.getMonth() + 1) + '/' + modDate.getDate() + '/' + modDate.getFullYear()
+            )
+        );
+        $row.append($('<td>').text(n.reference_id ? n.reference_id : '—'));
+        $row.append($('<td>').text(n.id));
+        $('#tbData').append($row);
     });
 
     //Zebra stripe the table
