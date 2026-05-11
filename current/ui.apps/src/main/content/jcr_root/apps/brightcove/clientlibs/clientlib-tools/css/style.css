@@ -2178,12 +2178,6 @@ body {
   margin-top: 4px;
 }
 
-#tbData span.playlist-actions {
-  position: relative;
-  top: -2px;
-  float: right;
-}
-
 #tbData .state-inactive {
   /* color: #656565; */
 }
