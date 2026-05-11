@@ -2984,5 +2984,52 @@ body.brc-mtf-open {
   background-color: #2a2a26;
 }
 
+/* ---------- Create Playlist Modal video table ---------- */
+
+.brc-cp-video-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #e8e6df;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.brc-cp-video-th {
+  background: #f7f6f2;
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 1.5px solid #e8e6df;
+}
+
+.brc-cp-video-th--id {
+  width: 35%;
+  text-align: right;
+}
+
+.brc-cp-video-table tbody tr {
+  border-bottom: 1px solid #f0efea;
+}
+
+.brc-cp-video-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.brc-cp-video-table td {
+  padding: 10px 14px;
+  color: #1a1a18;
+}
+
+.brc-cp-video-table td:last-child {
+  text-align: right;
+  color: #6b7280;
+  font-size: 12px;
+}
+
 /* ---------- END NEW CSS --------------- */
 

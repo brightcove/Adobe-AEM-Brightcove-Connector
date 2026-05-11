@@ -111,6 +111,9 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Create Playlist modal state
+var _cpVideos = []; // [{id, name}]
+
 // Edit Playlist modal state
 var _epPlaylistId   = null;
 var _epPlaylistType = null;
@@ -312,19 +315,7 @@ $(function () {
     })
 
     $('#searchDiv_pl').on('click', '.btn-create-playlist', function(event) {
-        var $message =
-            $('<p>Please enter a name for your playlist:</p>')
-            .append($('<input class="input-playlist-name" required type="text" autofocus />'));
-        showPopup('Create Playlist',
-            $message.prop('outerHTML'),
-            'Create',
-            'Cancel',
-            function(dialog) {
-                // do something here
-            },
-            function(dialog) {
-                // do nothing here
-            })
+        openCreatePlaylistModal([]);
     });
 
     $('.pml-dialog_content').on('click', '.playlist-listing li a', function(event) {
@@ -775,6 +766,24 @@ $(function () {
         });
         closeMoveToFolderModal();
         $('#fldr_list').change();
+    });
+
+    // ── Create Playlist Modal event handlers ────────────────────────────────
+
+    $('#cpClose, #cpCancel').on('click', function () {
+        closeCreatePlaylistModal();
+    });
+
+    $('#createPlaylistModal').on('click', function (e) {
+        if (e.target === this) closeCreatePlaylistModal();
+    });
+
+    $('#cpTitle_input').on('input', function () {
+        cpUpdateButton();
+    });
+
+    $('#cpSubmitBtn').on('click', function () {
+        if (!$(this).prop('disabled')) cpSubmit();
     });
 
     // ── Edit Playlist Modal event handlers ──────────────────────────────────
@@ -2539,36 +2548,81 @@ function syncEnd() {
 
 
 
+// ─── Create Playlist Modal ────────────────────────────────────────────────────
+
+function openCreatePlaylistModal(videos) {
+    _cpVideos = videos || [];
+    $('#cpTitle_input').val('');
+    $('#cpDescription').val('');
+    cpRenderVideoTable();
+    cpUpdateButton();
+    $('#createPlaylistModal').removeAttr('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { $('#cpTitle_input').focus(); }, 50);
+}
+
+function closeCreatePlaylistModal() {
+    $('#createPlaylistModal').attr('hidden', '');
+    document.body.style.overflow = '';
+    _cpVideos = [];
+}
+
+function cpRenderVideoTable() {
+    var $tbody = $('#cpVideoTableBody').empty();
+    _cpVideos.forEach(function(v) {
+        $tbody.append(
+            '<tr><td>' + escapeHtml(v.name) + '</td><td>' + v.id + '</td></tr>'
+        );
+    });
+}
+
+function cpUpdateButton() {
+    var hasTitle = $('#cpTitle_input').val().trim().length > 0;
+    $('#cpSubmitBtn').prop('disabled', !hasTitle);
+}
+
+function cpSubmit() {
+    var title = $('#cpTitle_input').val().trim();
+    if (!title) return;
+
+    $('#cpSubmitBtn, #cpCancel').prop('disabled', true);
+
+    var videoIds = _cpVideos.map(function(v) { return v.id; }).join(',');
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: {
+            a: 'create_playlist',
+            account_id: $('#selAccount').val(),
+            'plst.name': title,
+            'plst.shortDescription': $('#cpDescription').val().trim(),
+            'plst.referenceId': '',
+            playlist: videoIds
+        },
+        success: function() {
+            closeCreatePlaylistModal();
+            brcToast('Playlist created');
+            $('#allPlaylists').click();
+        },
+        error: function() {
+            $('#cpSubmitBtn, #cpCancel').prop('disabled', false);
+        }
+    });
+}
+
 function createPlaylistBox() {
-    var form = document.getElementById('createPlaylistForm'),
-        idx = 1;
-
-    form.playlist.value = '';
-
-    // Iterate row checkboxes directly. Each row checkbox's `id` attribute
-    // is the matching index in oCurrentVideoList (set by buildMainVideoList).
+    var videos = [];
     $('#tbData input[type="checkbox"]').each(function () {
         if (!this.checked) return;
         var videoIdx = parseInt(this.id, 10);
         var v = oCurrentVideoList[videoIdx];
-        if (!v) return;
-        $("#createPlstVideoTable").append(
-            '<tr ><td>' + v.name +
-            '</td><td style="width: 25%;" >' + v.id + '</td></tr>'
-        );
-
-        if (1 != idx) {
-            form.playlist.value += ',';
-        }
-        form.playlist.value += v.id;
-        idx++;
+        if (v) videos.push({ id: v.id, name: v.name });
     });
-
-    if (1 == idx) {
+    if (videos.length === 0) {
         alert("Please select at least one video to create a playlist.");
         return;
     }
-    openBox("createPlaylistDiv");
+    openCreatePlaylistModal(videos);
 }
 
 /*show a preview of the selected video
