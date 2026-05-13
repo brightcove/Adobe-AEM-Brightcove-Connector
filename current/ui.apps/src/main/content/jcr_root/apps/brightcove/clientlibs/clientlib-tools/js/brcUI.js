@@ -751,8 +751,12 @@ $(function () {
         if ($(this).prop('disabled') || !_mtfSelectedFolderId) return;
         var folderId = _mtfSelectedFolderId;
         var accountId = $('#selAccount').val();
+        var selectedCount = paging.selectedVideos.length;
+        var folderMatch = _mtfAllFolders.filter(function (f) { return f.id === folderId; })[0];
+        var folderName = folderMatch ? folderMatch.name : folderId;
+        var requests = [];
         $.each(paging.selectedVideos, function (i, checkbox) {
-            $.ajax({
+            requests.push($.ajax({
                 type: 'GET',
                 url: '/bin/brightcove/api.js',
                 data: {
@@ -762,10 +766,14 @@ $(function () {
                     account_id: accountId
                 },
                 async: true
-            });
+            }));
         });
         closeMoveToFolderModal();
-        $('#fldr_list').change();
+        $.when.apply($, requests).always(function () {
+            $('#fldr_list').change();
+            var toastMsg = (selectedCount === 1 ? 'Video' : 'Videos') + ' moved to ' + folderName;
+            brcToast(toastMsg);
+        });
     });
 
     // ── Create Playlist Modal event handlers ────────────────────────────────
