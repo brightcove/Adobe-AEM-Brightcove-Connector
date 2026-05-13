@@ -541,11 +541,28 @@
                     </div>
 
                     <!--Player Preview  -->
-                    <!-- This window is populated by doPreview -->
+                    <!-- Legacy playerDiv kept for backward compatibility -->
                     <div id="playerDiv" style="display:none;height: auto;" class="overlay">
                         <div id="playerdrag" class="hLine"></div>
                         <div id="playerTitle" style="text-transform:uppercase; font-weight:bold; font-size:14px;"></div>
                         <div class="hLine"></div>
+                    </div>
+
+                    <!-- Video Preview Modal -->
+                    <div id="videoPreviewModal" class="brc-vp-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="vpTitle">
+                        <div class="brc-vp-container">
+                            <div class="brc-vp-header">
+                                <h2 class="brc-vp-title" id="vpTitle"></h2>
+                                <button type="button" class="brc-vp-close" id="vpClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-vp-body">
+                                <div class="brc-vp-player" id="vpPlayer"></div>
+                            </div>
+                            <div class="brc-vp-footer">
+                                <button type="button" class="brc-vp-btn-close" id="vpCloseBtn">Close Preview</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!--Share Video -->

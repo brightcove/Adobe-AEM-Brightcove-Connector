@@ -786,6 +786,16 @@ $(function () {
         if (!$(this).prop('disabled')) cpSubmit();
     });
 
+    // ── Video Preview Modal event handlers ──────────────────────────────────
+
+    $('#vpClose, #vpCloseBtn').on('click', function () {
+        stopPreview();
+    });
+
+    $('#videoPreviewModal').on('click', function (e) {
+        if (e.target === this) stopPreview();
+    });
+
     // ── Edit Playlist Modal event handlers ──────────────────────────────────
 
     // Close buttons
@@ -2633,30 +2643,20 @@ function createPlaylistBox() {
  * In the publishing module click get code and select Player URL.
  */
 function doPreview(id) {
-    document.getElementById('playerTitle').innerHTML = '<center>' + document.getElementById('divMeta.name').innerHTML + '</center>';
-    var preview = document.createElement('iframe');
-    //if ($("a#allVideos").parent("li").attr("class").indexOf("active") != -1){
+    var title = document.getElementById('divMeta.name').innerHTML;
+    $('#vpTitle').text(title);
 
-    // including both query parameters for backwards compatibility.
-    preview.setAttribute('src', brc_admin.previewPlayerLoc + id);
-    preview.setAttribute('width', 480);
-    preview.setAttribute('height', 270);
-    /*} else {
-     preview.setAttribute("src", previewPlayerListLoc+"?bctid="+id);
-     preview.setAttribute("width", 960);
-     preview.setAttribute("height", 445);
-     }*/
-    preview.setAttribute('frameborder', 0);
-    preview.setAttribute('scrolling', 'no');
-    preview.setAttribute('id', 'previewPlayer');
-    document.getElementById('playerDiv').appendChild(preview);
+    var $player = $('#vpPlayer').empty();
+    var iframe = document.createElement('iframe');
+    iframe.setAttribute('src', brc_admin.previewPlayerLoc + id);
+    iframe.setAttribute('frameborder', 0);
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('allowfullscreen', true);
+    iframe.setAttribute('id', 'previewPlayer');
+    $player.append(iframe);
 
-    //This div has a close button, more content can be added  here below the player.  to add content above the player add it to the
-    //playerDiv in default.html
-    $('#playerDiv').append('<div id="previewClose" style="background-color:#fff;color:#5F9CE3;cursor:pointer; text-transform:uppercase; font-weight:bold;"\
-    onclick="stopPreview()"><br/><center>Close Preview</center></div>');
-    openBox('playerDiv');
-
+    $('#videoPreviewModal').removeAttr('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 /**
@@ -2678,9 +2678,9 @@ function changeVideoImage(id) {
 }
 //before closing the player window, remove the created elements, otherwise they would persist into another preview window.
 function stopPreview() {
-    document.getElementById("playerDiv").removeChild(document.getElementById("previewPlayer"));
-    document.getElementById("playerDiv").removeChild(document.getElementById("previewClose"));
-    closeBox('playerDiv');
+    $('#videoPreviewModal').attr('hidden', '');
+    $('#vpPlayer').empty();
+    document.body.style.overflow = '';
 }
 
 //type should be playlists or videos
