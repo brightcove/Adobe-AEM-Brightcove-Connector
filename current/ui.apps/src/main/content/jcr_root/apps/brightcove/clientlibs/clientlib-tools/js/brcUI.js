@@ -786,6 +786,71 @@ $(function () {
         if (!$(this).prop('disabled')) cpSubmit();
     });
 
+    // ── Upload Text Track Modal event handlers ───────────────────────────────
+
+    function closeUttModal() {
+        $('#uploadTextTrackModal').attr('hidden', '');
+        document.body.style.overflow = '';
+    }
+
+    $('#uttClose, #uttCancel').on('click', function () {
+        closeUttModal();
+    });
+
+    $('#uploadTextTrackModal').on('click', function (e) {
+        if (e.target === this) closeUttModal();
+    });
+
+    $('#uttFileBtn').on('click', function () {
+        $('#uttFile').trigger('click');
+    });
+
+    $('#uttFile').on('change', function () {
+        // Show filename in source URL field as visual confirmation; actual file sent on upload
+        var file = this.files && this.files[0];
+        if (file) {
+            $('#uttSourceUrl').val('').prop('disabled', true);
+        }
+    });
+
+    $('#uttSourceUrl').on('input', function () {
+        // Re-enable file input if user clears the URL
+        if ($(this).val().trim() === '') {
+            $('#uttFile').val('');
+            $(this).prop('disabled', false);
+        }
+    });
+
+    $('#uttUpload').on('click', function () {
+        var fields = {
+            limit: paging.size,
+            start: paging.generic,
+            id: document.getElementById('divMeta.id').innerHTML,
+            track_lang: $('#uttLanguage').val(),
+            track_label: $('#uttLabel').val(),
+            track_kind: $('#uttKind').val(),
+            track_default: $('#uttDefault').is(':checked') ? 'true' : 'false',
+            track_filepath: $('#uttFile').val(),
+            track_source: $('#uttSourceUrl').val(),
+            a: 'upload_text_track',
+            account_id: $('#selAccount').val()
+        };
+        $.ajax({
+            url: apiLocation + '.js',
+            type: 'POST',
+            data: fields,
+            success: function () {
+                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                Load(getAllVideosURL());
+                closeUttModal();
+                location.reload();
+            },
+            error: function () {
+                alert('Oops! There was an error with your text track submission. Please try again.');
+            }
+        });
+    });
+
     // ── Video Preview Modal event handlers ──────────────────────────────────
 
     $('#vpClose, #vpCloseBtn').on('click', function () {
@@ -2001,14 +2066,6 @@ function uploadThumbnail()
 
 function uploadtrack()
 {
-    var default_tracks = $("#divMeta\\.text_tracks_table tr.default_track");
-
-
-    var elem = document.querySelector('#upload_text_track_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
-    }
-
     var language_options = [
         {value: "ar", content : {textContent: 'ar'}},
         {value: "ar-AE", content : {textContent: 'ar-AE'}},
@@ -2208,109 +2265,25 @@ function uploadtrack()
         }
     ];
 
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_text_track_dialog',
-        header: {
-          innerHTML: 'Upload Text Track'
-        },
-        content: {
-          innerHTML: '<div class="coral-Form coral-Form--vertical" id="upload_text_track_form">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' +
-          '<coral-select name="text_track_language_field" placeholder="Language" id="text_track_language_field"></coral-select>' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_label_field" labelledby="label-vertical-textfield-1" value="">' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' +
-          '<coral-select name="text_track_type_field" placeholder="Text Type" id="text_track_type_field"></coral-select>' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<coral-checkbox value="true" id="text_track_default_field">Make Default Track</coral-checkbox>' +
-          '</div>' +
-          '<div class="or_field_split">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_source_url_field" labelledby="label-vertical-3" value="">' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<coral-fileupload accept="text/*" name="file" action="#">' +
-          '<button class="coral3-Button coral3-Button--secondary" is="coral-button" coral-fileupload-select>Select Track File</button>' +
-          '</coral-fileupload>' +
-          '</div>' +
-          '</div>' +
-          '<p>Please note you can only provide a Source URL <strong>OR</strong> a Source File.<br />File should be in a valid *.vtt format.</p>' +
-          '</div>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_text_track_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-
-    dialog.on('coral-overlay:open', function() {
-        console.log('dialog is ready');
-        var select_field_track_type = $('#text_track_type_field').get(0);
-        select_field_track_type.addEventListener('coral-select:showitems', function(event) {
-            select_field_track_type.items.clear();
-            kind_options.forEach(function(value, index) {
-                select_field_track_type.items.add(value);
-            });
+    // Populate language select once
+    var $uttLang = $('#uttLanguage');
+    if ($uttLang.find('option').length === 0) {
+        $uttLang.append('<option value="">Type a language...</option>');
+        language_options.forEach(function(opt) {
+            $uttLang.append($('<option>').val(opt.value).text(opt.content.textContent));
         });
-        var select_field_track_language = $('#text_track_language_field').get(0);
-        select_field_track_language.addEventListener('coral-select:showitems', function(event) {
-            select_field_track_language.items.clear();
-            language_options.forEach(function(value, index) {
-                select_field_track_language.items.add(value);
-            });
-        });
-    });
+    }
 
-    dialog.on('click', '#upload_text_track_dialog_click', function() {
-        // add validation in below
-        if (true) {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                track_lang: $('#text_track_language_field').get(0).value,
-                track_label: $('#text_track_label_field').get(0).value,
-                //track_mime_type: 'text/webvtt',
-                //track_mime_type: null,
-                track_kind: $('#text_track_type_field').get(0).value,
-                track_default: $('#text_track_default_field').get(0).value,
-                track_filepath: $('.coral3-FileUpload-input').get(0).value,
-                track_source: $('#text_track_source_url_field').get(0).value,
-                a: 'upload_text_track',
-                account_id: $("#selAccount").val(),
-            }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function ( data ){
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
-                    dialog.hide();
-                    location.reload();
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your text track submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide values for all fields.');
-        }
+    // Reset form fields
+    $('#uttLanguage').val('');
+    $('#uttLabel').val('');
+    $('#uttKind').val('subtitles');
+    $('#uttDefault').prop('checked', false);
+    $('#uttSourceUrl').val('');
+    $('#uttFile').val('');
 
-    });
-
-    document.body.appendChild(dialog);
-    dialog.show();
-
+    $('#uploadTextTrackModal').removeAttr('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 function extMetaEdit() {

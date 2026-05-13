@@ -490,6 +490,56 @@
                         </div>
                     </div>
 
+                    <!-- Upload Text Track Modal -->
+                    <div id="uploadTextTrackModal" class="brc-ep-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="uttTitle">
+                        <div class="brc-tt-container">
+                            <div class="brc-ep-header">
+                                <h2 class="brc-ep-title" id="uttTitle">Upload Text Track</h2>
+                                <button type="button" class="brc-ep-close" id="uttClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-tt-body">
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttLanguage">Language</label>
+                                    <select id="uttLanguage" class="brc-tt-select"></select>
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttLabel">Label</label>
+                                    <input type="text" id="uttLabel" class="brc-ep-input" autocomplete="off">
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttKind">Kind</label>
+                                    <select id="uttKind" class="brc-tt-select">
+                                        <option value="subtitles">Subtitles</option>
+                                        <option value="descriptions">Description</option>
+                                        <option value="chapters">Chapters</option>
+                                        <option value="metadata">Metadata</option>
+                                        <option value="captions">Captions</option>
+                                    </select>
+                                </div>
+                                <div class="brc-tt-checkbox-row">
+                                    <input type="checkbox" id="uttDefault" class="brc-tt-checkbox">
+                                    <label for="uttDefault" class="brc-tt-checkbox-label">Make Default Track</label>
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttSourceUrl">Source URL</label>
+                                    <div class="brc-tt-source-row">
+                                        <input type="text" id="uttSourceUrl" class="brc-ep-input brc-tt-url-input" autocomplete="off">
+                                        <span class="brc-tt-or">OR</span>
+                                        <button type="button" class="brc-tt-file-btn" id="uttFileBtn">Select Track File</button>
+                                        <input type="file" id="uttFile" accept="text/*" hidden>
+                                    </div>
+                                    <p class="brc-tt-hint">Provide a Source URL <strong>or</strong> a Source File. File must be in valid *.vtt format.</p>
+                                </div>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-ep-footer">
+                                <button type="button" class="brc-ep-btn-cancel" id="uttCancel">Cancel</button>
+                                <button type="button" class="brc-ep-btn-update" id="uttUpload">Upload</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!--Get Upload status-->
                     <div id='getUplStatus' style="display:none" class="overlay">
                         <center>Get Upload Status By VideoId

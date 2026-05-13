@@ -3153,5 +3153,130 @@ body.brc-mtf-open {
   background-color: #2a2a26;
 }
 
+/* ---------- Upload Text Track Modal ---------- */
+
+.brc-tt-container {
+  width: 520px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.brc-tt-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brc-ep-body .brc-ep-label,
+.brc-tt-body .brc-ep-label {
+  font-weight: 400;
+}
+
+.brc-tt-select {
+  height: 40px;
+  padding: 0 32px 0 12px;
+  border: 1.5px solid #e8e6df;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1a1a18;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.brc-tt-select:focus {
+  border-color: #1a1a18;
+}
+
+.brc-tt-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brc-tt-checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #1a1a18;
+  flex-shrink: 0;
+}
+
+.brc-tt-checkbox-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a1a18;
+  cursor: pointer;
+  margin: 0;
+}
+
+.brc-tt-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brc-tt-url-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.brc-tt-or {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.brc-tt-file-btn {
+  height: 40px;
+  padding: 0 16px;
+  background: transparent;
+  background-image: none;
+  background-color: transparent;
+  border: 1.5px solid #e8e6df;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a18;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+  text-transform: none;
+  margin: 0;
+}
+
+.brc-tt-file-btn:hover {
+  background: #f7f6f2;
+  background-color: #f7f6f2;
+}
+
+.brc-tt-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.brc-tt-hint strong {
+  color: #1a1a18;
+}
+
 /* ---------- END NEW CSS --------------- */
 
