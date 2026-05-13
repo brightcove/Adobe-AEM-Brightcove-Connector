@@ -461,6 +461,8 @@ $(function () {
         if (!count) return;
         var names = $checked.map(function () { return $(this).attr('data-playlist-name'); }).get();
         var ids   = $checked.map(function () { return $(this).val(); }).get();
+        // Build the confirmation message via DOM so playlist names are escaped
+        // (showPopup renders message via .html()).
         var $msg = $('<div>').append(
             $('<p>').text('Are you sure you want to delete the following ' + count + ' playlist' + (count > 1 ? 's' : '') + '?')
         ).append(
@@ -1367,6 +1369,12 @@ function sort(object) {
         $(object).attr("data-sortType", sortType);
         if (window.brcCurrentView === 'playlists') {
             var asc = sortType === '';
+            // Brightcove playlist IDs are integer strings of varying lengths
+            // (e.g. 5822937673001 vs 1860563059155019833). Sorting them via
+            // localeCompare gives lexicographic order, which puts shorter
+            // (smaller) IDs after longer (larger) ones. Compare by length
+            // first to get correct numeric order. JS Number can't safely
+            // hold 19-digit IDs (exceeds 2^53), so we stay in string space.
             oCurrentPlaylistList.sort(function (a, b) {
                 var av = a[sortBy] != null ? String(a[sortBy]) : '';
                 var bv = b[sortBy] != null ? String(b[sortBy]) : '';
@@ -1378,7 +1386,7 @@ function sort(object) {
                 }
                 return asc ? cmp : -cmp;
             });
-            buildPlaylistList('Playlists');
+            buildPlaylistList();
         } else {
             Load(getAllVideosURLOrdered(sortBy, sortType));
         }
@@ -1481,15 +1489,21 @@ function buildMainVideoList(title) {
 function buildPlaylistList() {
 
     window.brcCurrentView = 'playlists';
+    paging.selectedVideos = [];
     $('#bulkActionBar').attr('hidden', '');
+    $('#bulkCount').text(0);
+    $('#checkToggle').prop('checked', false);
 
     //Wipe out the old results
     $("#tbData").empty();
-    $("#trHeader th.sortable").removeClass("NONE").removeClass("ASC").removeClass("DESC");
+    if (!$("#nameCol").hasClass("ASC") && !$("#nameCol").hasClass("DESC") && !$("#nameCol").hasClass("NONE")) {
+        $("#trHeader th.sortable").addClass("NONE");
+        $("#nameCol").removeClass("NONE").addClass("ASC").attr("data-sortType", "");
+    }
 
     // Display Playlist count
     document.getElementById('divVideoCount').innerHTML = oCurrentPlaylistList.length;
-    document.getElementById('nameCol').innerHTML = "Name";
+    document.getElementById('nameCol').innerHTML = "Name<span class='order'></span>";
     document.getElementById('headTitle').innerHTML = "All Playlists";
     document.getElementById('search_pl').value = searchVal ? searchVal : "Search Playlists";
     $('#searchClear_pl').toggle(!!searchVal && searchVal !== 'Search Playlists');
@@ -1501,28 +1515,44 @@ function buildPlaylistList() {
     $('#filterToggle').hide();
     $('#filterPanel').attr('hidden', '');
     $('#filterToggle').attr('aria-expanded', 'false');
-    document.getElementById('checkToggle').style.display = "none";
-	document.getElementById('pagination').style.display = "none";
+    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
 
-
     //For each retrieved playlist, add a row to the table
     $.each(oCurrentPlaylistList, function (i, n) {
-        $("#tbData").append(
-            "<tr style=\"cursor:pointer;\" id=\"" + i + "\">\
-            <td>\
-            </td><td><a href=\"#\" data-playlist-id=\"" + n.id + "\" data-playlist-name=\"" + escapeHtml(n.name) + "\" data-playlist-type=\"" + n.type + "\" class=\"edit-playlist\">"
-            + escapeHtml(n.name) +
-            "</a></td><td>\
-                <center>---</center>\
-            </td><td>"
-            + ((n.reference_id) ? n.reference_id : '—') +
-            "</td><td>"
-            + n.id +
-            "<span class=\"playlist-actions\"><a href=\"#\" data-playlist=\"" + n.id + "\" data-playlist-name=\"" + escapeHtml(n.name) + "\"><img src=\"/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/delete.svg\" /></span>" +
-            "</td></tr>"
+        var dateStr = '—';
+        if (n.updated_at) {
+            var modDate = new Date(n.updated_at);
+            if (!isNaN(modDate.getTime())) {
+                dateStr = (modDate.getMonth() + 1) + '/' + modDate.getDate() + '/' + modDate.getFullYear();
+            }
+        }
+        var $row = $('<tr>', { 'id': i, style: 'cursor:pointer;' });
+        $row.append(
+            $('<td>').append(
+                $('<input>', {
+                    type: 'checkbox',
+                    value: n.id,
+                    'data-playlist-name': n.name,
+                    onclick: 'checkCheck()'
+                })
+            )
         );
+        $row.append(
+            $('<td>').append(
+                $('<button>', {
+                    type: 'button',
+                    class: 'edit-playlist brc-playlist-name-btn',
+                    'data-playlist-id': n.id
+                }).text(n.name)
+            )
+        );
+        $row.append($('<td>').text(dateStr));
+        $row.append($('<td>').text(n.reference_id ? n.reference_id : '—'));
+        $row.append($('<td>').text(n.id));
+        $('#tbData').append($row);
     });
 
     //Zebra stripe the table
@@ -1641,37 +1671,26 @@ function showPlaylist() {
 }
 
 function showVariants(v, idx) {
-    if (v) {
-
-        var elVariants = document.getElementById('divMeta.variants');
-
-        // immediately update the text if there are no variants present
-        if (!v.variants) {
-            elVariants.textContent = "No variants.";
-            return;
-        }
-
-        // now we show the variants
-        elVariants.innerHTML = '';
-        for (var x = 0; x < v.variants.length; x++) {
-            var link = '<a href="#" class="variant" data-variant-id="'
-                        + x + '" data-video-idx="' + idx + '">'
-                        + v.variants[x].language + '</a>';
-            elVariants.innerHTML += link;
-        }
+    var $container = $('#divMeta\\.variants').empty();
+    if (!v || !v.variants || v.variants.length === 0) {
+        $container.text('—');
+        return;
     }
+    v.variants.forEach(function(variant, i) {
+        $('<button>')
+            .addClass('brc-variant-link')
+            .attr('data-variant-id', i)
+            .attr('data-video-idx', idx)
+            .text(variant.language)
+            .appendTo($container);
+    });
 }
 
 function showMetaData(idx) {
-
-
-
     $("tr.select").removeClass("select");
     idx = oCurrentVideoList.length > idx ? idx : 0;
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
-
-    //CURRENTLY
     var v = oCurrentVideoList[idx];
 
     showVariants(v, idx);
@@ -1728,18 +1747,19 @@ function showMetaData(idx) {
     renderLabelPills();
     $('#labelInput').val('');
 
-    //if there's no link text use the linkURL as the text
+    // Link
     var linkText = (v.link != null && "" != v.link.text && null != v.link.text) ? v.link.text : (v.link != null && v.link.url != null) ? v.link.url : "";
     var linkURL = (v.link != null && v.link.url != null) ? v.link.url : "";
     document.getElementById('divMeta.linkURL').innerHTML = linkText;
-
     document.getElementById('divMeta.linkURL').href = linkURL;
     document.getElementById('divMeta.linkText').innerHTML = linkText;
+
     document.getElementById('divMeta.economics').innerHTML = v.economics;
 
     modDate = new Date(v.published_at);
     document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
     document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
+    $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
     $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
@@ -1757,6 +1777,59 @@ function showMetaData(idx) {
             document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
         }
     }
+}
+
+function _cameraIcon() {
+    return $('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
+        '</svg>');
+}
+
+function renderLabelPills() {
+    var $container = $('#divMeta\\.labels').empty();
+    _currentLabels.forEach(function(label) {
+        var $pill = $('<span class="brc-label-pill">')
+            .append($('<span>').text(label))
+            .append(
+                $('<button class="brc-label-pill-remove" type="button" aria-label="Remove">').text('×')
+                    .on('click', function() {
+                        var i = _currentLabels.indexOf(label);
+                        if (i > -1) _currentLabels.splice(i, 1);
+                        $(this).closest('.brc-label-pill').remove();
+                    })
+            );
+        $container.append($pill);
+    });
+}
+
+$(document).on('keydown', '#labelInput', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var val = $(this).val().trim();
+    if (!val || _currentLabels.indexOf(val) > -1) return;
+    _currentLabels.push(val);
+    renderLabelPills();
+    $(this).val('');
+});
+
+function saveLabels() {
+    var videoId = $('#divMeta\\.id').text().trim();
+    if (!videoId) return;
+    var savedLabels = _currentLabels.slice();
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
+        async: true,
+        success: function() {
+            var idx = parseInt($('tr.select').attr('id'), 10);
+            if (!isNaN(idx) && oCurrentVideoList[idx]) {
+                oCurrentVideoList[idx].labels = savedLabels;
+            }
+            brcToast('Labels saved');
+        }
+    });
 }
 function showMetaDataByVideoID(idx) {
 
@@ -1851,6 +1924,18 @@ function showMetaDataByVideoID(idx) {
                     document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
                 }
             }
+            $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
+
+            _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
+            renderLabelPills();
+            $('#labelInput').val('');
+
+            var vidIdx = 0;
+            for (var i = 0; i < oCurrentVideoList.length; i++) {
+                if (String(oCurrentVideoList[i].id) === String(v.id)) { vidIdx = i; break; }
+            }
+            showVariants(v, vidIdx);
+
             $("#tdMeta").show();
         },
         error: function () {

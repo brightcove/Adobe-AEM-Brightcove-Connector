@@ -347,7 +347,7 @@ public class CmsAPI {
                 LOGGER.info("updateVideoParams: {}", request.toPrettyString());
                 String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }

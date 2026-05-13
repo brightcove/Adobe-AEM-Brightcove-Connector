@@ -725,6 +725,37 @@
                     </svg>-->
                 </div>
             </div>
+        <!-- Variant Details modal (BCON-143) -->
+        <div id="variantDetailsModal" class="brc-variant-modal" hidden>
+            <div class="brc-variant-modal-dialog">
+                <div class="brc-variant-modal-header">
+                    <span id="variantModalTitle" class="brc-variant-modal-title"></span>
+                    <button class="brc-variant-modal-close" type="button" aria-label="Close">&#x2715;</button>
+                </div>
+                <div class="brc-variant-modal-body">
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">VIDEO NAME</div>
+                        <div id="variantModalName"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">DESCRIPTION</div>
+                        <div id="variantModalDesc"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">LONG DESCRIPTION</div>
+                        <div id="variantModalLongDesc"></div>
+                    </div>
+                    <div class="brc-variant-section">
+                        <div class="brc-variant-field-label">CUSTOM FIELDS</div>
+                        <div id="variantModalCustomFields"></div>
+                    </div>
+                </div>
+                <div class="brc-variant-modal-footer">
+                    <button type="button" class="brc-save-labels-btn brc-variant-modal-ok">OK</button>
+                </div>
+            </div>
+        </div>
+
         </body>
     </sly>
 </html>
