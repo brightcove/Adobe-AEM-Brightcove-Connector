@@ -284,7 +284,7 @@ public class CmsAPI {
 
                 String response = account.platform.patchAPI(targetURL, video.toPrettyString(), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
             }
         }
