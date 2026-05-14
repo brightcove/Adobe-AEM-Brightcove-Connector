@@ -101,6 +101,8 @@ var brc_admin = brc_admin || {};
 var _mtfAllFolders = [];
 var _mtfSelectedFolderId = null;
 var _currentLabels = [];
+var _uttLanguageOptions = null; // populated lazily from uploadtrack()
+var _uttLangValid = false;      // true when a suggestion has been selected or exact match typed
 
 function escapeHtml(str) {
     if (str == null) return '';
@@ -809,6 +811,13 @@ $(function () {
         document.body.style.overflow = '';
     }
 
+    function uttCheckUploadBtn() {
+        var langOk   = _uttLangValid;
+        var sourceOk = $('#uttSourceUrl').val().trim().length > 0 ||
+                       ($('#uttFile')[0] && $('#uttFile')[0].files.length > 0);
+        $('#uttUpload').prop('disabled', !(langOk && sourceOk));
+    }
+
     $('#uttClose, #uttCancel').on('click', function () {
         closeUttModal();
     });
@@ -817,24 +826,92 @@ $(function () {
         if (e.target === this) closeUttModal();
     });
 
+    // ── Language autocomplete ────────────────────────────────────────────────
+    $('#uttLanguage').on('input', function () {
+        var query = $(this).val().trim().toLowerCase();
+        _uttLangValid = false;
+        if (!query || !_uttLanguageOptions) {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+            uttCheckUploadBtn();
+            return;
+        }
+        var matches = _uttLanguageOptions.filter(function (opt) {
+            return opt.toLowerCase().indexOf(query) !== -1;
+        });
+        if (matches.length === 0) {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+        } else {
+            var $list = $('#uttLangSuggestions').empty().removeAttr('hidden');
+            matches.slice(0, 50).forEach(function (lang) {
+                $('<li class="brc-tt-suggestion-item">').text(lang)
+                    .on('mousedown', function (e) {
+                        e.preventDefault(); // prevent blur before click fires
+                        $('#uttLanguage').val(lang);
+                        _uttLangValid = true;
+                        $('#uttLangSuggestions').attr('hidden', '').empty();
+                        uttCheckUploadBtn();
+                    })
+                    .appendTo($list);
+            });
+            // Exact match counts as valid even without clicking
+            if (matches.indexOf($('#uttLanguage').val().trim()) !== -1) {
+                _uttLangValid = true;
+            }
+        }
+        uttCheckUploadBtn();
+    });
+
+    $('#uttLanguage').on('blur', function () {
+        // Small delay so mousedown on a suggestion fires first
+        setTimeout(function () {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+            // Re-validate: if typed value exactly matches a known option, accept it
+            if (_uttLanguageOptions) {
+                var val = $('#uttLanguage').val().trim();
+                _uttLangValid = _uttLanguageOptions.indexOf(val) !== -1;
+            } else {
+                _uttLangValid = false;
+            }
+            uttCheckUploadBtn();
+        }, 150);
+    });
+
+    // ── File / URL mutual exclusion ─────────────────────────────────────────
     $('#uttFileBtn').on('click', function () {
         $('#uttFile').trigger('click');
     });
 
+    // Clicking the filename in the pill re-opens the file picker
+    $('#uttFileName').on('click', function () {
+        $('#uttFile').trigger('click');
+    });
+
+    // X in the pill clears the file and restores the button
+    $('#uttFileClear').on('click', function () {
+        $('#uttFile').val('');
+        $('#uttFilePill').attr('hidden', '');
+        $('#uttFileBtn').show();
+        $('#uttSourceUrl').prop('disabled', false);
+        uttCheckUploadBtn();
+    });
+
     $('#uttFile').on('change', function () {
-        // Show filename in source URL field as visual confirmation; actual file sent on upload
         var file = this.files && this.files[0];
         if (file) {
             $('#uttSourceUrl').val('').prop('disabled', true);
+            $('#uttFileName').text(file.name);
+            $('#uttFilePill').removeAttr('hidden');
+            $('#uttFileBtn').hide();
         }
+        uttCheckUploadBtn();
     });
 
     $('#uttSourceUrl').on('input', function () {
-        // Re-enable file input if user clears the URL
         if ($(this).val().trim() === '') {
             $('#uttFile').val('');
             $(this).prop('disabled', false);
         }
+        uttCheckUploadBtn();
     });
 
     $('#uttUpload').on('click', function () {
@@ -846,25 +923,45 @@ $(function () {
             track_label: $('#uttLabel').val(),
             track_kind: $('#uttKind').val(),
             track_default: $('#uttDefault').is(':checked') ? 'true' : 'false',
-            track_filepath: $('#uttFile').val(),
+            track_filepath: '',
             track_source: $('#uttSourceUrl').val(),
             a: 'upload_text_track',
             account_id: $('#selAccount').val()
         };
-        $.ajax({
-            url: apiLocation + '.js',
-            type: 'POST',
-            data: fields,
-            success: function () {
-                window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                Load(getAllVideosURL());
-                closeUttModal();
-                location.reload();
-            },
-            error: function () {
-                alert('Oops! There was an error with your text track submission. Please try again.');
-            }
-        });
+
+        function doUpload() {
+            $.ajax({
+                url: apiLocation + '.js',
+                type: 'POST',
+                data: fields,
+                success: function () {
+                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                    Load(getAllVideosURL());
+                    closeUttModal();
+                    location.reload();
+                },
+                error: function () {
+                    alert('Oops! There was an error with your text track submission. Please try again.');
+                }
+            });
+        }
+
+        var fileInput = $('#uttFile')[0];
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (file) {
+            // Read file content as text so the server receives the actual VTT bytes
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                fields.track_filepath = e.target.result;
+                doUpload();
+            };
+            reader.onerror = function () {
+                alert('Oops! Could not read the selected file. Please try again.');
+            };
+            reader.readAsText(file);
+        } else {
+            doUpload();
+        }
     });
 
     // ── Video Preview Modal event handlers ──────────────────────────────────
@@ -2411,22 +2508,26 @@ function uploadtrack()
         }
     ];
 
-    // Populate language select once
-    var $uttLang = $('#uttLanguage');
-    if ($uttLang.find('option').length === 0) {
-        $uttLang.append('<option value="">Type a language...</option>');
-        language_options.forEach(function(opt) {
-            $uttLang.append($('<option>').val(opt.value).text(opt.content.textContent));
+    // Build language options list once
+    if (!_uttLanguageOptions) {
+        _uttLanguageOptions = language_options.map(function(opt) {
+            return opt.content.textContent;
         });
     }
 
-    // Reset form fields
+    // Reset form fields and state
+    _uttLangValid = false;
     $('#uttLanguage').val('');
+    $('#uttLangSuggestions').attr('hidden', '').empty();
     $('#uttLabel').val('');
     $('#uttKind').val('subtitles');
     $('#uttDefault').prop('checked', false);
-    $('#uttSourceUrl').val('');
+    $('#uttSourceUrl').val('').prop('disabled', false);
     $('#uttFile').val('');
+    $('#uttFilePill').attr('hidden', '');
+    $('#uttFileName').text('');
+    $('#uttFileBtn').show();
+    $('#uttUpload').prop('disabled', true);
 
     $('#uploadTextTrackModal').removeAttr('hidden');
     document.body.style.overflow = 'hidden';

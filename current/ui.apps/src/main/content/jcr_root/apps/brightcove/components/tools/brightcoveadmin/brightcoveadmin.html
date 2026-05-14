@@ -496,7 +496,10 @@
                             <div class="brc-tt-body">
                                 <div class="brc-ep-field-group">
                                     <label class="brc-ep-label" for="uttLanguage">Language</label>
-                                    <select id="uttLanguage" class="brc-tt-select"></select>
+                                    <div class="brc-tt-lang-wrapper">
+                                        <input type="text" id="uttLanguage" class="brc-ep-input" autocomplete="off" placeholder="Type a language...">
+                                        <ul id="uttLangSuggestions" class="brc-tt-suggestions" hidden></ul>
+                                    </div>
                                 </div>
                                 <div class="brc-ep-field-group">
                                     <label class="brc-ep-label" for="uttLabel">Label</label>
@@ -522,6 +525,14 @@
                                         <input type="text" id="uttSourceUrl" class="brc-ep-input brc-tt-url-input" autocomplete="off">
                                         <span class="brc-tt-or">OR</span>
                                         <button type="button" class="brc-tt-file-btn" id="uttFileBtn">Select Track File</button>
+                                        <div class="brc-tt-file-pill" id="uttFilePill" hidden>
+                                            <svg class="brc-tt-file-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            <button type="button" class="brc-tt-file-pill-name" id="uttFileName"></button>
+                                            <button type="button" class="brc-tt-file-pill-clear" id="uttFileClear" aria-label="Clear file">&#x2715;</button>
+                                        </div>
                                         <input type="file" id="uttFile" accept="text/*" hidden>
                                     </div>
                                     <p class="brc-tt-hint">Provide a Source URL <strong>or</strong> a Source File. File must be in valid *.vtt format.</p>
@@ -530,7 +541,7 @@
                             <div class="brc-ep-divider"></div>
                             <div class="brc-ep-footer">
                                 <button type="button" class="brc-ep-btn-cancel" id="uttCancel">Cancel</button>
-                                <button type="button" class="brc-ep-btn-update" id="uttUpload">Upload</button>
+                                <button type="button" class="brc-ep-btn-update" id="uttUpload" disabled>Upload</button>
                             </div>
                         </div>
                     </div>
