@@ -1286,11 +1286,14 @@ function epRenderPlaylistItems() {
     }
 
     _epVideos.forEach(function(v) {
-        var $item = $('<li class="brc-ep-playlist-item">' +
-            '<span class="brc-ep-item-handle" title="Drag to reorder">&#9776;</span>' +
-            '<span class="brc-ep-item-name" title="' + v.name + '">' + v.name + '</span>' +
-            '<button type="button" class="brc-ep-item-delete" data-video-id="' + v.id + '" title="Remove"><img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/trash_can.png" alt="Remove" /></button>' +
-            '</li>');
+        var $item = $('<li class="brc-ep-playlist-item">');
+        $item.append($('<span class="brc-ep-item-handle">').attr('title', 'Drag to reorder').html('&#9776;'));
+        $item.append($('<span class="brc-ep-item-name">').attr('title', v.name).text(v.name));
+        $item.append(
+            $('<button type="button" class="brc-ep-item-delete" title="Remove">')
+                .attr('data-video-id', v.id)
+                .append('<img src="/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/trash_can.png" alt="Remove" />')
+        );
         $list.append($item);
     });
 
@@ -1412,11 +1415,13 @@ function epVideoSearchCallback(data) {
     } else {
         items.forEach(function(v) {
             var isAdded = addedIds.indexOf(v.id) !== -1;
-            var $item = $('<li class="brc-ep-search-result-item' + (isAdded ? ' is-added' : '') + '" ' +
-                'data-video-id="' + v.id + '" data-video-name="' + (v.name || v.id).replace(/"/g, '&quot;') + '">' +
-                '<span class="brc-ep-search-result-name">' + (v.name || v.id) + '</span>' +
-                '<span class="brc-ep-search-result-id">' + v.id + '</span>' +
-                '</li>');
+            var displayName = v.name || v.id;
+            var $item = $('<li>')
+                .addClass('brc-ep-search-result-item' + (isAdded ? ' is-added' : ''))
+                .attr('data-video-id', v.id)
+                .attr('data-video-name', displayName)
+                .append($('<span class="brc-ep-search-result-name">').text(displayName))
+                .append($('<span class="brc-ep-search-result-id">').text(v.id));
             $results.append($item);
         });
     }
