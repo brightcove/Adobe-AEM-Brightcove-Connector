@@ -727,7 +727,7 @@ betty-titlebar {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 60px;
+  padding-top: 120px;
   background: rgba(255, 255, 255, 0.85);
   z-index: 5;
   pointer-events: none;
@@ -978,31 +978,6 @@ div.delConfPop {
   border-color: red;
   border-style: solid;
   padding: 5px;
-}
-
-#loading {
-  display: none;
-  background: none repeat scroll 0 0 transparent;
-  border: medium none;
-  color: #283E5E;
-  float: right;
-  position: fixed;
-  right: 5px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  top: 60px;
-}
-
-#loading {
-  display: none;
-  background: none repeat scroll 0 0 transparent;
-  border: medium none;
-  color: #283E5E;
-  float: right;
-  position: fixed;
-  right: 5px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-  top: 60px;
-    z-index:9999999;
 }
 
 #progress {
@@ -1817,256 +1792,6 @@ h6 {
 body {
   margin: 0;
   padding: 0;
-}
-
-.loading {
-  display: none;
-}
-.loading .loader {
-  top: 0;
-  left: 0;
-  z-index: 9999999999;
-  position: fixed;
-  background-color: rgba(0,0,0,0.5);
-  height: 100%;
-  width: 100vw;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: center;
-  -ms-flex-pack: center;
-  justify-content: center;
-  -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-}
-.loading .loader #brightcode {
-  max-width: 120px;
-  max-height: 120px;
-  height: 120px;
-  width: 120px;
-}
-.loading .loader #brightcode .cls-1,
-.loading .loader #brightcode .cls-2,
-.loading .loader #brightcode .cls-3 {
-  opacity: 0;
-  -webkit-transform: scale(0);
-  -ms-transform: scale(0);
-  transform: scale(0);
-  -webkit-transform-origin: center;
-  -ms-transform-origin: center;
-  transform-origin: center;
-}
-.loading .loader #brightcode .cls-1 {
-  fill: #099ab1;
-}
-.loading .loader #brightcode .cls-2 {
-  fill: #94bf3b;
-}
-.loading .loader #brightcode .cls-3 {
-  fill: #d3277c;
-}
-.loading .loader #brightcode .shape-1 {
-  animation-name: shape1;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-.loading .loader #brightcode .shape-2 {
-  animation-name: shape2;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-.loading .loader #brightcode .shape-3 {
-  animation-name: shape3;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-.loading .loader #brightcode .shape-4 {
-  animation-name: shape4;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-.loading .loader #brightcode .shape-5 {
-  animation-name: shape5;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-.loading .loader #brightcode .shape-6 {
-  animation-name: shape6;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-}
-@-webkit-keyframes shape1 {
-  0% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  4%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape1 {
-  0% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  4%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@-webkit-keyframes shape2 {
-  0%,
-  4% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  8%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape2 {
-  0%,
-  4% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  8%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@-webkit-keyframes shape3 {
-  0%,
-  8% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  12%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape3 {
-  0%,
-  8% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  12%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@-webkit-keyframes shape4 {
-  0%,
-  12% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  16%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape4 {
-  0%,
-  12% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  16%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@-webkit-keyframes shape5 {
-  0%,
-  16% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  20%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape5 {
-  0%,
-  16% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  20%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@-webkit-keyframes shape6 {
-  0%,
-  20% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  24%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
-}
-@keyframes shape6 {
-  0%,
-  20% {
-    opacity: 0;
-    -webkit-transform: scale(0);
-    transform: scale(0);
-  }
-  24%,
-  100% {
-    opacity: 0.9;
-    -webkit-transform: scale(1);
-    transform: scale(1);
-  }
 }
 
 #upload_text_track_form .coral3-Overlay {
@@ -3741,6 +3466,96 @@ body.brc-mtf-open {
 .brc-tt-suggestion-item:hover,
 .brc-tt-suggestion-item.is-active {
   background: #f7f6f2;
+/* ---- BCON-148: Sync database loading overlay (frame J) ---- */
+.brc-sync-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 24, 0.6);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', adobe-clean, Helvetica, Arial, sans-serif;
+}
+
+.brc-sync-overlay[hidden] {
+  display: none;
+}
+
+.brc-sync-modal {
+  width: 320px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.brc-sync-spinner-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.brc-sync-spinner-ring {
+  width: 48px;
+  height: 48px;
+  border: 2.5px solid #e8e6df;
+  border-top-color: #1a1a18;
+  border-radius: 50%;
+  animation: brc-spin 0.9s linear infinite;
+}
+
+.brc-sync-spinner-b {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a18;
+}
+
+.brc-sync-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a18;
+  margin-top: 2px;
+}
+
+.brc-sync-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-align: center;
+  margin: -8px 0 4px;
+}
+
+.brc-sync-progress-track {
+  position: relative;
+  width: 240px;
+  height: 4px;
+  background: #e8e6df;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.brc-sync-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: #1a1a18;
+  border-radius: 99px;
+  animation: brc-progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes brc-progress-indeterminate {
+  0%   { left: -40%; }
+  100% { left: 100%; }
 }
 
 /* ---------- END NEW CSS --------------- */

@@ -2736,21 +2736,16 @@ function metaEdit() {
     openBox('metaEditPop');
 }
 
-//Alerts the user that communication is happening, useful for accounts with lots of videos
-//where loading times might be a little long.
+// BCON-148: loadStart/loadEnd now use the scoped table spinner (BCON-141)
+// instead of the old top-right toast. The toast has been removed.
 function loadStart()
 {
-    $("#loading").slideDown("fast");
-    $(".loading").show();
+    showTableSpinner();
 }
 
 function loadEnd()
 {
     $('html,body').scrollTop(0);
-    $("#loading").slideUp("fast");
-    $(".loading").hide();
-    // Defensive: ensure the scoped tab spinner clears on error paths too,
-    // not only on buildMainVideoList / buildPlaylistList success.
     hideTableSpinner();
 }
 
@@ -2758,21 +2753,13 @@ function syncStart()
 {
     $("#syncdbutton").addClass('is-loading').prop('disabled', true);
     $("#syncdbutton .brc-sync-btn-label").text('Loading sync');
-    $("#loading").slideDown("fast");
-    $(".loading").show();
-
-    $(".loadingMsg").hide();
-    $(".syncingMsg").show();
-
+    $('#syncOverlay').removeAttr('hidden');
 }
 
 function syncEnd() {
-    $(".syncingMsg").fadeOut();
+    $('#syncOverlay').attr('hidden', '');
     $("#syncdbutton").removeClass('is-loading').prop('disabled', false);
     $("#syncdbutton .brc-sync-btn-label").text('Sync database');
-    loadEnd();
-    $(".loadingMsg").hide();
-    $(".loading").hide();
 }
 
 
