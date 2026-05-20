@@ -235,7 +235,12 @@ public class BrcApi extends SlingAllMethodsServlet {
             }
         } else {
             LOGGER.debug("NOT isID");
-            result = serviceUtil.searchVideo(request.getParameter(Constants.QUERY), Integer.parseInt(request.getParameter(Constants.START)), Integer.parseInt(request.getParameter(Constants.LIMIT)), request.getParameter(Constants.SORT), false);
+            int start = 0;
+            try { start = Integer.parseInt(request.getParameter(Constants.START)); } catch (NumberFormatException e) { /* use default */ }
+            int limit = ServiceUtil.DEFAULT_LIMIT;
+            try { limit = Integer.parseInt(request.getParameter(Constants.LIMIT)); } catch (NumberFormatException e) { /* use default */ }
+            String sort = request.getParameter(Constants.SORT);
+            result = serviceUtil.searchVideo(request.getParameter(Constants.QUERY), start, limit, sort, false);
         }
         return result;
     }
@@ -438,12 +443,15 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        if ( (request.getParameter("videos") != null) && (request.getParameter("playlistId") != null) ) {
-            String[] videos = request.getParameterValues("videos");
-            String playlistId = request.getParameter("playlistId");
-            result = brAPI.cms.updatePlaylist(playlistId, videos);
+        String playlistId = request.getParameter("playlistId");
+        String playlistName = request.getParameter("playlistName");
+        String[] videos = request.getParameterValues("videos");
+        boolean clearVideos = "true".equals(request.getParameter("clearVideos"));
+        // Allow name-only updates (smart playlists) — videos may be null
+        boolean hasName = (playlistName != null && !playlistName.isEmpty());
+        if (playlistId != null && (videos != null || clearVideos || hasName)) {
+            result = brAPI.cms.updatePlaylist(playlistId, clearVideos ? new String[0] : videos, playlistName);
         }
-
         return result;
     }
 

@@ -91,3 +91,4 @@ cs_commons-dev/
 
 /current/prepareRelease.sh
 /.metadata/
+/.claude/worktrees/
