@@ -101,6 +101,28 @@ var brc_admin = brc_admin || {};
 var _mtfAllFolders = [];
 var _mtfSelectedFolderId = null;
 var _currentLabels = [];
+var _uttLanguageOptions = null; // populated lazily from uploadtrack()
+var _uttLangValid = false;      // true when a suggestion has been selected or exact match typed
+
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Create Playlist modal state
+var _cpVideos = []; // [{id, name}]
+
+// Edit Playlist modal state
+var _epPlaylistId   = null;
+var _epPlaylistType = null;
+var _epVideos       = [];   // [{id, name}] — current ordered list
+var _epSortable     = null;
+var _epSearchDebounce = null;
 
 function escapeHtml(str) {
     if (str == null) return '';
@@ -454,6 +476,7 @@ $(function () {
 
     $('#bulkCreatePlaylist').on('click', function () { createPlaylistBox(); });
     $('#bulkMoveToFolder').on('click', function () { moveVideoToFolder(); });
+
     $('#bulkDeletePlaylists').on('click', function () {
         var $checked = $('#tbData input[type="checkbox"]:checked');
         var count = $checked.length;
@@ -510,7 +533,6 @@ $(function () {
         $('#variantModalName').text(variant.language || '—');
         $('#variantModalDesc').text(variant.description || '—');
         $('#variantModalLongDesc').text(variant.long_description || '—');
-
         var $cf = $('#variantModalCustomFields').empty();
         if (variant.custom_fields && JSON.stringify(variant.custom_fields) !== '{}') {
             var $table = $('<table class="brc-variant-cf-table">');
@@ -524,7 +546,6 @@ $(function () {
         } else {
             $cf.text('—');
         }
-
         $('#variantDetailsModal').removeAttr('hidden');
     });
 
@@ -760,8 +781,12 @@ $(function () {
         if ($(this).prop('disabled') || !_mtfSelectedFolderId) return;
         var folderId = _mtfSelectedFolderId;
         var accountId = $('#selAccount').val();
+        var selectedCount = paging.selectedVideos.length;
+        var folderMatch = _mtfAllFolders.filter(function (f) { return f.id === folderId; })[0];
+        var folderName = folderMatch ? folderMatch.name : folderId;
+        var requests = [];
         $.each(paging.selectedVideos, function (i, checkbox) {
-            $.ajax({
+            requests.push($.ajax({
                 type: 'GET',
                 url: '/bin/brightcove/api.js',
                 data: {
@@ -771,10 +796,267 @@ $(function () {
                     account_id: accountId
                 },
                 async: true
-            });
+            }));
         });
         closeMoveToFolderModal();
-        $('#fldr_list').change();
+        $.when.apply($, requests).always(function () {
+            $('#fldr_list').change();
+            var toastMsg = (selectedCount === 1 ? 'Video' : 'Videos') + ' moved to ' + folderName;
+            brcToast(toastMsg);
+        });
+    });
+
+    // ── Create Playlist Modal event handlers ────────────────────────────────
+
+    $('#cpClose, #cpCancel').on('click', function () {
+        closeCreatePlaylistModal();
+    });
+
+    $('#createPlaylistModal').on('click', function (e) {
+        if (e.target === this) closeCreatePlaylistModal();
+    });
+
+    $('#cpTitle_input').on('input', function () {
+        cpUpdateButton();
+    });
+
+    $('#cpSubmitBtn').on('click', function () {
+        if (!$(this).prop('disabled')) cpSubmit();
+    });
+
+    // ── Upload Text Track Modal event handlers ───────────────────────────────
+
+    function closeUttModal() {
+        $('#uploadTextTrackModal').attr('hidden', '');
+        document.body.style.overflow = '';
+    }
+
+    function uttCheckUploadBtn() {
+        var langOk   = _uttLangValid;
+        var sourceOk = $('#uttSourceUrl').val().trim().length > 0 ||
+                       ($('#uttFile')[0] && $('#uttFile')[0].files.length > 0);
+        $('#uttUpload').prop('disabled', !(langOk && sourceOk));
+    }
+
+    $('#uttClose, #uttCancel').on('click', function () {
+        closeUttModal();
+    });
+
+    $('#uploadTextTrackModal').on('click', function (e) {
+        if (e.target === this) closeUttModal();
+    });
+
+    // ── Language autocomplete ────────────────────────────────────────────────
+    $('#uttLanguage').on('input', function () {
+        var query = $(this).val().trim().toLowerCase();
+        _uttLangValid = false;
+        if (!query || !_uttLanguageOptions) {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+            uttCheckUploadBtn();
+            return;
+        }
+        var matches = _uttLanguageOptions.filter(function (opt) {
+            return opt.toLowerCase().indexOf(query) !== -1;
+        });
+        if (matches.length === 0) {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+        } else {
+            var $list = $('#uttLangSuggestions').empty().removeAttr('hidden');
+            matches.slice(0, 50).forEach(function (lang) {
+                $('<li class="brc-tt-suggestion-item">').text(lang)
+                    .on('mousedown', function (e) {
+                        e.preventDefault(); // prevent blur before click fires
+                        $('#uttLanguage').val(lang);
+                        _uttLangValid = true;
+                        $('#uttLangSuggestions').attr('hidden', '').empty();
+                        uttCheckUploadBtn();
+                    })
+                    .appendTo($list);
+            });
+            // Exact match counts as valid even without clicking
+            if (matches.indexOf($('#uttLanguage').val().trim()) !== -1) {
+                _uttLangValid = true;
+            }
+        }
+        uttCheckUploadBtn();
+    });
+
+    $('#uttLanguage').on('blur', function () {
+        // Small delay so mousedown on a suggestion fires first
+        setTimeout(function () {
+            $('#uttLangSuggestions').attr('hidden', '').empty();
+            // Re-validate: if typed value exactly matches a known option, accept it
+            if (_uttLanguageOptions) {
+                var val = $('#uttLanguage').val().trim();
+                _uttLangValid = _uttLanguageOptions.indexOf(val) !== -1;
+            } else {
+                _uttLangValid = false;
+            }
+            uttCheckUploadBtn();
+        }, 150);
+    });
+
+    // ── File / URL mutual exclusion ─────────────────────────────────────────
+    $('#uttFileBtn').on('click', function () {
+        $('#uttFile').trigger('click');
+    });
+
+    // Clicking the filename in the pill re-opens the file picker
+    $('#uttFileName').on('click', function () {
+        $('#uttFile').trigger('click');
+    });
+
+    // X in the pill clears the file and restores the button
+    $('#uttFileClear').on('click', function () {
+        $('#uttFile').val('');
+        $('#uttFilePill').attr('hidden', '');
+        $('#uttFileBtn').show();
+        $('#uttSourceUrl').prop('disabled', false);
+        uttCheckUploadBtn();
+    });
+
+    $('#uttFile').on('change', function () {
+        var file = this.files && this.files[0];
+        if (file) {
+            $('#uttSourceUrl').val('').prop('disabled', true);
+            $('#uttFileName').text(file.name);
+            $('#uttFilePill').removeAttr('hidden');
+            $('#uttFileBtn').hide();
+        }
+        uttCheckUploadBtn();
+    });
+
+    $('#uttSourceUrl').on('input', function () {
+        if ($(this).val().trim() === '') {
+            $('#uttFile').val('');
+            $(this).prop('disabled', false);
+        }
+        uttCheckUploadBtn();
+    });
+
+    $('#uttUpload').on('click', function () {
+        var fields = {
+            limit: paging.size,
+            start: paging.generic,
+            id: document.getElementById('divMeta.id').innerHTML,
+            track_lang: $('#uttLanguage').val(),
+            track_label: $('#uttLabel').val(),
+            track_kind: $('#uttKind').val(),
+            track_default: $('#uttDefault').is(':checked') ? 'true' : 'false',
+            track_filepath: '',
+            track_source: $('#uttSourceUrl').val(),
+            a: 'upload_text_track',
+            account_id: $('#selAccount').val()
+        };
+
+        function doUpload() {
+            $.ajax({
+                url: apiLocation + '.js',
+                type: 'POST',
+                data: fields,
+                success: function () {
+                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
+                    Load(getAllVideosURL());
+                    closeUttModal();
+                    location.reload();
+                },
+                error: function () {
+                    alert('Oops! There was an error with your text track submission. Please try again.');
+                }
+            });
+        }
+
+        var fileInput = $('#uttFile')[0];
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (file) {
+            // Read file content as text so the server receives the actual VTT bytes
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                fields.track_filepath = e.target.result;
+                doUpload();
+            };
+            reader.onerror = function () {
+                alert('Oops! Could not read the selected file. Please try again.');
+            };
+            reader.readAsText(file);
+        } else {
+            doUpload();
+        }
+    });
+
+    // ── Video Preview Modal event handlers ──────────────────────────────────
+
+    $('#vpClose, #vpCloseBtn').on('click', function () {
+        stopPreview();
+    });
+
+    $('#videoPreviewModal').on('click', function (e) {
+        if (e.target === this) stopPreview();
+    });
+
+    // ── Edit Playlist Modal event handlers ──────────────────────────────────
+
+    // Close buttons
+    $('#epClose, #epCancel').on('click', function () {
+        closeEditPlaylistModal();
+    });
+
+    // Overlay backdrop click closes modal; any click outside the search field/results closes the suggestions
+    $('#editPlaylistModal').on('click', function (e) {
+        if (e.target === this) closeEditPlaylistModal();
+        if (!$(e.target).closest('#epVideoSearch, #epSearchResults').length) {
+            $('#epVideoSearch').val('');
+            $('#epSearchResults').empty().removeClass('is-visible');
+        }
+    });
+
+    // Playlist name input — enable/disable Update button
+    $('#epPlaylistName').on('input', function () {
+        epUpdateButtons();
+    });
+
+    // Video search — debounced 750 ms
+    $('#epVideoSearch').on('input', function () {
+        var query = $(this).val().trim();
+        clearTimeout(_epSearchDebounce);
+        if (query.length === 0) {
+            $('#epSearchResults').empty().removeClass('is-visible');
+            return;
+        }
+        _epSearchDebounce = setTimeout(function () {
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: {
+                    a: 'search_videos',
+                    callback: 'epVideoSearchCallback',
+                    query: query,
+                    limit: 20
+                },
+                async: true
+            });
+        }, 750);
+    });
+
+    // Click a search result → add to playlist
+    $(document).on('click', '.brc-ep-search-result-item', function () {
+        if ($(this).hasClass('is-added')) return;
+        var vid  = $(this).attr('data-video-id');
+        var name = $(this).attr('data-video-name') || vid;
+        epAddVideo(vid, name);
+    });
+
+    // Click delete on a playlist item → remove + immediate save
+    $(document).on('click', '.brc-ep-item-delete', function () {
+        if ($(this).prop('disabled')) return;
+        var vid = $(this).attr('data-video-id');
+        epRemoveAndSave(vid);
+    });
+
+    // Update Playlist button
+    $('#epUpdate').on('click', function () {
+        if ($(this).prop('disabled')) return;
+        epSavePlaylist(true);
     });
 
     // ── Create Playlist Modal event handlers ────────────────────────────────
@@ -1006,7 +1288,6 @@ function loadLabels() {
     });
 }
 
-
 function callback(data) {
     // generic callback
 }
@@ -1201,6 +1482,16 @@ function epSavePlaylist(showToast) {
         playlistId: _epPlaylistId,
         playlistName: playlistName
     };
+    if (!isSmart) {
+        var ids = epVideoIds();
+        if (ids.length === 0) {
+            playlistData['clearVideos'] = true;
+        } else {
+            playlistData['videos'] = ids;
+        }
+    }
+
+    epSetSaving(true);
 
     // Build the query string manually for the videos portion so we bypass
     // jQuery's $.param behaviour of dropping empty arrays entirely.  When the
@@ -1701,6 +1992,8 @@ function showMetaData(idx) {
     document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
     $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
+    $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
+
     // Text tracks
     $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
     var arr = v.text_tracks != null ? v.text_tracks : "";
@@ -1785,7 +2078,7 @@ function showMetaDataByVideoID(idx) {
         {
             var v = response.items[0];
 
-            // Populate the metadata panel
+            // Panel header
             document.getElementById('divMeta.name').innerHTML = v.name;
             var modDate = new Date(v.updated_at);
             document.getElementById('divMeta.lastModifiedDate').innerHTML = 'Updated ' + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
@@ -1837,9 +2130,17 @@ function showMetaDataByVideoID(idx) {
             document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
             document.getElementById('divMeta.referenceId').innerHTML = (v.reference_id != null) ? v.reference_id : "";
 
+            $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
-            //document.getElementById('divMeta.text_tracks').innerHTML = "<button>" +  v.toString() + "</button>";
+            _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
+            renderLabelPills();
+            $('#labelInput').val('');
 
+            var vidIdx = 0;
+            for (var i = 0; i < oCurrentVideoList.length; i++) {
+                if (String(oCurrentVideoList[i].id) === String(v.id)) { vidIdx = i; break; }
+            }
+            showVariants(v, vidIdx);
 
             $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
             var arr = v.text_tracks != null ? v.text_tracks : "";
@@ -1850,11 +2151,8 @@ function showMetaDataByVideoID(idx) {
                 document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
                 for (var x = 0; x < arr.length; x++) {
                     var cur = arr[x];
-                    var defTrack = "";
-                    if (cur["default"]) {
-                        defTrack = "default_track";
-                    }
-                    document.getElementById('divMeta.text_tracks_table').innerHTML = document.getElementById('divMeta.text_tracks_table').innerHTML + "<tr class='texttrackrow "+defTrack+"'><td class=\"tg-baqh \">" + cur.label + "</td><td  class=\"tg-baqh\">" + cur.srclang + "</td><td  class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td> </tr>";
+                    var defTrack = cur["default"] ? "default_track" : "";
+                    document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
                 }
             }
             $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
@@ -1877,6 +2175,59 @@ function showMetaDataByVideoID(idx) {
     });
 }
 
+
+function _cameraIcon() {
+    return $('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
+        '</svg>');
+}
+
+function renderLabelPills() {
+    var $container = $('#divMeta\\.labels').empty();
+    _currentLabels.forEach(function(label) {
+        var $pill = $('<span class="brc-label-pill">')
+            .append($('<span>').text(label))
+            .append(
+                $('<button class="brc-label-pill-remove" type="button" aria-label="Remove">').text('×')
+                    .on('click', function() {
+                        var i = _currentLabels.indexOf(label);
+                        if (i > -1) _currentLabels.splice(i, 1);
+                        $(this).closest('.brc-label-pill').remove();
+                    })
+            );
+        $container.append($pill);
+    });
+}
+
+$(document).on('keydown', '#labelInput', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var val = $(this).val().trim();
+    if (!val || _currentLabels.indexOf(val) > -1) return;
+    _currentLabels.push(val);
+    renderLabelPills();
+    $(this).val('');
+});
+
+function saveLabels() {
+    var videoId = $('#divMeta\\.id').text().trim();
+    if (!videoId) return;
+    var savedLabels = _currentLabels.slice();
+    $.ajax({
+        type: 'GET',
+        url: '/bin/brightcove/api.js',
+        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
+        async: true,
+        success: function() {
+            var idx = parseInt($('tr.select').attr('id'), 10);
+            if (!isNaN(idx) && oCurrentVideoList[idx]) {
+                oCurrentVideoList[idx].labels = savedLabels;
+            }
+            brcToast('Labels saved');
+        }
+    });
+}
 
 function deleteTrack(trackid , videoID)
 {
@@ -2092,14 +2443,6 @@ function uploadThumbnail()
 
 function uploadtrack()
 {
-    var default_tracks = $("#divMeta\\.text_tracks_table tr.default_track");
-
-
-    var elem = document.querySelector('#upload_text_track_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
-    }
-
     var language_options = [
         {value: "ar", content : {textContent: 'ar'}},
         {value: "ar-AE", content : {textContent: 'ar-AE'}},
@@ -2299,109 +2642,29 @@ function uploadtrack()
         }
     ];
 
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_text_track_dialog',
-        header: {
-          innerHTML: 'Upload Text Track'
-        },
-        content: {
-          innerHTML: '<div class="coral-Form coral-Form--vertical" id="upload_text_track_form">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Language</label>' +
-          '<coral-select name="text_track_language_field" placeholder="Language" id="text_track_language_field"></coral-select>' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-1">Label</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_label_field" labelledby="label-vertical-textfield-1" value="">' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-2">Kind</label>' +
-          '<coral-select name="text_track_type_field" placeholder="Text Type" id="text_track_type_field"></coral-select>' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<coral-checkbox value="true" id="text_track_default_field">Make Default Track</coral-checkbox>' +
-          '</div>' +
-          '<div class="or_field_split">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-3">Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="" name="name" id="text_track_source_url_field" labelledby="label-vertical-3" value="">' +
-          '</div>' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<coral-fileupload accept="text/*" name="file" action="#">' +
-          '<button class="coral3-Button coral3-Button--secondary" is="coral-button" coral-fileupload-select>Select Track File</button>' +
-          '</coral-fileupload>' +
-          '</div>' +
-          '</div>' +
-          '<p>Please note you can only provide a Source URL <strong>OR</strong> a Source File.<br />File should be in a valid *.vtt format.</p>' +
-          '</div>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_text_track_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-
-    dialog.on('coral-overlay:open', function() {
-        console.log('dialog is ready');
-        var select_field_track_type = $('#text_track_type_field').get(0);
-        select_field_track_type.addEventListener('coral-select:showitems', function(event) {
-            select_field_track_type.items.clear();
-            kind_options.forEach(function(value, index) {
-                select_field_track_type.items.add(value);
-            });
+    // Build language options list once
+    if (!_uttLanguageOptions) {
+        _uttLanguageOptions = language_options.map(function(opt) {
+            return opt.content.textContent;
         });
-        var select_field_track_language = $('#text_track_language_field').get(0);
-        select_field_track_language.addEventListener('coral-select:showitems', function(event) {
-            select_field_track_language.items.clear();
-            language_options.forEach(function(value, index) {
-                select_field_track_language.items.add(value);
-            });
-        });
-    });
+    }
 
-    dialog.on('click', '#upload_text_track_dialog_click', function() {
-        // add validation in below
-        if (true) {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                track_lang: $('#text_track_language_field').get(0).value,
-                track_label: $('#text_track_label_field').get(0).value,
-                //track_mime_type: 'text/webvtt',
-                //track_mime_type: null,
-                track_kind: $('#text_track_type_field').get(0).value,
-                track_default: $('#text_track_default_field').get(0).value,
-                track_filepath: $('.coral3-FileUpload-input').get(0).value,
-                track_source: $('#text_track_source_url_field').get(0).value,
-                a: 'upload_text_track',
-                account_id: $("#selAccount").val(),
-            }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function ( data ){
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
-                    dialog.hide();
-                    location.reload();
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your text track submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide values for all fields.');
-        }
+    // Reset form fields and state
+    _uttLangValid = false;
+    $('#uttLanguage').val('');
+    $('#uttLangSuggestions').attr('hidden', '').empty();
+    $('#uttLabel').val('');
+    $('#uttKind').val('subtitles');
+    $('#uttDefault').prop('checked', false);
+    $('#uttSourceUrl').val('').prop('disabled', false);
+    $('#uttFile').val('');
+    $('#uttFilePill').attr('hidden', '');
+    $('#uttFileName').text('');
+    $('#uttFileBtn').show();
+    $('#uttUpload').prop('disabled', true);
 
-    });
-
-    document.body.appendChild(dialog);
-    dialog.show();
-
+    $('#uploadTextTrackModal').removeAttr('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 function extMetaEdit() {
@@ -2720,30 +2983,20 @@ function createPlaylistBox() {
  * In the publishing module click get code and select Player URL.
  */
 function doPreview(id) {
-    document.getElementById('playerTitle').innerHTML = '<center>' + document.getElementById('divMeta.name').innerHTML + '</center>';
-    var preview = document.createElement('iframe');
-    //if ($("a#allVideos").parent("li").attr("class").indexOf("active") != -1){
+    var title = document.getElementById('divMeta.name').innerHTML;
+    $('#vpTitle').text(title);
 
-    // including both query parameters for backwards compatibility.
-    preview.setAttribute('src', brc_admin.previewPlayerLoc + id);
-    preview.setAttribute('width', 480);
-    preview.setAttribute('height', 270);
-    /*} else {
-     preview.setAttribute("src", previewPlayerListLoc+"?bctid="+id);
-     preview.setAttribute("width", 960);
-     preview.setAttribute("height", 445);
-     }*/
-    preview.setAttribute('frameborder', 0);
-    preview.setAttribute('scrolling', 'no');
-    preview.setAttribute('id', 'previewPlayer');
-    document.getElementById('playerDiv').appendChild(preview);
+    var $player = $('#vpPlayer').empty();
+    var iframe = document.createElement('iframe');
+    iframe.setAttribute('src', brc_admin.previewPlayerLoc + id);
+    iframe.setAttribute('frameborder', 0);
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('allowfullscreen', true);
+    iframe.setAttribute('id', 'previewPlayer');
+    $player.append(iframe);
 
-    //This div has a close button, more content can be added  here below the player.  to add content above the player add it to the
-    //playerDiv in default.html
-    $('#playerDiv').append('<div id="previewClose" style="background-color:#fff;color:#5F9CE3;cursor:pointer; text-transform:uppercase; font-weight:bold;"\
-    onclick="stopPreview()"><br/><center>Close Preview</center></div>');
-    openBox('playerDiv');
-
+    $('#videoPreviewModal').removeAttr('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 /**
@@ -2765,9 +3018,9 @@ function changeVideoImage(id) {
 }
 //before closing the player window, remove the created elements, otherwise they would persist into another preview window.
 function stopPreview() {
-    document.getElementById("playerDiv").removeChild(document.getElementById("previewPlayer"));
-    document.getElementById("playerDiv").removeChild(document.getElementById("previewClose"));
-    closeBox('playerDiv');
+    $('#videoPreviewModal').attr('hidden', '');
+    $('#vpPlayer').empty();
+    document.body.style.overflow = '';
 }
 
 //type should be playlists or videos

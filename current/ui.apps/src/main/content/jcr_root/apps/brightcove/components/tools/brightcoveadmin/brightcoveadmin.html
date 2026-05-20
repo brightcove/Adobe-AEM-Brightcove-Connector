@@ -317,8 +317,8 @@
                                     <div class="brc-label-hint">Press Enter to add a label</div>
                                     <button id="saveLabelsBtn" type="button" class="brc-save-labels-btn" onclick="saveLabels()">Save Labels</button>
                                 </div>
-                                </div><!-- /.brc-panel-inner -->
 
+                                </div><!-- /.brc-panel-inner -->
                             </td>
                         </tr>
                     </table>
@@ -481,6 +481,67 @@
                         </div>
                     </div>
 
+                    <!-- Upload Text Track Modal -->
+                    <div id="uploadTextTrackModal" class="brc-ep-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="uttTitle">
+                        <div class="brc-tt-container">
+                            <div class="brc-ep-header">
+                                <h2 class="brc-ep-title" id="uttTitle">Upload Text Track</h2>
+                                <button type="button" class="brc-ep-close" id="uttClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-tt-body">
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttLanguage">Language</label>
+                                    <div class="brc-tt-lang-wrapper">
+                                        <input type="text" id="uttLanguage" class="brc-ep-input" autocomplete="off" placeholder="Type a language...">
+                                        <ul id="uttLangSuggestions" class="brc-tt-suggestions" hidden></ul>
+                                    </div>
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttLabel">Label</label>
+                                    <input type="text" id="uttLabel" class="brc-ep-input" autocomplete="off">
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttKind">Kind</label>
+                                    <select id="uttKind" class="brc-tt-select">
+                                        <option value="subtitles">Subtitles</option>
+                                        <option value="descriptions">Description</option>
+                                        <option value="chapters">Chapters</option>
+                                        <option value="metadata">Metadata</option>
+                                        <option value="captions">Captions</option>
+                                    </select>
+                                </div>
+                                <div class="brc-tt-checkbox-row">
+                                    <input type="checkbox" id="uttDefault" class="brc-tt-checkbox">
+                                    <label for="uttDefault" class="brc-tt-checkbox-label">Make Default Track</label>
+                                </div>
+                                <div class="brc-ep-field-group">
+                                    <label class="brc-ep-label" for="uttSourceUrl">Source URL</label>
+                                    <div class="brc-tt-source-row">
+                                        <input type="text" id="uttSourceUrl" class="brc-ep-input brc-tt-url-input" autocomplete="off">
+                                        <span class="brc-tt-or">OR</span>
+                                        <button type="button" class="brc-tt-file-btn" id="uttFileBtn">Select Track File</button>
+                                        <div class="brc-tt-file-pill" id="uttFilePill" hidden>
+                                            <svg class="brc-tt-file-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            <button type="button" class="brc-tt-file-pill-name" id="uttFileName"></button>
+                                            <button type="button" class="brc-tt-file-pill-clear" id="uttFileClear" aria-label="Clear file">&#x2715;</button>
+                                        </div>
+                                        <input type="file" id="uttFile" accept="text/*" hidden>
+                                    </div>
+                                    <p class="brc-tt-hint">Provide a Source URL <strong>or</strong> a Source File. File must be in valid *.vtt format.</p>
+                                </div>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-ep-footer">
+                                <button type="button" class="brc-ep-btn-cancel" id="uttCancel">Cancel</button>
+                                <button type="button" class="brc-ep-btn-update" id="uttUpload" disabled>Upload</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!--Get Upload status-->
                     <div id='getUplStatus' style="display:none" class="overlay">
                         <center>Get Upload Status By VideoId
@@ -532,11 +593,59 @@
                     </div>
 
                     <!--Player Preview  -->
-                    <!-- This window is populated by doPreview -->
+                    <!-- Legacy playerDiv kept for backward compatibility -->
                     <div id="playerDiv" style="display:none;height: auto;" class="overlay">
                         <div id="playerdrag" class="hLine"></div>
                         <div id="playerTitle" style="text-transform:uppercase; font-weight:bold; font-size:14px;"></div>
                         <div class="hLine"></div>
+                    </div>
+
+                    <!-- Variant Details modal (BCON-143) -->
+                    <div id="variantDetailsModal" class="brc-variant-modal" hidden>
+                        <div class="brc-variant-modal-dialog">
+                            <div class="brc-variant-modal-header">
+                                <span id="variantModalTitle" class="brc-variant-modal-title"></span>
+                                <button class="brc-variant-modal-close" type="button" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-variant-modal-body">
+                                <div class="brc-variant-section">
+                                    <div class="brc-variant-field-label">VIDEO NAME</div>
+                                    <div id="variantModalName"></div>
+                                </div>
+                                <div class="brc-variant-section">
+                                    <div class="brc-variant-field-label">DESCRIPTION</div>
+                                    <div id="variantModalDesc"></div>
+                                </div>
+                                <div class="brc-variant-section">
+                                    <div class="brc-variant-field-label">LONG DESCRIPTION</div>
+                                    <div id="variantModalLongDesc"></div>
+                                </div>
+                                <div class="brc-variant-section">
+                                    <div class="brc-variant-field-label">CUSTOM FIELDS</div>
+                                    <div id="variantModalCustomFields"></div>
+                                </div>
+                            </div>
+                            <div class="brc-variant-modal-footer">
+                                <button type="button" class="brc-save-labels-btn brc-variant-modal-ok">OK</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Preview Modal -->
+                    <div id="videoPreviewModal" class="brc-vp-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="vpTitle">
+                        <div class="brc-vp-container">
+                            <div class="brc-vp-header">
+                                <h2 class="brc-vp-title" id="vpTitle"></h2>
+                                <button type="button" class="brc-vp-close" id="vpClose" aria-label="Close">&#x2715;</button>
+                            </div>
+                            <div class="brc-ep-divider"></div>
+                            <div class="brc-vp-body">
+                                <div class="brc-vp-player" id="vpPlayer"></div>
+                            </div>
+                            <div class="brc-vp-footer">
+                                <button type="button" class="brc-vp-btn-close" id="vpCloseBtn">Close Preview</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!--Share Video -->
