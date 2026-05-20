@@ -124,6 +124,26 @@ var _epVideos       = [];   // [{id, name}] — current ordered list
 var _epSortable     = null;
 var _epSearchDebounce = null;
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Create Playlist modal state
+var _cpVideos = []; // [{id, name}]
+
+// Edit Playlist modal state
+var _epPlaylistId   = null;
+var _epPlaylistType = null;
+var _epVideos       = [];   // [{id, name}] — current ordered list
+var _epSortable     = null;
+var _epSearchDebounce = null;
+
 
 //tUploadBar has the timer id for the upload progress bar, so it can be cancelled.  progressPos is used to keep track of the progress bar's position.
 var tUploadBar,
@@ -1038,6 +1058,89 @@ $(function () {
         if ($(this).prop('disabled')) return;
         epSavePlaylist(true);
     });
+
+    // ── Create Playlist Modal event handlers ────────────────────────────────
+
+    $('#cpClose, #cpCancel').on('click', function () {
+        closeCreatePlaylistModal();
+    });
+
+    $('#createPlaylistModal').on('click', function (e) {
+        if (e.target === this) closeCreatePlaylistModal();
+    });
+
+    $('#cpTitle_input').on('input', function () {
+        cpUpdateButton();
+    });
+
+    $('#cpSubmitBtn').on('click', function () {
+        if (!$(this).prop('disabled')) cpSubmit();
+    });
+
+    // ── Edit Playlist Modal event handlers ──────────────────────────────────
+
+    // Close buttons
+    $('#epClose, #epCancel').on('click', function () {
+        closeEditPlaylistModal();
+    });
+
+    // Overlay backdrop click closes modal; any click outside the search field/results closes the suggestions
+    $('#editPlaylistModal').on('click', function (e) {
+        if (e.target === this) closeEditPlaylistModal();
+        if (!$(e.target).closest('#epVideoSearch, #epSearchResults').length) {
+            $('#epVideoSearch').val('');
+            $('#epSearchResults').empty().removeClass('is-visible');
+        }
+    });
+
+    // Playlist name input — enable/disable Update button
+    $('#epPlaylistName').on('input', function () {
+        epUpdateButtons();
+    });
+
+    // Video search — debounced 750 ms
+    $('#epVideoSearch').on('input', function () {
+        var query = $(this).val().trim();
+        clearTimeout(_epSearchDebounce);
+        if (query.length === 0) {
+            $('#epSearchResults').empty().removeClass('is-visible');
+            return;
+        }
+        _epSearchDebounce = setTimeout(function () {
+            $.ajax({
+                type: 'GET',
+                url: '/bin/brightcove/api.js',
+                data: {
+                    a: 'search_videos',
+                    callback: 'epVideoSearchCallback',
+                    query: query,
+                    limit: 20
+                },
+                async: true
+            });
+        }, 750);
+    });
+
+    // Click a search result → add to playlist
+    $(document).on('click', '.brc-ep-search-result-item', function () {
+        if ($(this).hasClass('is-added')) return;
+        var vid  = $(this).attr('data-video-id');
+        var name = $(this).attr('data-video-name') || vid;
+        epAddVideo(vid, name);
+    });
+
+    // Click delete on a playlist item → remove + immediate save
+    $(document).on('click', '.brc-ep-item-delete', function () {
+        if ($(this).prop('disabled')) return;
+        var vid = $(this).attr('data-video-id');
+        epRemoveAndSave(vid);
+    });
+
+    // Update Playlist button
+    $('#epUpdate').on('click', function () {
+        if ($(this).prop('disabled')) return;
+        epSavePlaylist(true);
+    });
 });
 
 function getMoveVideoToFolderUrl(video_id, folder_id) {
@@ -1286,6 +1389,9 @@ function epRenderPlaylistItems() {
     }
 
     _epVideos.forEach(function(v) {
+        // Use jQuery DOM methods so v.name is always text-node–escaped; raw
+        // HTML concatenation would let a name containing " or < break out of
+        // attributes or inject elements.
         var $item = $('<li class="brc-ep-playlist-item">');
         $item.append($('<span class="brc-ep-item-handle">').attr('title', 'Drag to reorder').html('&#9776;'));
         $item.append($('<span class="brc-ep-item-name">').attr('title', v.name).text(v.name));
@@ -1367,7 +1473,9 @@ function epSetSaving(saving) {
 
 function epSavePlaylist(showToast) {
     var playlistName = $('#epPlaylistName').val().trim();
-    var isSmart = (_epPlaylistType !== 'EXPLICIT');
+    // Guard: treat an unset type as smart so we never accidentally wipe videos
+    // on a playlist whose type we don't know.
+    var isExplicit = (_epPlaylistType === 'EXPLICIT');
 
     var playlistData = {
         a: 'update_playlist',
@@ -1385,10 +1493,31 @@ function epSavePlaylist(showToast) {
 
     epSetSaving(true);
 
+    // Build the query string manually for the videos portion so we bypass
+    // jQuery's $.param behaviour of dropping empty arrays entirely.  When the
+    // list is empty we send clearVideos=true; BrcApi converts that to an empty
+    // String[] which CmsAPI serialises as "video_ids": [] in the PATCH body,
+    // telling Brightcove to clear the playlist.  Simply passing videos: [] to
+    // $.param would produce no parameter at all, causing the server to receive
+    // null and leave the existing videos untouched.
+    var qs = $.param(playlistData);
+    if (isExplicit) {
+        var ids = epVideoIds();
+        if (ids.length > 0) {
+            qs += '&' + ids.map(function(id) {
+                return 'videos=' + encodeURIComponent(id);
+            }).join('&');
+        } else {
+            qs += '&clearVideos=true';
+        }
+    }
+
+    epSetSaving(true);
+
     $.ajax({
         type: 'GET',
         url: '/bin/brightcove/api.js',
-        data: $.param(playlistData, true),
+        data: qs,
         async: true,
         success: function() {
             if (showToast) {
