@@ -123,6 +123,13 @@ function createPlayers(root) {
     var pendingRoots = [];
     var scheduled = false;
 
+    // Bind to window so the native methods retain their receiver — calling
+    // a detached window.requestAnimationFrame throws TypeError: Illegal
+    // invocation in strict mode, and even in non-strict mode it's fragile.
+    var defer = typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame.bind(window)
+        : function (cb) { return window.setTimeout(cb, 0); };
+
     function flush() {
         scheduled = false;
         var roots = pendingRoots;
@@ -136,7 +143,7 @@ function createPlayers(root) {
         pendingRoots.push(root);
         if (!scheduled) {
             scheduled = true;
-            (window.requestAnimationFrame || setTimeout)(flush, 0);
+            defer(flush);
         }
     }
 
