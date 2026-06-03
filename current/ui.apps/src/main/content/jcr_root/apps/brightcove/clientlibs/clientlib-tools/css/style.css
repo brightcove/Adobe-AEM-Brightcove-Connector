@@ -1066,11 +1066,6 @@ div.delConfPop {
   padding-right: 5px;
 }
 
-#divMeta.shortDescription pre {
-  white-space: pre-wrap;
-  margin-top: 5px;
-}
-
 #divMeta.labels a {
   display: block;
   margin-bottom: 2px;
