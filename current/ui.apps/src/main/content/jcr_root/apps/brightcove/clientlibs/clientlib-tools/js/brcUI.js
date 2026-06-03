@@ -1227,38 +1227,64 @@ function loadLabels() {
             Load(getAllVideosURL());
         } else if (selected == 'create') {
             var $message =
-                $('<p>Label Name:</p>')
-                .append($('<input class="input-label-name" type="text" autofocus />'));
+                $('<div>')
+                .append($('<p>Label Name:</p>'))
+                .append($('<input class="input-label-name" type="text" autofocus />'))
+                .append($('<p class="input-label-error" style="display:none;color:#d7373f;margin-top:6px;font-size:12px;"></p>'));
             showPopup('Create New Label',
                 $message.prop('outerHTML'),
                 'Create',
                 'Cancel',
                 function(dialog) {
+                    var $input = $('.input-label-name');
+                    var $err   = $('.input-label-error');
+                    var labelName = ($input.val() || '').trim();
 
-                    // do some basic validationå
-                    var labelName = $('.input-label-name').val();
-                    if (labelName == '' || !labelName.startsWith('/')) {
-                        $('.input-label-name').addClass('error');
-                    } else {
-                        $('.input-label-name').removeClass('error');
-                        // call the API here.
-                        var data = {
-                            a: 'create_label',
-                            label: labelName
-                        };
-                        $.ajax({
-                            type: 'GET',
-                            url: '/bin/brightcove/api.js',
-                            data: data,
-                            async: true,
-                            success: function (data)
-                            {
-                                // do something here?
-                            }
-                        });
-                        dialog.hide();
-                        location.reload();
+                    // Only an empty name is a hard error — give the user an
+                    // actual message instead of a silently-red box (BCON-182).
+                    if (labelName === '') {
+                        $input.addClass('error');
+                        $err.text('Please enter a label name.').show();
+                        return; // keep the dialog open
                     }
+
+                    // Brightcove labels are hierarchical paths and must start
+                    // with '/'. Be forgiving and prepend it when the user omits
+                    // it, rather than rejecting an otherwise-valid name.
+                    if (labelName.charAt(0) !== '/') {
+                        labelName = '/' + labelName;
+                    }
+
+                    $input.removeClass('error');
+                    $err.hide();
+
+                    $.ajax({
+                        type: 'GET',
+                        url: '/bin/brightcove/api.js',
+                        data: { a: 'create_label', label: labelName },
+                        async: true,
+                        success: function (resp) {
+                            // BrcApi returns null/empty on success and an
+                            // {error: <code>} body on failure (409 = exists).
+                            var hasError = resp && (resp.error ||
+                                (typeof resp === 'string' && resp.indexOf('"error"') !== -1));
+                            if (hasError) {
+                                var dup = (resp.error === 409) ||
+                                    (typeof resp === 'string' && resp.indexOf('409') !== -1);
+                                $input.addClass('error');
+                                $err.text(dup
+                                    ? 'That label already exists.'
+                                    : 'Could not create the label. Please try again.').show();
+                                return;
+                            }
+                            dialog.hide();
+                            location.reload();
+                        },
+                        error: function () {
+                            $input.addClass('error');
+                            $err.text('Could not create the label. Please try again.').show();
+                        }
+                    });
                 },
                 function(dialog) {
                     // do nothing here
