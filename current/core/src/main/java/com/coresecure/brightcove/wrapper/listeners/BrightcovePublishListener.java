@@ -18,8 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -96,6 +98,13 @@ public class BrightcovePublishListener implements EventHandler {
                 LOG.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
 
+                // BGS-1600: move the new video into the Brightcove folder that mirrors
+                // its AEM parent folder. Without this the publish path leaves the video
+                // in the default "All Videos" folder (the workflow/sync-button path has
+                // always done this; the publish listener never did).
+                Node assetNode = _asset.adaptTo(Node.class);
+                syncFolder(serviceUtil, api_resp, assetNode);
+
                 LOG.info("BC: ACTIVATION SUCCESSFUL >> {}", _asset.getPath());
 
                 // update the metadata to show the last sync time
@@ -135,6 +144,11 @@ public class BrightcovePublishListener implements EventHandler {
                 LOG.info("Brightcove video updated successfully: {}", _asset.getPath());
                 serviceUtil.updateRenditions(_asset, video);
                 LOG.info("Updated renditions for Brightcove video: {}", _asset.getPath());
+
+                // BGS-1600: keep the Brightcove folder in sync with the AEM parent folder
+                // on re-publish as well, mirroring the workflow/sync-button path.
+                Node assetNode = _asset.adaptTo(Node.class);
+                syncFolder(serviceUtil, api_resp, assetNode);
 
                 long current_time_millisec = new Date().getTime();
                 brc_lastsync_map.put(Constants.BRC_LASTSYNC, current_time_millisec);
@@ -198,6 +212,76 @@ public class BrightcovePublishListener implements EventHandler {
 
         }
 
+    }
+
+    private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Node assetNode) {
+        try {
+            LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
+            Node parentNode = assetNode.getParent();
+            String videoId = api_resp.get(Constants.VIDEOID).asText();
+
+            // Skip folder sync if the asset lives directly in the account root folder.
+            // The account root (e.g. /content/dam/brightcove_assets/{accountId}) has no
+            // brc_folder_id, so without this guard syncFolder would create a spurious
+            // Brightcove folder named after the account ID and move the video into it.
+            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
+            for (String accountId : cg.getAvailableServices()) {
+                ConfigurationService cs = cg.getConfigurationService(accountId);
+                if (cs == null) continue;
+                String integrationPath = cs.getAssetIntegrationPath();
+                String normalized = integrationPath.endsWith("/")
+                        ? integrationPath.substring(0, integrationPath.length() - 1)
+                        : integrationPath;
+                String accountRootPath = normalized + "/" + accountId;
+                if (parentNode.getPath().equals(accountRootPath)) {
+                    LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", accountRootPath);
+                    return;
+                }
+            }
+
+            if (!parentNode.hasProperty("brc_folder_id")) {
+                String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
+                if (folderId != null && !folderId.isEmpty()) {
+                    setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
+                } else {
+                    LOG.error("*************************** No folder created ***************************");
+                    TimeUnit.SECONDS.sleep(15);
+                    parentNode.refresh(false);
+                    if (!parentNode.hasProperty("brc_folder_id")) {
+                        folderId = serviceUtil.createFolder(assetNode.getParent().getName());
+                        if (folderId != null && !folderId.isEmpty()) {
+                            setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
+                        } else {
+                            LOG.error("*************************** No folder created attempt 2 ***************************");
+                        }
+                    } else {
+                        // this is in a subfolder so we need to formally move the asset to this folder
+                        String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
+                        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                        serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
+                    }
+                }
+            } else {
+                // this is in a subfolder so we need to formally move the asset to this folder
+                String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
+                LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
+                serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
+            }
+
+        } catch (Exception e) {
+
+            // log the error
+            LOG.error("Error syncing folder");
+
+        }
+    }
+
+    private void setFolderIdMoveAssetInBC(ServiceUtil serviceUtil, Node parentNode, String videoId, String folderId) throws Exception {
+        parentNode.setProperty("brc_folder_id", folderId);
+        parentNode.getSession().save();
+
+        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
+        serviceUtil.moveVideoToFolder(folderId, videoId);
     }
 
     private void deactivateAsset(ResourceResolver rr, Asset _asset, String accountId) {
