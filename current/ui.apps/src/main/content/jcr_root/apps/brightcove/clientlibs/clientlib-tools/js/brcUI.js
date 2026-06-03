@@ -1482,16 +1482,6 @@ function epSavePlaylist(showToast) {
         playlistId: _epPlaylistId,
         playlistName: playlistName
     };
-    if (!isSmart) {
-        var ids = epVideoIds();
-        if (ids.length === 0) {
-            playlistData['clearVideos'] = true;
-        } else {
-            playlistData['videos'] = ids;
-        }
-    }
-
-    epSetSaving(true);
 
     // Build the query string manually for the videos portion so we bypass
     // jQuery's $.param behaviour of dropping empty arrays entirely.  When the
