@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
-import java.util.concurrent.TimeUnit;
 
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -245,8 +244,12 @@ public class BrightcovePublishListener implements EventHandler {
                     setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
                 } else {
                     LOG.error("*************************** No folder created ***************************");
-                    TimeUnit.SECONDS.sleep(15);
-                    parentNode.refresh(false);
+                    // Re-read the parent from the persistent store in case a concurrent publish
+                    // created the folder. keepChanges=true: in Oak refresh() is session-wide, so
+                    // refresh(false) would discard pending metadata (e.g. BRC_ID) set before this
+                    // call. No sleep here: this runs on a shared OSGi EventAdmin delivery thread
+                    // and must not block.
+                    parentNode.refresh(true);
                     if (!parentNode.hasProperty("brc_folder_id")) {
                         folderId = serviceUtil.createFolder(assetNode.getParent().getName());
                         if (folderId != null && !folderId.isEmpty()) {
