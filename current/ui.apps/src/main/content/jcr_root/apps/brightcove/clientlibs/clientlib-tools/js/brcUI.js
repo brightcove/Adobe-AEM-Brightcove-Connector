@@ -1608,6 +1608,21 @@ function sort(object) {
                 return asc ? cmp : -cmp;
             });
             buildPlaylistList();
+        } else if (sortBy === 'id' && window.brcCurrentView === 'videos') {
+            // Brightcove video search does not support sort=id: the CMS API
+            // rejects it and returns zero results, which blanked the entire
+            // list (BCON-183). Sort the loaded videos client-side by numeric
+            // id instead, mirroring the playlist path above. IDs can exceed
+            // 2^53 so compare in string space: shorter string = smaller
+            // number, then lexicographic for equal lengths.
+            var ascId = sortType === '';
+            oCurrentVideoList.sort(function (a, b) {
+                var av = a.id != null ? String(a.id) : '';
+                var bv = b.id != null ? String(b.id) : '';
+                var cmp = av.length !== bv.length ? (av.length - bv.length) : (av < bv ? -1 : av > bv ? 1 : 0);
+                return ascId ? cmp : -cmp;
+            });
+            buildMainVideoList(document.getElementById('headTitle').innerHTML);
         } else {
             Load(getAllVideosURLOrdered(sortBy, sortType));
         }
