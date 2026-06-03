@@ -3887,6 +3887,8 @@ body.brc-mtf-open {
 .brc-tt-suggestion-item:hover,
 .brc-tt-suggestion-item.is-active {
   background: #f7f6f2;
+}
+
 /* ---- BCON-148: Sync database loading overlay (frame J) ---- */
 .brc-sync-overlay {
   position: fixed;
