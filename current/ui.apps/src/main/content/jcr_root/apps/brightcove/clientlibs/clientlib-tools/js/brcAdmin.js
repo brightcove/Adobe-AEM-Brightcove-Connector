@@ -116,8 +116,11 @@ function getFindPlaylistsURL() {
                 '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         } else if (searchField == "find_playlist_by_name") {
+            // Brightcove's playlist search `q` performs a name search directly;
+            // it does not accept the field-qualified `name:` syntax used for
+            // video search (that returns zero results). Send the bare term.
             return apiLocation +
-                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=name:' + searchVal
+                '.js?account_id='+$("#selAccount").val()+'&a=search_playlists&callback=showAllPlaylistsCallBack&query=' + searchVal
                 + '&limit=' + paging.size + '&start=' + paging.allPlaylists
         } else if (searchField == "find_playlist_by_id") {
             return apiLocation +
