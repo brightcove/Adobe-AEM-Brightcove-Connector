@@ -262,7 +262,13 @@
             </div>
             <div class="coral-Form-fieldwrapper">
                 <label class="coral-Form-fieldlabel" for="brc-variant-name">Name <span style="color:#d9534f;">*</span></label>
-                <input id="brc-variant-name" is="coral-textfield" class="coral-Form-field" type="text" aria-required="true">
+                <%-- No aria-required/required here: the dialog markup lives inside the
+                     asset metadata form, so a validation attribute on this empty field
+                     would flag the whole Brightcove tab as invalid (red icon, no message)
+                     even while the dialog is closed. Required-ness is enforced visually
+                     (the asterisk) and in variant-dialog.js (the "Name is required" check),
+                     matching the Language Code field above. --%>
+                <input id="brc-variant-name" is="coral-textfield" class="coral-Form-field" type="text">
             </div>
             <div class="coral-Form-fieldwrapper">
                 <label class="coral-Form-fieldlabel" for="brc-variant-description">Short Description</label>

@@ -27,6 +27,20 @@ async function openVariantDialog(page) {
   await page.locator('#brc-variant-language').waitFor({ state: 'visible', timeout: 8_000 });
 }
 
+test('the Brightcove tab is not falsely flagged invalid on load', async ({ page }) => {
+  // Regression: marking the dialog's Name field aria-required flagged the whole
+  // Brightcove tab as invalid (red icon, no message) because the dialog markup
+  // lives inside the asset metadata form. The tab must load clean.
+  await page.goto(EDITOR, { waitUntil: 'networkidle' });
+  const bcTab = page.locator('coral-tab:has-text("Brightcove")');
+  await expect(bcTab).not.toHaveClass(/is-invalid/);
+  await bcTab.click();
+  await page.waitForTimeout(500);
+  await expect(bcTab).not.toHaveClass(/is-invalid/);
+  // and no field inside is marked invalid
+  expect(await page.locator('#brc-variant-name[aria-invalid="true"]').count()).toBe(0);
+});
+
 test('BCON-176: empty variant name shows a Name error, not a language-code error', async ({ page }) => {
   await openVariantDialog(page);
 
