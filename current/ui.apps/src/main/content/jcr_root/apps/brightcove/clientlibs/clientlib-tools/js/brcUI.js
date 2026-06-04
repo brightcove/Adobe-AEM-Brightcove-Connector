@@ -271,21 +271,33 @@ $(function () {
         }
         var accountId = $row.attr('data-account-id');
         var accountAlias = $row.attr('data-account-alias') || accountId;
-        // Set the brc_act cookie via CQ.Ext if available, otherwise fall
-        // back to document.cookie. Without this fallback the page would
-        // reload without the new cookie, leaving the user on the old
-        // account but showing a misleading "Switched to <alias>" toast.
-        if (CQ && CQ.Ext) {
-            CQ.Ext.util.Cookies.set('brc_act', accountId);
-        } else {
-            document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
-        }
-        try {
-            if (window.sessionStorage) {
-                sessionStorage.setItem('brc_account_switched', accountAlias);
-            }
-        } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
-        window.location.reload();
+
+        // Switching reloads the whole page, so confirm before doing it rather
+        // than switching on a single click (BCON-178). Close the popover and
+        // ask the user to confirm; only switch on confirmation.
+        $('#accountPopover').attr('hidden', '');
+        $('#accountTrigger').attr('aria-expanded', 'false');
+
+        // Build the message via jQuery so the alias is text-escaped.
+        var $confirmMsg = $('<p>').text('Switch to "' + accountAlias + '"? The page will reload.');
+
+        showPopup('Switch account', $confirmMsg.prop('outerHTML'), 'Switch', 'Cancel',
+            function () {
+                // Confirmed — set the brc_act cookie via CQ.Ext if available,
+                // otherwise fall back to document.cookie, then reload.
+                if (CQ && CQ.Ext) {
+                    CQ.Ext.util.Cookies.set('brc_act', accountId);
+                } else {
+                    document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
+                }
+                try {
+                    if (window.sessionStorage) {
+                        sessionStorage.setItem('brc_account_switched', accountAlias);
+                    }
+                } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
+                window.location.reload();
+            },
+            null /* Cancel just closes the dialog; no switch */);
     });
 
     $('.butDiv').hide();
