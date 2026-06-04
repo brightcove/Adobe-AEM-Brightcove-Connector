@@ -52,7 +52,7 @@ test('a plain name is accepted and sent as a /-prefixed path', async ({ page }) 
     const url = route.request().url();
     if (url.includes('a=create_label')) {
       createUrl = decodeURIComponent(url);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '' });
+      return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
     }
     return route.continue();
   });
@@ -66,6 +66,13 @@ test('a plain name is accepted and sent as a /-prefixed path', async ({ page }) 
 
   // The fix prepends '/'; a bare name must not be rejected.
   expect(createUrl).toContain('label=/QA Test Label');
+
+  // Because Brightcove's GET /labels index lags, success must NOT depend on a
+  // reload: the new label is added to the dropdown optimistically and a toast
+  // confirms it.
+  await expect(page.locator('#brcToast')).toBeVisible();
+  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText('/QA Test Label');
+  await expect(page.locator('#label_list option[value="/QA Test Label"]')).toHaveCount(1);
 });
 
 test('a name already starting with / is not double-prefixed', async ({ page }) => {
@@ -76,7 +83,7 @@ test('a name already starting with / is not double-prefixed', async ({ page }) =
     const url = route.request().url();
     if (url.includes('a=create_label')) {
       createUrl = decodeURIComponent(url);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '' });
+      return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
     }
     return route.continue();
   });

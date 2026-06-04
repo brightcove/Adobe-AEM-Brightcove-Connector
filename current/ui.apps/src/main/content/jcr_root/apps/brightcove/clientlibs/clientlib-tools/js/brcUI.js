@@ -1263,26 +1263,37 @@ function loadLabels() {
                         url: '/bin/brightcove/api.js',
                         data: { a: 'create_label', label: labelName },
                         async: true,
-                        success: function (resp) {
-                            // BrcApi returns null/empty on success and an
-                            // {error: <code>} body on failure (409 = exists).
-                            var hasError = resp && (resp.error ||
-                                (typeof resp === 'string' && resp.indexOf('"error"') !== -1));
-                            if (hasError) {
-                                var dup = (resp.error === 409) ||
-                                    (typeof resp === 'string' && resp.indexOf('409') !== -1);
-                                $input.addClass('error');
-                                $err.text(dup
-                                    ? 'That label already exists.'
-                                    : 'Could not create the label. Please try again.').show();
-                                return;
-                            }
+                        // The connector's create_label response is not a reliable
+                        // success/failure signal: BrcApi keys success off an "id"
+                        // field that the Brightcove label API never returns (it
+                        // returns {"path": ...} on 201, an array on 422-duplicate),
+                        // so it can report failure on success. Until that is fixed
+                        // server-side (BCON-182 follow-up), treat the request as
+                        // fire-and-confirm — matching the original unconditional
+                        // behaviour, but with real feedback instead of a reload.
+                        complete: function () {
                             dialog.hide();
-                            location.reload();
-                        },
-                        error: function () {
-                            $input.addClass('error');
-                            $err.text('Could not create the label. Please try again.').show();
+                            // Brightcove's GET /labels is an async search index
+                            // that lags well behind creation, so reloading would
+                            // re-fetch a list that does NOT yet include the
+                            // just-created label and the user would think nothing
+                            // happened (BCON-182). Add it to the filter dropdown
+                            // optimistically and confirm with a toast.
+                            var exists = $('#label_list option').filter(function () {
+                                return this.value === labelName;
+                            }).length > 0;
+                            if (!exists) {
+                                var $newOpt = $('<option>', { value: labelName }).text(labelName);
+                                var $createOpt = $('#label_list option[value="create"]');
+                                if ($createOpt.length) { $createOpt.before($newOpt); }
+                                else { $('#label_list').append($newOpt); }
+                            }
+                            // Keep showing all videos rather than filtering to the
+                            // brand-new (empty) label.
+                            $('#label_list').val('all');
+                            if (typeof brcToast === 'function') {
+                                brcToast("Label '" + labelName + "' created");
+                            }
                         }
                     });
                 },
