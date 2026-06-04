@@ -118,6 +118,11 @@
         if (!language) { showError(dlg, "Language code is required."); return; }
 
         var name        = dlg.querySelector("#brc-variant-name").value.trim();
+        // Brightcove requires the variant name (the API rejects an empty name
+        // with "name: REQUIRED_FIELD"). Validate it here so the user gets a
+        // message about the Name rather than a misleading language-code error.
+        if (!name) { showError(dlg, "Name is required."); return; }
+
         var description = dlg.querySelector("#brc-variant-description").value.trim();
         var longDesc    = dlg.querySelector("#brc-variant-long-description").value.trim();
 
@@ -148,7 +153,10 @@
                 var isError  = errorVal != null && errorVal !== 0 &&
                                errorVal !== 200 && errorVal !== 201;
                 if (isError) {
-                    showError(dlg, "Save failed. Check the language code and try again.");
+                    // Neutral message — don't blame the language code, since the
+                    // most common cause (a missing required Name) is now caught
+                    // by client-side validation above before we ever submit.
+                    showError(dlg, "Save failed. Please check the variant details and try again.");
                     return;
                 }
                 dlg.hide();
