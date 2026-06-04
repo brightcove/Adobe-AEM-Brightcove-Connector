@@ -420,6 +420,10 @@ betty-titlebar {
   align-items: center;
   gap: 12px;
   margin-left: 6px;
+  /* When the viewport is narrow, wrap the bar to a new row instead of
+     letting the buttons shrink and wrap their labels (BCON-181). */
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 .brc-bulk-bar[hidden] {
@@ -463,6 +467,10 @@ betty-titlebar {
   filter: none;
   margin: 0;
   line-height: 32px;
+  /* Keep each button its natural size on one line — don't let flex shrink
+     them until their labels wrap (BCON-181). */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brc-bulk-bar-btn:hover {
@@ -1493,13 +1501,16 @@ table.tblConsole #tbData td:nth-child(2) {
   content: '';
   display: block;
   position: absolute;
-  left: 3px;
-  top: 0;
+  /* Center the checkmark in the box. The tick's elbow sits toward the
+     bottom of its bounding box, so nudge up slightly (-60% Y) so it reads
+     as centered rather than low. */
+  left: 50%;
+  top: 50%;
   width: 4px;
   height: 8px;
   border-right: 1.5px solid #fff;
   border-bottom: 1.5px solid #fff;
-  transform: rotate(45deg);
+  transform: translate(-50%, -60%) rotate(45deg);
 }
 
 #playerDiv.overlay.ui-draggable {
