@@ -1706,7 +1706,7 @@ function buildMainVideoList(title) {
     document.getElementById('searchDiv_pl').style.display = "none";
     $('#filterToggle').show();
 
-    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('checkToggle').style.display = "inline-block";
     $("span[name=buttonRow]").show();
     $(":button[name=delFromPlstButton]").hide();
 
@@ -1804,7 +1804,7 @@ function buildPlaylistList() {
     $('#filterToggle').hide();
     $('#filterPanel').attr('hidden', '');
     $('#filterToggle').attr('aria-expanded', 'false');
-    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('checkToggle').style.display = "inline-block";
     document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
@@ -1906,7 +1906,7 @@ function showPlaylist() {
     document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
 
-    document.getElementById('checkToggle').style.display = "inline"
+    document.getElementById('checkToggle').style.display = "inline-block"
     document.getElementById('tdMeta').style.display = "none";
     $("span[name=buttonRow]").show();
     $(".uplButton").hide();

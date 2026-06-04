@@ -25,6 +25,24 @@ test('BCON-179: checkbox checkmark is centered, not top-left', async ({ page }) 
   expect(pos.transform).not.toBe('none');
 });
 
+test('select-all header checkbox is visible (15x15) and toggles all rows', async ({ page }) => {
+  // Follow-up found during BCON-179 testing: the select-all was rendered at
+  // ~2x3px (JS forced display:inline on an appearance:none checkbox, which
+  // ignores width/height) and the column was styled font-size:1px — so it was
+  // effectively invisible/unusable.
+  await openAdmin(page);
+  const toggle = page.locator('#checkToggle');
+  const box = await toggle.boundingBox();
+  expect(Math.round(box.width)).toBe(15);
+  expect(Math.round(box.height)).toBe(15);
+
+  await toggle.check();
+  const total = await page.locator('#tbData input[type="checkbox"]').count();
+  const checked = await page.locator('#tbData input[type="checkbox"]:checked').count();
+  expect(total).toBeGreaterThan(0);
+  expect(checked).toBe(total);
+});
+
 test('BCON-181: bulk-bar buttons stay single-line at narrow width', async ({ page }) => {
   await openAdmin(page);
   const boxes = page.locator('#tbData input[type="checkbox"]');

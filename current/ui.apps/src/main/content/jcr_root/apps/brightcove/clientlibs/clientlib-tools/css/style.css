@@ -1478,6 +1478,10 @@ table.tblConsole #tbData td:nth-child(2) {
 .brc-filter-checkbox input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
+  /* inline-block so the explicit width/height apply — the select-all header
+     checkbox was rendering as display:inline, which ignores width/height and
+     collapsed it to a near-invisible 2x3px box. */
+  display: inline-block;
   width: 15px;
   height: 15px;
   border: 1.5px solid #c8c7c2;

@@ -210,7 +210,7 @@
                                             <table id="tblMainList" cellpadding="3" cellspacing="0">
                                                 <thead>
                                                 <tr id="trHeader">
-                                                    <th id="checkCol" class="tdMainTableHead" style="border-right:0px;color:#e5e5e5;font-size:1px"><input type="checkbox" onclick="toggleSelect(this)" id="checkToggle"/>?</th>
+                                                    <th id="checkCol" class="tdMainTableHead"><input type="checkbox" onclick="toggleSelect(this)" id="checkToggle" aria-label="Select all"/></th>
                                                     <th id="nameCol" class="tdMainTableHead sortable ASC" style="border-left:0px" data-sortType="" data-sortBy="name" onclick="sort(this)">Name<span class='order'></span></th>
                                                     <th id="lastUpdated" class="tdMainTableHead sortable NONE" data-sortType="-" data-sortBy="updated_at" onclick="sort(this)">Last Updated <span class='order'></span></th>
                                                     <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="reference_id" onclick="sort(this)">Reference ID <span class='order'></span></th>
