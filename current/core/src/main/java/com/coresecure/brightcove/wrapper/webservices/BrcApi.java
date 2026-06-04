@@ -340,10 +340,18 @@ public class BrcApi extends SlingAllMethodsServlet {
         LOGGER.info("Creating a Label");
         ObjectNode labelResult = brAPI.cms.createLabel(requestParameter.toString());
 
-        if (!labelResult.has(Constants.ID)) {
-            result.put(Constants.ERROR, 409);
-        } else {
+        // The Brightcove label API returns {"path": ...} on success (201). The
+        // old check keyed on an "id" field the API never returns, so it reported
+        // failure on every successful create. On failure HttpServices synthesises
+        // {"error_code": <status>, ...} — 422 means the path already exists.
+        if (labelResult != null && labelResult.has(Constants.PATH)) {
             result = null;
+        } else if (labelResult != null && labelResult.has(Constants.ERROR_CODE)) {
+            int code = labelResult.get(Constants.ERROR_CODE).asInt();
+            // Surface a duplicate (422) as a 409-style "already exists" for the JS.
+            result.put(Constants.ERROR, code == 422 ? 409 : code);
+        } else {
+            result.put(Constants.ERROR, 409);
         }
         return result;
     }

@@ -1263,15 +1263,19 @@ function loadLabels() {
                         url: '/bin/brightcove/api.js',
                         data: { a: 'create_label', label: labelName },
                         async: true,
-                        // The connector's create_label response is not a reliable
-                        // success/failure signal: BrcApi keys success off an "id"
-                        // field that the Brightcove label API never returns (it
-                        // returns {"path": ...} on 201, an array on 422-duplicate),
-                        // so it can report failure on success. Until that is fixed
-                        // server-side (BCON-182 follow-up), treat the request as
-                        // fire-and-confirm — matching the original unconditional
-                        // behaviour, but with real feedback instead of a reload.
-                        complete: function () {
+                        // Inspect the raw response in `complete` rather than
+                        // relying on jQuery's success/error split: BrcApi writes
+                        // "true" on success and a body containing {"error":<code>}
+                        // on failure (409 = the path already exists).
+                        complete: function (jqXHR) {
+                            var body = (jqXHR && jqXHR.responseText) ? jqXHR.responseText : '';
+                            if (body.indexOf('"error"') !== -1) {
+                                $input.addClass('error');
+                                $err.text(body.indexOf('409') !== -1
+                                    ? 'That label already exists.'
+                                    : 'Could not create the label. Please try again.').show();
+                                return; // keep the dialog open
+                            }
                             dialog.hide();
                             // Brightcove's GET /labels is an async search index
                             // that lags well behind creation, so reloading would

@@ -75,6 +75,29 @@ test('a plain name is accepted and sent as a /-prefixed path', async ({ page }) 
   await expect(page.locator('#label_list option[value="/QA Test Label"]')).toHaveCount(1);
 });
 
+test('a duplicate label shows an error and is not added to the dropdown', async ({ page }) => {
+  await openAdmin(page);
+
+  // Mock the server reporting a duplicate (BrcApi maps the CMS 422 to {"error":409}).
+  await page.route('**/bin/brightcove/api.js**', (route) => {
+    if (route.request().url().includes('a=create_label')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"error":409}' });
+    }
+    return route.continue();
+  });
+
+  await openCreateLabelModal(page);
+  await page.fill('.pml-dialog .input-label-name', 'Dup Label');
+  await page.locator('.pml-dialog .pml-dialog_footer .btn-primary').click();
+
+  // Error message shown, dialog stays open, no toast, no dropdown entry.
+  await expect(page.locator('.input-label-error')).toBeVisible();
+  await expect(page.locator('.input-label-error')).toHaveText(/already exists/i);
+  await expect(page.locator('.pml-dialog .input-label-name')).toBeVisible();
+  await expect(page.locator('#brcToast')).toHaveCount(0);
+  await expect(page.locator('#label_list option[value="/Dup Label"]')).toHaveCount(0);
+});
+
 test('a name already starting with / is not double-prefixed', async ({ page }) => {
   await openAdmin(page);
 
