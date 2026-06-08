@@ -2502,25 +2502,49 @@ $(document).on('click', '.brc-image-url-save', function() {
         account_id: $("#selAccount").val()
     };
     fields[field] = url;
+    var noun = (kind === 'thumbnail' ? 'Thumbnail' : 'Poster');
+
+    function resetForm() {
+        $save.prop('disabled', false).text(originalLabel);
+        $cancel.prop('disabled', false);
+        $input.prop('disabled', false);
+    }
 
     $.ajax({
         url: apiLocation + '.js',
         type: 'POST',
         data: fields,
-        success: function() {
+        dataType: 'json',
+        success: function(resp) {
+            // Brightcove's Dynamic Ingest endpoint is asynchronous — it
+            // queues a job and returns {"id":"<job_id>"}. The actual image
+            // doesn't appear on Brightcove (under a boltdns.net CDN URL) for
+            // many seconds. So:
+            //   (a) success means "queued" — be honest about that in the
+            //       toast (was "Poster updated", which was a lie that left
+            //       users wondering why the URL "reverted" on refresh);
+            //   (b) failure to queue (error_code in response) surfaces a
+            //       proper error toast and leaves the edit row open so the
+            //       user can fix the URL.
+            if (resp && resp.error_code) {
+                brcToast(noun + ' update failed: ' + (resp.message || 'Brightcove rejected the URL'));
+                resetForm();
+                return;
+            }
+            _exitImageUrlEdit($widget);
+            // Optimistic preview: show the typed URL so the user sees
+            // immediate visual feedback. NOTE this is a temporary preview —
+            // on refresh, the image src will be Brightcove's CDN URL once
+            // the ingest job completes, or revert to the previous URL if
+            // the job fails (which we can't tell synchronously).
             var safeId = previewId.replace(/\./g, '\\.');
             $('#' + safeId).empty().append($('<img>').attr('src', url));
-            _exitImageUrlEdit($widget);
-            brcToast((kind === 'thumbnail' ? 'Thumbnail' : 'Poster') + ' updated');
-            $save.prop('disabled', false).text(originalLabel);
-            $cancel.prop('disabled', false);
-            $input.prop('disabled', false);
+            brcToast(noun + ' update queued — may take a moment to appear on Brightcove');
+            resetForm();
         },
         error: function() {
-            brcToast((kind === 'thumbnail' ? 'Thumbnail' : 'Poster') + ' update failed — please try again');
-            $save.prop('disabled', false).text(originalLabel);
-            $cancel.prop('disabled', false);
-            $input.prop('disabled', false);
+            brcToast(noun + ' update failed — please try again');
+            resetForm();
         }
     });
 });

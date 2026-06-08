@@ -62,6 +62,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.coresecure.brightcove.wrapper.utils.JsonReader;
+
 import javax.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -645,6 +647,56 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
         LOGGER.trace(videoItem.toPrettyString());
 
+        // Parse the DI response so the JS can tell whether the QUEUE succeeded.
+        // (The actual image processing is async — Brightcove returns 200 +
+        // {"id":"<job-id>"} for any payload it accepts, then workers fetch
+        // the URL and update the image minutes later. We can't surface the
+        // job result synchronously, but we MUST surface a queue failure
+        // instead of always claiming success.)
+        ObjectNode ingestResult = JsonNodeFactory.instance.objectNode();
+        boolean ingestQueued = false;
+        if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
+            String rawResponse = videoItem.get(Constants.RESPONSE).asText();
+            if (rawResponse != null && !rawResponse.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.JsonNode parsed = JsonReader.readJsonTree(rawResponse);
+                    if (parsed.isObject()) {
+                        ObjectNode obj = (ObjectNode) parsed;
+                        if (obj.has("id")) {
+                            ingestQueued = true;
+                            ingestResult.put("job_id", obj.get("id").asText());
+                        } else if (obj.has("error_code")) {
+                            // Brightcove DI wraps errors as object {"error_code": "...", "message": "..."}
+                            ingestResult.put("error_code", 422);
+                            ingestResult.put("message", obj.has("message") ? obj.get("message").asText() : obj.get("error_code").asText());
+                        } else if (obj.has("error")) {
+                            // executePost's synthesised error wrapper (numeric or string in "error" field).
+                            int code;
+                            try { code = Integer.parseInt(obj.get("error").asText()); }
+                            catch (NumberFormatException nfe) { code = 422; }
+                            ingestResult.put("error_code", code);
+                            ingestResult.put("message", obj.has("error_message") ? obj.get("error_message").asText() : "Ingest queue failed");
+                        }
+                    } else if (parsed.isArray() && parsed.size() > 0) {
+                        // Brightcove validation errors come as an array body.
+                        com.fasterxml.jackson.databind.JsonNode first = parsed.get(0);
+                        ingestResult.put("error_code", 422);
+                        ingestResult.put("message", first.has("message") ? first.get("message").asText() : "Validation error");
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse DI ingest response: {}", rawResponse, e);
+                    ingestResult.put("error_code", 502);
+                    ingestResult.put("message", "Could not parse ingest response");
+                }
+            } else {
+                ingestResult.put("error_code", 502);
+                ingestResult.put("message", "Empty ingest response");
+            }
+        } else {
+            ingestResult.put("error_code", 502);
+            ingestResult.put("message", "No ingest response (auth/transport failure)");
+        }
+
         if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
             try {
                 String videoId = request.getParameter(Constants.ID);
@@ -703,7 +755,13 @@ public class BrcApi extends SlingAllMethodsServlet {
             }
         }
 
-        return null;
+        // Return a real response shape so the JS can distinguish queued
+        // (async — image will appear shortly) from queue-failed.
+        if (!ingestQueued && !ingestResult.has("error_code")) {
+            ingestResult.put("error_code", 502);
+            ingestResult.put("message", "Ingest queue failed");
+        }
+        return ingestResult;
     }
 
     private ObjectNode apiLogic(SlingHttpServletRequest request, SlingHttpServletResponse response, ObjectNode jsonObject) throws IOException {

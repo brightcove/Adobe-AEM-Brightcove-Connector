@@ -65,7 +65,7 @@ test('Cancel returns the widget to button view without sending anything', async 
   expect(uploadFired).toBe(false);
 });
 
-test('Save posts the correct field, updates the preview, no popup, no page reload', async ({ page }) => {
+test('Save posts the correct field, queues the ingest, no popup, no page reload', async ({ page }) => {
   await openFirstVideoPanel(page);
   const $poster = page.locator('.brc-image-widget[data-image-kind="poster"]');
 
@@ -73,12 +73,18 @@ test('Save posts the correct field, updates the preview, no popup, no page reloa
   await page.evaluate(() => { window.__bcon184Sentinel = 'alive'; });
 
   let postedBody = null;
+  // Mock with the real success shape: BrcApi.uploadImage now returns
+  // {"job_id":"<id>"} on a queued ingest (instead of plain `true`).
   await page.route(/api\.js$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
     const body = route.request().postData() || '';
     if (!body.includes('a=upload_image')) return route.continue();
     postedBody = body;
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{"job_id":"fake-job-id-12345"}',
+    });
   });
 
   const url = 'https://example.com/poster-' + Date.now() + '.jpg';
@@ -92,10 +98,12 @@ test('Save posts the correct field, updates the preview, no popup, no page reloa
   expect(postedBody).toContain('poster_source=' + encodeURIComponent(url));
   expect(postedBody).not.toContain('thumbnail_source=');
 
-  // Preview updated.
+  // Optimistic preview updated (real CDN URL appears on refresh once
+  // Brightcove finishes processing — see toast copy).
   await expect(page.locator('#divMeta\\.posterPreview img')).toHaveAttribute('src', url);
-  // Toast.
-  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/Poster updated/);
+  // Toast is honest about the async nature — not "Poster updated".
+  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/queued/i);
+  await expect(page.locator('#brcToast .brc-toast-msg')).not.toContainText(/^Poster updated$/);
   // Returned to button view, no popup.
   await expect($poster.locator('.brc-image-url-edit')).toBeHidden();
   await expect($poster.locator('.brc-image-url-btn')).toBeVisible();
@@ -103,6 +111,49 @@ test('Save posts the correct field, updates the preview, no popup, no page reloa
   // No page reload.
   const sentinel = await page.evaluate(() => window.__bcon184Sentinel);
   expect(sentinel).toBe('alive');
+});
+
+test('Brightcove ingest error surfaces a real error toast (not phantom success)', async ({ page }) => {
+  // Regression guard for the silent-failure bug: BrcApi.uploadImage used
+  // to return null unconditionally so the JS always toasted success even
+  // when Brightcove rejected the queue request. Now the JS inspects
+  // resp.error_code and surfaces the real message.
+  await openFirstVideoPanel(page);
+  const $thumb = page.locator('.brc-image-widget[data-image-kind="thumbnail"]');
+
+  // Capture the preview src BEFORE the save attempt so we can assert it
+  // didn't get optimistically overwritten on a failure.
+  const previewBefore = await page.locator('#divMeta\\.thumbPreview img').count() > 0
+    ? await page.locator('#divMeta\\.thumbPreview img').getAttribute('src')
+    : null;
+
+  await page.route(/api\.js$/, async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    const body = route.request().postData() || '';
+    if (!body.includes('a=upload_image')) return route.continue();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{"error_code":422,"message":"Invalid URL: must be HTTPS and reachable"}',
+    });
+  });
+
+  await $thumb.locator('.brc-image-url-btn').click();
+  await $thumb.locator('.brc-image-url-input').fill('https://example.com/bogus.jpg');
+  await $thumb.locator('.brc-image-url-save').click();
+
+  // Error surfaces in the toast with the upstream message.
+  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/Thumbnail update failed/);
+  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/Invalid URL/);
+  // The edit row stays open + re-enabled so the user can fix the URL.
+  await expect($thumb.locator('.brc-image-url-edit')).toBeVisible();
+  await expect($thumb.locator('.brc-image-url-save')).toBeEnabled();
+  await expect($thumb.locator('.brc-image-url-input')).toBeEnabled();
+  // No optimistic preview update on failure.
+  const previewAfter = await page.locator('#divMeta\\.thumbPreview img').count() > 0
+    ? await page.locator('#divMeta\\.thumbPreview img').getAttribute('src')
+    : null;
+  expect(previewAfter).toBe(previewBefore);
 });
 
 test('switching videos closes any stuck inline edit state', async ({ page }) => {
