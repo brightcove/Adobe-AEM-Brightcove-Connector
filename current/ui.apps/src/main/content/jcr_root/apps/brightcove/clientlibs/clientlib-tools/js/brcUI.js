@@ -2078,58 +2078,11 @@ function showMetaData(idx) {
     }
 }
 
-function _cameraIcon() {
-    return $('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
-        '</svg>');
-}
+// _cameraIcon / renderLabelPills / keydown #labelInput / saveLabels are
+// defined further down (search for `function _cameraIcon`). They used to
+// live here too — the duplicate top-level binding of the keydown handler
+// caused every Enter press in the label input to dispatch twice.
 
-function renderLabelPills() {
-    var $container = $('#divMeta\\.labels').empty();
-    _currentLabels.forEach(function(label) {
-        var $pill = $('<span class="brc-label-pill">')
-            .append($('<span>').text(label))
-            .append(
-                $('<button class="brc-label-pill-remove" type="button" aria-label="Remove">').text('×')
-                    .on('click', function() {
-                        var i = _currentLabels.indexOf(label);
-                        if (i > -1) _currentLabels.splice(i, 1);
-                        $(this).closest('.brc-label-pill').remove();
-                    })
-            );
-        $container.append($pill);
-    });
-}
-
-$(document).on('keydown', '#labelInput', function(e) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    var val = $(this).val().trim();
-    if (!val || _currentLabels.indexOf(val) > -1) return;
-    _currentLabels.push(val);
-    renderLabelPills();
-    $(this).val('');
-});
-
-function saveLabels() {
-    var videoId = $('#divMeta\\.id').text().trim();
-    if (!videoId) return;
-    var savedLabels = _currentLabels.slice();
-    $.ajax({
-        type: 'GET',
-        url: '/bin/brightcove/api.js',
-        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
-        async: true,
-        success: function() {
-            var idx = parseInt($('tr.select').attr('id'), 10);
-            if (!isNaN(idx) && oCurrentVideoList[idx]) {
-                oCurrentVideoList[idx].labels = savedLabels;
-            }
-            brcToast('Labels saved');
-        }
-    });
-}
 function showMetaDataByVideoID(idx) {
 
     window.selectedVideoId = false;
@@ -2268,12 +2221,40 @@ function renderLabelPills() {
     });
 }
 
+// Normalize a user-typed label to Brightcove's canonical /-prefixed-/-suffixed
+// form. Brightcove rejects bare or partial paths with a 422 ILLEGAL_VALUE,
+// and the rejection wipes the entire labels array atomically — so a stale
+// "foo" alongside a known "/test/demo/" loses both.
+function normalizeLabelPath(s) {
+    if (!s) return s;
+    if (s.charAt(0) !== '/') s = '/' + s;
+    if (s.charAt(s.length - 1) !== '/') s = s + '/';
+    return s;
+}
+
+// The known-labels set is the same one loadLabelCallback uses to populate
+// the Labels dropdown. We read from the populated <option>s rather than
+// keeping a parallel cache so the source of truth stays the dropdown.
+function knownLabelPaths() {
+    return $('#label_list option').map(function() { return $(this).val(); }).get()
+        .filter(function(v) { return v && v !== 'create'; });
+}
+
 $(document).on('keydown', '#labelInput', function(e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    var val = $(this).val().trim();
-    if (!val || _currentLabels.indexOf(val) > -1) return;
-    _currentLabels.push(val);
+    var raw = $(this).val().trim();
+    if (!raw) return;
+    var normalized = normalizeLabelPath(raw);
+    if (knownLabelPaths().indexOf(normalized) === -1) {
+        brcToast('Label "' + raw + '" not found — create it via the Labels dropdown first');
+        return;
+    }
+    if (_currentLabels.indexOf(normalized) > -1) {
+        $(this).val('');
+        return;
+    }
+    _currentLabels.push(normalized);
     renderLabelPills();
     $(this).val('');
 });
@@ -2285,14 +2266,28 @@ function saveLabels() {
     $.ajax({
         type: 'GET',
         url: '/bin/brightcove/api.js',
+        // The endpoint is JSONP — let jQuery wire the callback so the response
+        // body is actually parsed into `resp`. The prior `dataType` omission
+        // caused the response to be executed as a script (`cb({...})`) and the
+        // success handler arg to be the source text — meaning the handler
+        // unconditionally toasted "Labels saved" even on a 422 from Brightcove.
         data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
+        dataType: 'jsonp',
+        jsonp: 'callback',
         async: true,
-        success: function() {
+        success: function(resp) {
+            if (resp && resp.error_code) {
+                brcToast('Labels not saved: ' + (resp.message || 'Brightcove rejected one or more labels'));
+                return;
+            }
             var idx = parseInt($('tr.select').attr('id'), 10);
             if (!isNaN(idx) && oCurrentVideoList[idx]) {
                 oCurrentVideoList[idx].labels = savedLabels;
             }
             brcToast('Labels saved');
+        },
+        error: function() {
+            brcToast('Labels not saved: server error');
         }
     });
 }
