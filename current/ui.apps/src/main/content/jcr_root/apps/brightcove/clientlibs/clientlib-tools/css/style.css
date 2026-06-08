@@ -2888,6 +2888,72 @@ body.brc-mtf-open {
   background: #f7f6f2;
 }
 
+/* BCON-184: inline image URL editor (replaces the popup). */
+.brc-image-url-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.brc-image-url-input {
+  width: 100%;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1a1a18;
+  box-sizing: border-box;
+}
+
+.brc-image-url-input:focus {
+  outline: none;
+  border-color: #1a1a18;
+}
+
+.brc-image-url-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.brc-image-url-save,
+.brc-image-url-cancel {
+  flex: 1 1 0;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.brc-image-url-save {
+  background: #1a1a18;
+  color: #fff;
+  border-color: #1a1a18;
+  font-weight: 500;
+}
+
+.brc-image-url-save:hover {
+  background: #000;
+}
+
+.brc-image-url-save[disabled] {
+  background: #6b7280;
+  border-color: #6b7280;
+  cursor: not-allowed;
+}
+
+.brc-image-url-cancel {
+  background: #fff;
+  color: #1a1a18;
+}
+
+.brc-image-url-cancel:hover {
+  background: #f7f6f2;
+}
+
 /* Action buttons */
 .brc-panel-action-btn {
   display: block;

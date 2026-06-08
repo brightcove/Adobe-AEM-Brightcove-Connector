@@ -2013,6 +2013,9 @@ function showMetaData(idx) {
     idx = oCurrentVideoList.length > idx ? idx : 0;
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
+    // BCON-184: reset any leftover inline URL-edit from a previous video.
+    $('.brc-image-widget').each(function() { _exitImageUrlEdit($(this)); });
+
     var v = oCurrentVideoList[idx];
 
     showVariants(v, idx);
@@ -2151,6 +2154,10 @@ function showMetaDataByVideoID(idx) {
     $("tr.select").removeClass("select");
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
+    // BCON-184: any leftover inline URL-edit from a previous video should
+    // close on switch — otherwise the new video opens with the previous
+    // video's URL still typed in.
+    $('.brc-image-widget').each(function() { _exitImageUrlEdit($(this)); });
 
     $.ajax({
         url: getVideoAPIURL(idx),
@@ -2428,131 +2435,95 @@ function syncDB()
 }
 
 
-function uploadPoster()
-{
-    // first cleanup any existing dialogs
-    var elem = document.querySelector('#upload_poster_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
-    }
+// BCON-184: Image URL editing happens INSIDE the image widget instead of in
+// a Coral.Dialog popup. Each widget carries `data-image-kind`, `data-field`,
+// and `data-preview-id` attrs identifying how to post the change and which
+// preview to update. The widget toggles between two children:
+//   .brc-image-url-btn   (resting state — "ENTER URL")
+//   .brc-image-url-edit  (editing — input + Save + Cancel)
+//
+// `uploadPoster()` / `uploadThumbnail()` survive as the inline-onclick entry
+// points and delegate to the shared helper.
+function uploadPoster()    { _enterImageUrlEdit($('.brc-image-widget[data-image-kind="poster"]')); }
+function uploadThumbnail() { _enterImageUrlEdit($('.brc-image-widget[data-image-kind="thumbnail"]')); }
 
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_poster_dialog',
-        header: {
-          innerHTML: 'Update Poster Image'
-        },
-        content: {
-          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + ($('#divMeta\\.posterPreview img').attr('src') || '') + '"' +
-          '></div></form>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_poster_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-    dialog.on('click', '#upload_poster_dialog_click', function() {
-        if ($('#upload_poster_dialog_field_source').val() != '') {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                a: 'upload_image',
-                account_id: $("#selAccount").val(),
-                poster_source: $('#upload_poster_dialog_field_source').val()
-            }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function () {
-                    var url = $('#upload_poster_dialog_field_source').val();
-                    $('#divMeta\\.posterPreview').empty().append($('<img>').attr('src', url));
-                    $('#posterUrlBtn').text('ENTER URL');
-                    dialog.hide();
-                    brcToast('Poster updated');
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide a valid poster image source URL.');
-        }
-
-    });
-    document.body.appendChild(dialog);
-    dialog.show();
-
+function _enterImageUrlEdit($widget) {
+    if (!$widget || !$widget.length) return;
+    var $btn   = $widget.find('.brc-image-url-btn');
+    var $edit  = $widget.find('.brc-image-url-edit');
+    var $input = $edit.find('.brc-image-url-input');
+    var $preview = $widget.find('.brc-image-preview img');
+    $input.val($preview.attr('src') || '');
+    $btn.attr('hidden', '');
+    $edit.removeAttr('hidden');
+    $input.trigger('focus').get(0).select && $input.get(0).select();
 }
 
-function uploadThumbnail()
-{
-    // first cleanup any existing dialogs
-    var elem = document.querySelector('#upload_thumbnail_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
-    }
-
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_thumbnail_dialog',
-        header: {
-          innerHTML: 'Update Thumbnail'
-        },
-        content: {
-          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + ($('#divMeta\\.thumbPreview img').attr('src') || '') + '"' +
-          '></div></form>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_thumbnail_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-    dialog.on('click', '#upload_thumbnail_dialog_click', function() {
-        if ($('#upload_thumbnail_dialog_field_source').val() != '') {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                a: 'upload_image',
-                account_id: $("#selAccount").val(),
-                thumbnail_source: $('#upload_thumbnail_dialog_field_source').val()
-            }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function () {
-                    var url = $('#upload_thumbnail_dialog_field_source').val();
-                    $('#divMeta\\.thumbPreview').empty().append($('<img>').attr('src', url));
-                    $('#thumbUrlBtn').text('ENTER URL');
-                    dialog.hide();
-                    brcToast('Thumbnail updated');
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide a valid thumbnail source URL.');
-        }
-
-    });
-    document.body.appendChild(dialog);
-    dialog.show();
-
+function _exitImageUrlEdit($widget) {
+    if (!$widget || !$widget.length) return;
+    $widget.find('.brc-image-url-edit').attr('hidden', '');
+    $widget.find('.brc-image-url-btn').removeAttr('hidden');
 }
+
+$(document).on('click', '.brc-image-url-cancel', function() {
+    _exitImageUrlEdit($(this).closest('.brc-image-widget'));
+});
+
+$(document).on('keydown', '.brc-image-url-input', function(e) {
+    if (e.key === 'Escape') {
+        _exitImageUrlEdit($(this).closest('.brc-image-widget'));
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).closest('.brc-image-widget').find('.brc-image-url-save').trigger('click');
+    }
+});
+
+$(document).on('click', '.brc-image-url-save', function() {
+    var $widget = $(this).closest('.brc-image-widget');
+    var $input  = $widget.find('.brc-image-url-input');
+    var $save   = $widget.find('.brc-image-url-save');
+    var $cancel = $widget.find('.brc-image-url-cancel');
+    var field   = $widget.attr('data-field');                   // poster_source | thumbnail_source
+    var kind    = $widget.attr('data-image-kind');              // poster | thumbnail
+    var previewId = $widget.attr('data-preview-id');            // divMeta.<...>Preview
+    var url = ($input.val() || '').trim();
+    if (!url) { brcToast('Enter an image URL'); return; }
+
+    var originalLabel = $save.text();
+    $save.prop('disabled', true).text('Saving…');
+    $cancel.prop('disabled', true);
+    $input.prop('disabled', true);
+
+    var fields = {
+        limit: paging.size,
+        start: paging.generic,
+        id: document.getElementById('divMeta.id').innerHTML,
+        a: 'upload_image',
+        account_id: $("#selAccount").val()
+    };
+    fields[field] = url;
+
+    $.ajax({
+        url: apiLocation + '.js',
+        type: 'POST',
+        data: fields,
+        success: function() {
+            var safeId = previewId.replace(/\./g, '\\.');
+            $('#' + safeId).empty().append($('<img>').attr('src', url));
+            _exitImageUrlEdit($widget);
+            brcToast((kind === 'thumbnail' ? 'Thumbnail' : 'Poster') + ' updated');
+            $save.prop('disabled', false).text(originalLabel);
+            $cancel.prop('disabled', false);
+            $input.prop('disabled', false);
+        },
+        error: function() {
+            brcToast((kind === 'thumbnail' ? 'Thumbnail' : 'Poster') + ' update failed — please try again');
+            $save.prop('disabled', false).text(originalLabel);
+            $cancel.prop('disabled', false);
+            $input.prop('disabled', false);
+        }
+    });
+});
 
 function uploadtrack()
 {
