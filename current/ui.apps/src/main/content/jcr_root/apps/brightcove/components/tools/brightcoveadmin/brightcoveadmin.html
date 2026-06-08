@@ -210,7 +210,7 @@
                                             <table id="tblMainList" cellpadding="3" cellspacing="0">
                                                 <thead>
                                                 <tr id="trHeader">
-                                                    <th id="checkCol" class="tdMainTableHead" style="border-right:0px;color:#e5e5e5;font-size:1px"><input type="checkbox" onclick="toggleSelect(this)" id="checkToggle"/>?</th>
+                                                    <th id="checkCol" class="tdMainTableHead"><input type="checkbox" onclick="toggleSelect(this)" id="checkToggle" aria-label="Select all"/></th>
                                                     <th id="nameCol" class="tdMainTableHead sortable ASC" style="border-left:0px" data-sortType="" data-sortBy="name" onclick="sort(this)">Name<span class='order'></span></th>
                                                     <th id="lastUpdated" class="tdMainTableHead sortable NONE" data-sortType="-" data-sortBy="updated_at" onclick="sort(this)">Last Updated <span class='order'></span></th>
                                                     <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="reference_id" onclick="sort(this)">Reference ID <span class='order'></span></th>
@@ -265,19 +265,35 @@
                                     <button class="brc-panel-close" type="button" onclick="closeBox('tdMeta')" aria-label="Close">&#x2715;</button>
                                 </div>
 
-                                <!-- IMAGES -->
+                                <!-- IMAGES — BCON-184: inline URL edit replaces the popup. -->
                                 <div class="brc-panel-section">
                                     <div class="brc-panel-section-title">IMAGES</div>
                                     <div class="brc-panel-images">
-                                        <div class="brc-image-widget">
+                                        <div class="brc-image-widget" data-image-kind="poster"
+                                             data-field="poster_source" data-preview-id="divMeta.posterPreview">
                                             <div class="brc-image-preview" id="divMeta.posterPreview"></div>
                                             <span class="brc-image-label">Poster</span>
                                             <button class="brc-image-url-btn" id="posterUrlBtn" type="button" onclick="uploadPoster()">ENTER URL</button>
+                                            <div class="brc-image-url-edit" id="posterUrlEdit" hidden>
+                                                <input type="text" class="brc-image-url-input" id="posterUrlInput" placeholder="https://..." autocomplete="off">
+                                                <div class="brc-image-url-edit-actions">
+                                                    <button type="button" class="brc-image-url-save" id="posterUrlSave">Save</button>
+                                                    <button type="button" class="brc-image-url-cancel" id="posterUrlCancel">Cancel</button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="brc-image-widget">
+                                        <div class="brc-image-widget" data-image-kind="thumbnail"
+                                             data-field="thumbnail_source" data-preview-id="divMeta.thumbPreview">
                                             <div class="brc-image-preview" id="divMeta.thumbPreview"></div>
                                             <span class="brc-image-label">Thumbnail</span>
                                             <button class="brc-image-url-btn" id="thumbUrlBtn" type="button" onclick="uploadThumbnail()">ENTER URL</button>
+                                            <div class="brc-image-url-edit" id="thumbUrlEdit" hidden>
+                                                <input type="text" class="brc-image-url-input" id="thumbUrlInput" placeholder="https://..." autocomplete="off">
+                                                <div class="brc-image-url-edit-actions">
+                                                    <button type="button" class="brc-image-url-save" id="thumbUrlSave">Save</button>
+                                                    <button type="button" class="brc-image-url-cancel" id="thumbUrlCancel">Cancel</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -285,10 +301,15 @@
                                 <!-- ACTIONS -->
                                 <div class="brc-panel-section" id="trackarea">
                                     <div class="brc-panel-section-title">ACTIONS</div>
-                                    <div id="divMeta.text_tracks"></div>
                                     <button class="brc-panel-action-btn" type="button" onclick="uploadtrack()">Upload New Text Track</button>
                                     <button class="brc-panel-action-btn" type="button"
                                             onclick="doPreview(document.getElementById('divMeta.id').innerHTML)">Video Preview</button>
+                                </div>
+
+                                <!-- TEXT TRACKS — BCON-187: separate section AFTER actions, pill rendering. -->
+                                <div class="brc-panel-section" id="textTracksSection" hidden>
+                                    <div class="brc-panel-section-title">TEXT TRACKS</div>
+                                    <div id="divMeta.text_tracks" class="brc-track-list"></div>
                                 </div>
 
                                 <!-- VIDEO INFO -->

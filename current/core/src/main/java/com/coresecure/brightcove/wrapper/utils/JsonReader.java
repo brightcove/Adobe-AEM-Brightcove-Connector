@@ -32,6 +32,7 @@
  */
 package com.coresecure.brightcove.wrapper.utils;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -50,6 +51,15 @@ public class JsonReader {
 
     public static ArrayNode readJsonArrayFromString(String jsonText) throws IOException {
         return (ArrayNode) MAPPER.readTree(jsonText);
+    }
+
+    // Callers that need to introspect whether the parsed tree is an object or
+    // array (e.g. Brightcove CMS responses use an array body to convey errors
+    // and an object body for success) should use this rather than the typed
+    // helpers above — the typed helpers throw ClassCastException on mismatch
+    // and that exception is easy to swallow into a silent empty result.
+    public static JsonNode readJsonTree(String jsonText) throws IOException {
+        return MAPPER.readTree(jsonText);
     }
 
 }

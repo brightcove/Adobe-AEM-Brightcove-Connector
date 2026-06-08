@@ -62,6 +62,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.coresecure.brightcove.wrapper.utils.JsonReader;
+
 import javax.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -340,10 +342,41 @@ public class BrcApi extends SlingAllMethodsServlet {
         LOGGER.info("Creating a Label");
         ObjectNode labelResult = brAPI.cms.createLabel(requestParameter.toString());
 
-        if (!labelResult.has(Constants.ID)) {
-            result.put(Constants.ERROR, 409);
-        } else {
+        // The Brightcove label API returns {"path": ...} on success (201). On
+        // failure HttpServices synthesises an error object — but its field
+        // name is method-dependent: executePost writes `"error"` (with the
+        // upstream `error_code` STRING like "RESOURCE_ALREADY_EXISTS" as the
+        // value when the body parsed, or the numeric HTTP status when it
+        // didn't), while executePut/Delete/Patch (and the exception paths)
+        // write `"error_code"` numerically. The previous version only
+        // checked `error_code`, so every POST failure fell through to the
+        // final `else` returning 409 — every error read as "already exists",
+        // even unrelated 4xx/5xx (cursorbot review on PR #108).
+        if (labelResult != null && labelResult.has(Constants.PATH)) {
             result = null;
+        } else if (labelResult != null && (labelResult.has(Constants.ERROR_CODE) || labelResult.has(Constants.ERROR))) {
+            com.fasterxml.jackson.databind.JsonNode raw = labelResult.has(Constants.ERROR_CODE)
+                    ? labelResult.get(Constants.ERROR_CODE)
+                    : labelResult.get(Constants.ERROR);
+            String text = raw.asText();
+            int code;
+            try {
+                code = Integer.parseInt(text);
+            } catch (NumberFormatException nfe) {
+                // Upstream code came through as a string (executePost happy-error
+                // path). Map known duplicate signals to 422, everything else to
+                // 500 so the JS surfaces "Could not create" not "already exists".
+                code = ("RESOURCE_ALREADY_EXISTS".equals(text) || "VALIDATION_ERROR".equals(text))
+                        ? 422 : 500;
+            }
+            // Surface a duplicate (422) as a 409-style "already exists" for the JS.
+            result.put(Constants.ERROR, code == 422 ? 409 : code);
+        } else {
+            // Shape we don't recognise (executePost returning empty / null,
+            // transport-level failure with no body at all). Used to be a hard
+            // 409 — that mislabelled every weird failure as a duplicate. 500
+            // is the honest answer.
+            result.put(Constants.ERROR, 500);
         }
         return result;
     }
@@ -614,6 +647,56 @@ public class BrcApi extends SlingAllMethodsServlet {
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
         LOGGER.trace(videoItem.toPrettyString());
 
+        // Parse the DI response so the JS can tell whether the QUEUE succeeded.
+        // (The actual image processing is async — Brightcove returns 200 +
+        // {"id":"<job-id>"} for any payload it accepts, then workers fetch
+        // the URL and update the image minutes later. We can't surface the
+        // job result synchronously, but we MUST surface a queue failure
+        // instead of always claiming success.)
+        ObjectNode ingestResult = JsonNodeFactory.instance.objectNode();
+        boolean ingestQueued = false;
+        if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
+            String rawResponse = videoItem.get(Constants.RESPONSE).asText();
+            if (rawResponse != null && !rawResponse.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.JsonNode parsed = JsonReader.readJsonTree(rawResponse);
+                    if (parsed.isObject()) {
+                        ObjectNode obj = (ObjectNode) parsed;
+                        if (obj.has("id")) {
+                            ingestQueued = true;
+                            ingestResult.put("job_id", obj.get("id").asText());
+                        } else if (obj.has("error_code")) {
+                            // Brightcove DI wraps errors as object {"error_code": "...", "message": "..."}
+                            ingestResult.put("error_code", 422);
+                            ingestResult.put("message", obj.has("message") ? obj.get("message").asText() : obj.get("error_code").asText());
+                        } else if (obj.has("error")) {
+                            // executePost's synthesised error wrapper (numeric or string in "error" field).
+                            int code;
+                            try { code = Integer.parseInt(obj.get("error").asText()); }
+                            catch (NumberFormatException nfe) { code = 422; }
+                            ingestResult.put("error_code", code);
+                            ingestResult.put("message", obj.has("error_message") ? obj.get("error_message").asText() : "Ingest queue failed");
+                        }
+                    } else if (parsed.isArray() && parsed.size() > 0) {
+                        // Brightcove validation errors come as an array body.
+                        com.fasterxml.jackson.databind.JsonNode first = parsed.get(0);
+                        ingestResult.put("error_code", 422);
+                        ingestResult.put("message", first.has("message") ? first.get("message").asText() : "Validation error");
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse DI ingest response: {}", rawResponse, e);
+                    ingestResult.put("error_code", 502);
+                    ingestResult.put("message", "Could not parse ingest response");
+                }
+            } else {
+                ingestResult.put("error_code", 502);
+                ingestResult.put("message", "Empty ingest response");
+            }
+        } else {
+            ingestResult.put("error_code", 502);
+            ingestResult.put("message", "No ingest response (auth/transport failure)");
+        }
+
         if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
             try {
                 String videoId = request.getParameter(Constants.ID);
@@ -672,7 +755,13 @@ public class BrcApi extends SlingAllMethodsServlet {
             }
         }
 
-        return null;
+        // Return a real response shape so the JS can distinguish queued
+        // (async — image will appear shortly) from queue-failed.
+        if (!ingestQueued && !ingestResult.has("error_code")) {
+            ingestResult.put("error_code", 502);
+            ingestResult.put("message", "Ingest queue failed");
+        }
+        return ingestResult;
     }
 
     private ObjectNode apiLogic(SlingHttpServletRequest request, SlingHttpServletResponse response, ObjectNode jsonObject) throws IOException {

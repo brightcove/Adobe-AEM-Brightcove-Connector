@@ -271,21 +271,33 @@ $(function () {
         }
         var accountId = $row.attr('data-account-id');
         var accountAlias = $row.attr('data-account-alias') || accountId;
-        // Set the brc_act cookie via CQ.Ext if available, otherwise fall
-        // back to document.cookie. Without this fallback the page would
-        // reload without the new cookie, leaving the user on the old
-        // account but showing a misleading "Switched to <alias>" toast.
-        if (CQ && CQ.Ext) {
-            CQ.Ext.util.Cookies.set('brc_act', accountId);
-        } else {
-            document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
-        }
-        try {
-            if (window.sessionStorage) {
-                sessionStorage.setItem('brc_account_switched', accountAlias);
-            }
-        } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
-        window.location.reload();
+
+        // Switching reloads the whole page, so confirm before doing it rather
+        // than switching on a single click (BCON-178). Close the popover and
+        // ask the user to confirm; only switch on confirmation.
+        $('#accountPopover').attr('hidden', '');
+        $('#accountTrigger').attr('aria-expanded', 'false');
+
+        // Build the message via jQuery so the alias is text-escaped.
+        var $confirmMsg = $('<p>').text('Switch to "' + accountAlias + '"? The page will reload.');
+
+        showPopup('Switch account', $confirmMsg.prop('outerHTML'), 'Switch', 'Cancel',
+            function () {
+                // Confirmed — set the brc_act cookie via CQ.Ext if available,
+                // otherwise fall back to document.cookie, then reload.
+                if (CQ && CQ.Ext) {
+                    CQ.Ext.util.Cookies.set('brc_act', accountId);
+                } else {
+                    document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
+                }
+                try {
+                    if (window.sessionStorage) {
+                        sessionStorage.setItem('brc_account_switched', accountAlias);
+                    }
+                } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
+                window.location.reload();
+            },
+            null /* Cancel just closes the dialog; no switch */);
     });
 
     $('.butDiv').hide();
@@ -583,6 +595,14 @@ $(function () {
         searchVal = '';
         searchField = 'every_field';
         Load(getAllPlaylistsURL());
+    });
+
+    // Enter in the playlist search input triggers the search.
+    $('#search_pl').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('searchBut_pl').click();
+        }
     });
 
 });
@@ -935,10 +955,11 @@ $(function () {
     });
 
     $('#uttUpload').on('click', function () {
+        var videoId = document.getElementById('divMeta.id').innerHTML;
         var fields = {
             limit: paging.size,
             start: paging.generic,
-            id: document.getElementById('divMeta.id').innerHTML,
+            id: videoId,
             track_lang: $('#uttLanguage').val(),
             track_label: $('#uttLabel').val(),
             track_kind: $('#uttKind').val(),
@@ -949,19 +970,41 @@ $(function () {
             account_id: $('#selAccount').val()
         };
 
+        // BCON-186: in-flight feedback. Disable the modal's Upload button +
+        // swap its label to "Uploading…" so the user sees the action took
+        // effect. The full-page reload that hid this gap previously is now
+        // gone; the panel re-renders in place on success.
+        var $uploadBtn = $('#uttUpload');
+        var originalLabel = $uploadBtn.text();
+        function setUploading(on) {
+            if (on) {
+                $uploadBtn.prop('disabled', true).text('Uploading…');
+            } else {
+                $uploadBtn.prop('disabled', false).text(originalLabel);
+            }
+        }
+
         function doUpload() {
+            setUploading(true);
             $.ajax({
                 url: apiLocation + '.js',
                 type: 'POST',
                 data: fields,
                 success: function () {
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
                     closeUttModal();
-                    location.reload();
+                    setUploading(false);
+                    brcToast('Text track uploaded');
+                    // Re-fetch this video so the new track appears in the
+                    // TEXT TRACKS section without a full page reload (which
+                    // would re-render everything + lose scroll position).
+                    if (videoId) {
+                        window.selectedVideoId = videoId;
+                        showMetaDataByVideoID(videoId);
+                    }
                 },
                 error: function () {
-                    alert('Oops! There was an error with your text track submission. Please try again.');
+                    setUploading(false);
+                    brcToast('Text track upload failed — please try again');
                 }
             });
         }
@@ -976,7 +1019,7 @@ $(function () {
                 doUpload();
             };
             reader.onerror = function () {
-                alert('Oops! Could not read the selected file. Please try again.');
+                brcToast('Could not read the selected file — please try again');
             };
             reader.readAsText(file);
         } else {
@@ -1227,38 +1270,79 @@ function loadLabels() {
             Load(getAllVideosURL());
         } else if (selected == 'create') {
             var $message =
-                $('<p>Label Name:</p>')
-                .append($('<input class="input-label-name" type="text" autofocus />'));
+                $('<div>')
+                .append($('<p>Label Name:</p>'))
+                .append($('<input class="input-label-name" type="text" autofocus />'))
+                .append($('<p class="input-label-error" style="display:none;color:#d7373f;margin-top:6px;font-size:12px;"></p>'));
             showPopup('Create New Label',
                 $message.prop('outerHTML'),
                 'Create',
                 'Cancel',
                 function(dialog) {
+                    var $input = $('.input-label-name');
+                    var $err   = $('.input-label-error');
+                    var labelName = ($input.val() || '').trim();
 
-                    // do some basic validationå
-                    var labelName = $('.input-label-name').val();
-                    if (labelName == '' || !labelName.startsWith('/')) {
-                        $('.input-label-name').addClass('error');
-                    } else {
-                        $('.input-label-name').removeClass('error');
-                        // call the API here.
-                        var data = {
-                            a: 'create_label',
-                            label: labelName
-                        };
-                        $.ajax({
-                            type: 'GET',
-                            url: '/bin/brightcove/api.js',
-                            data: data,
-                            async: true,
-                            success: function (data)
-                            {
-                                // do something here?
-                            }
-                        });
-                        dialog.hide();
-                        location.reload();
+                    // Only an empty name is a hard error — give the user an
+                    // actual message instead of a silently-red box (BCON-182).
+                    if (labelName === '') {
+                        $input.addClass('error');
+                        $err.text('Please enter a label name.').show();
+                        return; // keep the dialog open
                     }
+
+                    // Brightcove labels are hierarchical paths and must start
+                    // with '/'. Be forgiving and prepend it when the user omits
+                    // it, rather than rejecting an otherwise-valid name.
+                    if (labelName.charAt(0) !== '/') {
+                        labelName = '/' + labelName;
+                    }
+
+                    $input.removeClass('error');
+                    $err.hide();
+
+                    $.ajax({
+                        type: 'GET',
+                        url: '/bin/brightcove/api.js',
+                        data: { a: 'create_label', label: labelName },
+                        async: true,
+                        // Inspect the raw response in `complete` rather than
+                        // relying on jQuery's success/error split: BrcApi writes
+                        // "true" on success and a body containing {"error":<code>}
+                        // on failure (409 = the path already exists).
+                        complete: function (jqXHR) {
+                            var body = (jqXHR && jqXHR.responseText) ? jqXHR.responseText : '';
+                            if (body.indexOf('"error"') !== -1) {
+                                $input.addClass('error');
+                                $err.text(body.indexOf('409') !== -1
+                                    ? 'That label already exists.'
+                                    : 'Could not create the label. Please try again.').show();
+                                return; // keep the dialog open
+                            }
+                            dialog.hide();
+                            // Brightcove's GET /labels is an async search index
+                            // that lags well behind creation, so reloading would
+                            // re-fetch a list that does NOT yet include the
+                            // just-created label and the user would think nothing
+                            // happened (BCON-182). Add it to the filter dropdown
+                            // optimistically and confirm with a toast.
+                            var exists = $('#label_list option').filter(function () {
+                                return this.value === labelName;
+                            }).length > 0;
+                            if (!exists) {
+                                var $newOpt = $('<option>', { value: labelName }).text(labelName);
+                                var $createOpt = $('#label_list option[value="create"]');
+                                if ($createOpt.length) { $createOpt.before($newOpt); }
+                                else { $('#label_list').append($newOpt); }
+                            }
+                            // Keep showing all videos rather than filtering to the
+                            // brand-new (empty) label.
+                            $('#label_list').val('all');
+                            if (typeof brcToast === 'function') {
+                                brcToast("Label '" + labelName + "' created");
+                            }
+                        }
+                    });
                 },
                 function(dialog) {
                     // do nothing here
@@ -1482,16 +1566,6 @@ function epSavePlaylist(showToast) {
         playlistId: _epPlaylistId,
         playlistName: playlistName
     };
-    if (!isSmart) {
-        var ids = epVideoIds();
-        if (ids.length === 0) {
-            playlistData['clearVideos'] = true;
-        } else {
-            playlistData['videos'] = ids;
-        }
-    }
-
-    epSetSaving(true);
 
     // Build the query string manually for the videos portion so we bypass
     // jQuery's $.param behaviour of dropping empty arrays entirely.  When the
@@ -1618,6 +1692,21 @@ function sort(object) {
                 return asc ? cmp : -cmp;
             });
             buildPlaylistList();
+        } else if (sortBy === 'id' && window.brcCurrentView === 'videos') {
+            // Brightcove video search does not support sort=id: the CMS API
+            // rejects it and returns zero results, which blanked the entire
+            // list (BCON-183). Sort the loaded videos client-side by numeric
+            // id instead, mirroring the playlist path above. IDs can exceed
+            // 2^53 so compare in string space: shorter string = smaller
+            // number, then lexicographic for equal lengths.
+            var ascId = sortType === '';
+            oCurrentVideoList.sort(function (a, b) {
+                var av = a.id != null ? String(a.id) : '';
+                var bv = b.id != null ? String(b.id) : '';
+                var cmp = av.length !== bv.length ? (av.length - bv.length) : (av < bv ? -1 : av > bv ? 1 : 0);
+                return ascId ? cmp : -cmp;
+            });
+            buildMainVideoList(document.getElementById('headTitle').innerHTML);
         } else {
             Load(getAllVideosURLOrdered(sortBy, sortType));
         }
@@ -1648,7 +1737,7 @@ function buildMainVideoList(title) {
     document.getElementById('searchDiv_pl').style.display = "none";
     $('#filterToggle').show();
 
-    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('checkToggle').style.display = "inline-block";
     $("span[name=buttonRow]").show();
     $(":button[name=delFromPlstButton]").hide();
 
@@ -1746,7 +1835,7 @@ function buildPlaylistList() {
     $('#filterToggle').hide();
     $('#filterPanel').attr('hidden', '');
     $('#filterToggle').attr('aria-expanded', 'false');
-    document.getElementById('checkToggle').style.display = "inline";
+    document.getElementById('checkToggle').style.display = "inline-block";
     document.getElementById('pagination').style.display = "none";
     $("span[name=buttonRow]").hide();
     $(":button[name=delFromPlstButton]").hide();
@@ -1776,7 +1865,9 @@ function buildPlaylistList() {
                 $('<button>', {
                     type: 'button',
                     class: 'edit-playlist brc-playlist-name-btn',
-                    'data-playlist-id': n.id
+                    'data-playlist-id': n.id,
+                    'data-playlist-name': n.name,
+                    'data-playlist-type': n.type || ''
                 }).text(n.name)
             )
         );
@@ -1848,7 +1939,7 @@ function showPlaylist() {
     document.getElementById('searchDiv').style.display = "inline-flex";
     document.getElementById('searchDiv_pl').style.display = "none";
 
-    document.getElementById('checkToggle').style.display = "inline"
+    document.getElementById('checkToggle').style.display = "inline-block"
     document.getElementById('tdMeta').style.display = "none";
     $("span[name=buttonRow]").show();
     $(".uplButton").hide();
@@ -1922,6 +2013,9 @@ function showMetaData(idx) {
     idx = oCurrentVideoList.length > idx ? idx : 0;
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
+    // BCON-184: reset any leftover inline URL-edit from a previous video.
+    $('.brc-image-widget').each(function() { _exitImageUrlEdit($(this)); });
+
     var v = oCurrentVideoList[idx];
 
     showVariants(v, idx);
@@ -1936,7 +2030,7 @@ function showMetaData(idx) {
     var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
     if (posterSrc) {
         $posterPreview.append($('<img>').attr('src', posterSrc));
-        $('#posterUrlBtn').text('Change URL');
+        $('#posterUrlBtn').text('ENTER URL');
     } else {
         $posterPreview.append(_cameraIcon());
         $('#posterUrlBtn').text('ENTER URL');
@@ -1947,7 +2041,7 @@ function showMetaData(idx) {
     var thumbSrc = v.thumbnailURL || null;
     if (thumbSrc) {
         $thumbPreview.append($('<img>').attr('src', thumbSrc));
-        $('#thumbUrlBtn').text('Change URL');
+        $('#thumbUrlBtn').text('ENTER URL');
     } else {
         $thumbPreview.append(_cameraIcon());
         $('#thumbUrlBtn').text('ENTER URL');
@@ -1959,7 +2053,7 @@ function showMetaData(idx) {
     document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
     document.getElementById('divMeta.id').innerHTML = v.id;
-    document.getElementById('divMeta.shortDescription').innerHTML = "<pre style=\"white-space: pre-wrap;\">" + (v.description != null ? v.description : "") + "</pre>";
+    document.getElementById('divMeta.shortDescription').textContent = (v.description != null ? v.description : "");
 
     // Tags
     var tagsObject = "";
@@ -1994,74 +2088,65 @@ function showMetaData(idx) {
 
     $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
-    // Text tracks
+    // Text tracks — render via shared helper into the BCON-187 section.
     $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
-    var arr = v.text_tracks != null ? v.text_tracks : "";
-    document.getElementById('divMeta.text_tracks').innerHTML = "";
+    renderTextTracksSection(v.text_tracks, v.id);
+}
 
-    if (arr.length > 0) {
-        var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
-        document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
-        for (var x = 0; x < arr.length; x++) {
-            var cur = arr[x];
-            var defTrack = cur["default"] ? "default_track" : "";
-            document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
+// Map a BCP-47 language tag to its English display name (e.g. "en" → "English",
+// "ja-JP" → "Japanese"). Falls back to the raw tag when the runtime doesn't
+// have Intl.DisplayNames.
+function _languageDisplay(srclang) {
+    if (!srclang) return '';
+    try {
+        if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+            var dn = new Intl.DisplayNames(['en'], { type: 'language' });
+            var name = dn.of(srclang);
+            if (name) return name;
         }
+    } catch (e) { /* fall through to the raw tag */ }
+    return srclang;
+}
+
+// BCON-187: render the TEXT TRACKS section as pill rows under its own
+// section header (was an unstyled table jammed into ACTIONS, above the
+// upload button). Hides the section entirely when there are no tracks.
+function renderTextTracksSection(tracks, videoId) {
+    var $section = $('#textTracksSection');
+    var $list = $('#divMeta\\.text_tracks').empty();
+    if (!tracks || !tracks.length) {
+        $section.attr('hidden', '');
+        return;
     }
-}
-
-function _cameraIcon() {
-    return $('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
-        '</svg>');
-}
-
-function renderLabelPills() {
-    var $container = $('#divMeta\\.labels').empty();
-    _currentLabels.forEach(function(label) {
-        var $pill = $('<span class="brc-label-pill">')
-            .append($('<span>').text(label))
-            .append(
-                $('<button class="brc-label-pill-remove" type="button" aria-label="Remove">').text('×')
-                    .on('click', function() {
-                        var i = _currentLabels.indexOf(label);
-                        if (i > -1) _currentLabels.splice(i, 1);
-                        $(this).closest('.brc-label-pill').remove();
-                    })
-            );
-        $container.append($pill);
-    });
-}
-
-$(document).on('keydown', '#labelInput', function(e) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    var val = $(this).val().trim();
-    if (!val || _currentLabels.indexOf(val) > -1) return;
-    _currentLabels.push(val);
-    renderLabelPills();
-    $(this).val('');
-});
-
-function saveLabels() {
-    var videoId = $('#divMeta\\.id').text().trim();
-    if (!videoId) return;
-    var savedLabels = _currentLabels.slice();
-    $.ajax({
-        type: 'GET',
-        url: '/bin/brightcove/api.js',
-        data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
-        async: true,
-        success: function() {
-            var idx = parseInt($('tr.select').attr('id'), 10);
-            if (!isNaN(idx) && oCurrentVideoList[idx]) {
-                oCurrentVideoList[idx].labels = savedLabels;
-            }
-            brcToast('Labels saved');
+    $section.removeAttr('hidden');
+    tracks.forEach(function(t) {
+        var label = t.label || _languageDisplay(t.srclang) || t.srclang || 'Untitled';
+        var kind = (t.kind || 'subtitles').toLowerCase();
+        var kindDisplay = kind.charAt(0).toUpperCase() + kind.slice(1);
+        var $row = $('<div class="brc-track-row">');
+        $row.append($('<span class="brc-track-label">').text(label));
+        $row.append($('<span class="brc-track-kind">').addClass('brc-track-kind--' + kind).text(kindDisplay));
+        if (t['default']) {
+            $row.append($('<span class="brc-track-default">').text('Default'));
         }
+        var $del = $('<button type="button" class="brc-track-delete" aria-label="Delete track">');
+        $del.append($('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<polyline points="3 6 5 6 21 6"/>' +
+            '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>' +
+            '<path d="M10 11v6"/><path d="M14 11v6"/>' +
+            '<path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>' +
+            '</svg>'));
+        $del.on('click', function() { deleteTrack(t.id, videoId); });
+        $row.append($del);
+        $list.append($row);
     });
 }
+
+// _cameraIcon / renderLabelPills / keydown #labelInput / saveLabels are
+// defined further down (search for `function _cameraIcon`). They used to
+// live here too — the duplicate top-level binding of the keydown handler
+// caused every Enter press in the label input to dispatch twice.
+
 function showMetaDataByVideoID(idx) {
 
     window.selectedVideoId = false;
@@ -2069,6 +2154,10 @@ function showMetaDataByVideoID(idx) {
     $("tr.select").removeClass("select");
     $("#tbData>tr:eq(" + idx + ")").addClass("select");
 
+    // BCON-184: any leftover inline URL-edit from a previous video should
+    // close on switch — otherwise the new video opens with the previous
+    // video's URL still typed in.
+    $('.brc-image-widget').each(function() { _exitImageUrlEdit($(this)); });
 
     $.ajax({
         url: getVideoAPIURL(idx),
@@ -2086,13 +2175,13 @@ function showMetaDataByVideoID(idx) {
             // Poster preview
             var $posterPreview = $('#divMeta\\.posterPreview').empty();
             var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
-            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('Change URL'); }
+            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('ENTER URL'); }
             else { $posterPreview.append(_cameraIcon()); $('#posterUrlBtn').text('ENTER URL'); }
 
             // Thumbnail preview
             var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
             var thumbSrc = (v.images && v.images.thumbnail && v.images.thumbnail.src) ? v.images.thumbnail.src : null;
-            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('Change URL'); }
+            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('ENTER URL'); }
             else { $thumbPreview.append(_cameraIcon()); $('#thumbUrlBtn').text('ENTER URL'); }
 
             //v.length is the running time of the video in ms
@@ -2101,7 +2190,7 @@ function showMetaDataByVideoID(idx) {
             document.getElementById('divMeta.length').innerHTML = Math.floor(v.duration / 60000) + ":" + sec;
 
             document.getElementById('divMeta.id').innerHTML = v.id;
-            document.getElementById('divMeta.shortDescription').innerHTML = "<pre>" + (v.description != null ? v.description : "") + "</pre>";
+            document.getElementById('divMeta.shortDescription').textContent = (v.description != null ? v.description : "");
 
             //Construct the tag section:
             var tagsObject = "";
@@ -2143,18 +2232,7 @@ function showMetaDataByVideoID(idx) {
             showVariants(v, vidIdx);
 
             $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
-            var arr = v.text_tracks != null ? v.text_tracks : "";
-            document.getElementById('divMeta.text_tracks').innerHTML = "";
-
-            if (arr.length > 0) {
-                var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
-                document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
-                for (var x = 0; x < arr.length; x++) {
-                    var cur = arr[x];
-                    var defTrack = cur["default"] ? "default_track" : "";
-                    document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
-                }
-            }
+            renderTextTracksSection(v.text_tracks, v.id);
             $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
             _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];
@@ -2200,12 +2278,40 @@ function renderLabelPills() {
     });
 }
 
+// Normalize a user-typed label to Brightcove's canonical /-prefixed-/-suffixed
+// form. Brightcove rejects bare or partial paths with a 422 ILLEGAL_VALUE,
+// and the rejection wipes the entire labels array atomically — so a stale
+// "foo" alongside a known "/test/demo/" loses both.
+function normalizeLabelPath(s) {
+    if (!s) return s;
+    if (s.charAt(0) !== '/') s = '/' + s;
+    if (s.charAt(s.length - 1) !== '/') s = s + '/';
+    return s;
+}
+
+// The known-labels set is the same one loadLabelCallback uses to populate
+// the Labels dropdown. We read from the populated <option>s rather than
+// keeping a parallel cache so the source of truth stays the dropdown.
+function knownLabelPaths() {
+    return $('#label_list option').map(function() { return $(this).val(); }).get()
+        .filter(function(v) { return v && v !== 'create'; });
+}
+
 $(document).on('keydown', '#labelInput', function(e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    var val = $(this).val().trim();
-    if (!val || _currentLabels.indexOf(val) > -1) return;
-    _currentLabels.push(val);
+    var raw = $(this).val().trim();
+    if (!raw) return;
+    var normalized = normalizeLabelPath(raw);
+    if (knownLabelPaths().indexOf(normalized) === -1) {
+        brcToast('Label "' + raw + '" not found — create it via the Labels dropdown first');
+        return;
+    }
+    if (_currentLabels.indexOf(normalized) > -1) {
+        $(this).val('');
+        return;
+    }
+    _currentLabels.push(normalized);
     renderLabelPills();
     $(this).val('');
 });
@@ -2217,14 +2323,28 @@ function saveLabels() {
     $.ajax({
         type: 'GET',
         url: '/bin/brightcove/api.js',
+        // The endpoint is JSONP — let jQuery wire the callback so the response
+        // body is actually parsed into `resp`. The prior `dataType` omission
+        // caused the response to be executed as a script (`cb({...})`) and the
+        // success handler arg to be the source text — meaning the handler
+        // unconditionally toasted "Labels saved" even on a 422 from Brightcove.
         data: $.param({ a: 'update_labels', labels: savedLabels, videoId: videoId }, true),
+        dataType: 'jsonp',
+        jsonp: 'callback',
         async: true,
-        success: function() {
+        success: function(resp) {
+            if (resp && resp.error_code) {
+                brcToast('Labels not saved: ' + (resp.message || 'Brightcove rejected one or more labels'));
+                return;
+            }
             var idx = parseInt($('tr.select').attr('id'), 10);
             if (!isNaN(idx) && oCurrentVideoList[idx]) {
                 oCurrentVideoList[idx].labels = savedLabels;
             }
             brcToast('Labels saved');
+        },
+        error: function() {
+            brcToast('Labels not saved: server error');
         }
     });
 }
@@ -2315,131 +2435,119 @@ function syncDB()
 }
 
 
-function uploadPoster()
-{
-    // first cleanup any existing dialogs
-    var elem = document.querySelector('#upload_poster_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
-    }
+// BCON-184: Image URL editing happens INSIDE the image widget instead of in
+// a Coral.Dialog popup. Each widget carries `data-image-kind`, `data-field`,
+// and `data-preview-id` attrs identifying how to post the change and which
+// preview to update. The widget toggles between two children:
+//   .brc-image-url-btn   (resting state — "ENTER URL")
+//   .brc-image-url-edit  (editing — input + Save + Cancel)
+//
+// `uploadPoster()` / `uploadThumbnail()` survive as the inline-onclick entry
+// points and delegate to the shared helper.
+function uploadPoster()    { _enterImageUrlEdit($('.brc-image-widget[data-image-kind="poster"]')); }
+function uploadThumbnail() { _enterImageUrlEdit($('.brc-image-widget[data-image-kind="thumbnail"]')); }
 
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_poster_dialog',
-        header: {
-          innerHTML: 'Update Poster Image'
-        },
-        content: {
-          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Poster Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_poster_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + ($('#divMeta\\.posterPreview img').attr('src') || '') + '"' +
-          '></div></form>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_poster_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-    dialog.on('click', '#upload_poster_dialog_click', function() {
-        if ($('#upload_poster_dialog_field_source').val() != '') {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                a: 'upload_image',
-                account_id: $("#selAccount").val(),
-                poster_source: $('#upload_poster_dialog_field_source').val()
-            }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function () {
-                    var url = $('#upload_poster_dialog_field_source').val();
-                    $('#divMeta\\.posterPreview').empty().append($('<img>').attr('src', url));
-                    $('#posterUrlBtn').text('Change URL');
-                    dialog.hide();
-                    brcToast('Poster updated');
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide a valid poster image source URL.');
-        }
-
-    });
-    document.body.appendChild(dialog);
-    dialog.show();
-
+function _enterImageUrlEdit($widget) {
+    if (!$widget || !$widget.length) return;
+    var $btn   = $widget.find('.brc-image-url-btn');
+    var $edit  = $widget.find('.brc-image-url-edit');
+    var $input = $edit.find('.brc-image-url-input');
+    var $preview = $widget.find('.brc-image-preview img');
+    $input.val($preview.attr('src') || '');
+    $btn.attr('hidden', '');
+    $edit.removeAttr('hidden');
+    $input.trigger('focus').get(0).select && $input.get(0).select();
 }
 
-function uploadThumbnail()
-{
-    // first cleanup any existing dialogs
-    var elem = document.querySelector('#upload_thumbnail_dialog');
-    if (elem) {
-        elem.parentNode.removeChild(elem);
+function _exitImageUrlEdit($widget) {
+    if (!$widget || !$widget.length) return;
+    $widget.find('.brc-image-url-edit').attr('hidden', '');
+    $widget.find('.brc-image-url-btn').removeAttr('hidden');
+}
+
+$(document).on('click', '.brc-image-url-cancel', function() {
+    _exitImageUrlEdit($(this).closest('.brc-image-widget'));
+});
+
+$(document).on('keydown', '.brc-image-url-input', function(e) {
+    if (e.key === 'Escape') {
+        _exitImageUrlEdit($(this).closest('.brc-image-widget'));
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        $(this).closest('.brc-image-widget').find('.brc-image-url-save').trigger('click');
+    }
+});
+
+$(document).on('click', '.brc-image-url-save', function() {
+    var $widget = $(this).closest('.brc-image-widget');
+    var $input  = $widget.find('.brc-image-url-input');
+    var $save   = $widget.find('.brc-image-url-save');
+    var $cancel = $widget.find('.brc-image-url-cancel');
+    var field   = $widget.attr('data-field');                   // poster_source | thumbnail_source
+    var kind    = $widget.attr('data-image-kind');              // poster | thumbnail
+    var previewId = $widget.attr('data-preview-id');            // divMeta.<...>Preview
+    var url = ($input.val() || '').trim();
+    if (!url) { brcToast('Enter an image URL'); return; }
+
+    var originalLabel = $save.text();
+    $save.prop('disabled', true).text('Saving…');
+    $cancel.prop('disabled', true);
+    $input.prop('disabled', true);
+
+    var fields = {
+        limit: paging.size,
+        start: paging.generic,
+        id: document.getElementById('divMeta.id').innerHTML,
+        a: 'upload_image',
+        account_id: $("#selAccount").val()
+    };
+    fields[field] = url;
+    var noun = (kind === 'thumbnail' ? 'Thumbnail' : 'Poster');
+
+    function resetForm() {
+        $save.prop('disabled', false).text(originalLabel);
+        $cancel.prop('disabled', false);
+        $input.prop('disabled', false);
     }
 
-    var dialog = new Coral.Dialog().set({
-        id: 'upload_thumbnail_dialog',
-        header: {
-          innerHTML: 'Update Thumbnail'
-        },
-        content: {
-          innerHTML: '<form class="coral-Form coral-Form--vertical">' +
-          '<div class="coral-Form-fieldwrapper">' +
-          '<label class="coral-Form-fieldlabel" id="label-vertical-textfield-0">Thumbnail Source URL</label>' +
-          '<input is="coral-textfield" class="coral-Form-field" placeholder="https://" name="name" id="upload_thumbnail_dialog_field_source" labelledby="label-vertical-textfield-0"' +
-          'value="' + ($('#divMeta\\.thumbPreview img').attr('src') || '') + '"' +
-          '></div></form>'
-        },
-        footer: {
-          innerHTML: '<button is="coral-button" id="upload_thumbnail_dialog_click" variant="primary">Upload</button><button is="coral-button" variant="quiet" coral-close>Cancel</button>'
-        }
-    });
-    dialog.on('click', '#upload_thumbnail_dialog_click', function() {
-        if ($('#upload_thumbnail_dialog_field_source').val() != '') {
-            var fields = {
-                limit: paging.size,
-                start: paging.generic,
-                id: document.getElementById('divMeta.id').innerHTML,
-                a: 'upload_image',
-                account_id: $("#selAccount").val(),
-                thumbnail_source: $('#upload_thumbnail_dialog_field_source').val()
+    $.ajax({
+        url: apiLocation + '.js',
+        type: 'POST',
+        data: fields,
+        dataType: 'json',
+        success: function(resp) {
+            // Brightcove's Dynamic Ingest endpoint is asynchronous — it
+            // queues a job and returns {"id":"<job_id>"}. The actual image
+            // doesn't appear on Brightcove (under a boltdns.net CDN URL) for
+            // many seconds. So:
+            //   (a) success means "queued" — be honest about that in the
+            //       toast (was "Poster updated", which was a lie that left
+            //       users wondering why the URL "reverted" on refresh);
+            //   (b) failure to queue (error_code in response) surfaces a
+            //       proper error toast and leaves the edit row open so the
+            //       user can fix the URL.
+            if (resp && resp.error_code) {
+                brcToast(noun + ' update failed: ' + (resp.message || 'Brightcove rejected the URL'));
+                resetForm();
+                return;
             }
-            console.log(fields);
-            $.ajax({
-                url: apiLocation + '.js',
-                type: 'POST',
-                data: fields,
-                success: function () {
-                    var url = $('#upload_thumbnail_dialog_field_source').val();
-                    $('#divMeta\\.thumbPreview').empty().append($('<img>').attr('src', url));
-                    $('#thumbUrlBtn').text('Change URL');
-                    dialog.hide();
-                    brcToast('Thumbnail updated');
-                },
-                error: function ( data )
-                {
-                    console.log(data);
-                    alert('Oops! There was an error with your submission. Please try again.');
-                }
-            });
-        } else {
-            alert('Please provide a valid thumbnail source URL.');
+            _exitImageUrlEdit($widget);
+            // Optimistic preview: show the typed URL so the user sees
+            // immediate visual feedback. NOTE this is a temporary preview —
+            // on refresh, the image src will be Brightcove's CDN URL once
+            // the ingest job completes, or revert to the previous URL if
+            // the job fails (which we can't tell synchronously).
+            var safeId = previewId.replace(/\./g, '\\.');
+            $('#' + safeId).empty().append($('<img>').attr('src', url));
+            brcToast(noun + ' update queued — may take a moment to appear on Brightcove');
+            resetForm();
+        },
+        error: function() {
+            brcToast(noun + ' update failed — please try again');
+            resetForm();
         }
-
     });
-    document.body.appendChild(dialog);
-    dialog.show();
-
-}
+});
 
 function uploadtrack()
 {

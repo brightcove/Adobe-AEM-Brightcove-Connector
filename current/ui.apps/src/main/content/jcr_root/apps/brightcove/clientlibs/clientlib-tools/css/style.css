@@ -420,6 +420,10 @@ betty-titlebar {
   align-items: center;
   gap: 12px;
   margin-left: 6px;
+  /* When the viewport is narrow, wrap the bar to a new row instead of
+     letting the buttons shrink and wrap their labels (BCON-181). */
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 .brc-bulk-bar[hidden] {
@@ -463,6 +467,10 @@ betty-titlebar {
   filter: none;
   margin: 0;
   line-height: 32px;
+  /* Keep each button its natural size on one line — don't let flex shrink
+     them until their labels wrap (BCON-181). */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brc-bulk-bar-btn:hover {
@@ -1066,11 +1074,6 @@ div.delConfPop {
   padding-right: 5px;
 }
 
-#divMeta.shortDescription pre {
-  white-space: pre-wrap;
-  margin-top: 5px;
-}
-
 #divMeta.labels a {
   display: block;
   margin-bottom: 2px;
@@ -1475,6 +1478,10 @@ table.tblConsole #tbData td:nth-child(2) {
 .brc-filter-checkbox input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
+  /* inline-block so the explicit width/height apply — the select-all header
+     checkbox was rendering as display:inline, which ignores width/height and
+     collapsed it to a near-invisible 2x3px box. */
+  display: inline-block;
   width: 15px;
   height: 15px;
   border: 1.5px solid #c8c7c2;
@@ -1498,13 +1505,16 @@ table.tblConsole #tbData td:nth-child(2) {
   content: '';
   display: block;
   position: absolute;
-  left: 3px;
-  top: 0;
+  /* Center the checkmark in the box. The tick's elbow sits toward the
+     bottom of its bounding box, so nudge up slightly (-60% Y) so it reads
+     as centered rather than low. */
+  left: 50%;
+  top: 50%;
   width: 4px;
   height: 8px;
   border-right: 1.5px solid #fff;
   border-bottom: 1.5px solid #fff;
-  transform: rotate(45deg);
+  transform: translate(-50%, -60%) rotate(45deg);
 }
 
 #playerDiv.overlay.ui-draggable {
@@ -2761,6 +2771,9 @@ body.brc-mtf-open {
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  /* BCON-175: outer border divides the Properties panel from the list section. */
+  border: 1px solid #e8e6df;
+  background: #fff;
 }
 
 .brc-panel-header {
@@ -2769,6 +2782,8 @@ body.brc-mtf-open {
   justify-content: space-between;
   padding: 16px 16px 12px;
   border-bottom: 1px solid #f0efea;
+  /* BCON-175: header has a grey background, distinct from the section body. */
+  background: #f7f6f2;
 }
 
 .brc-panel-title {
@@ -2817,6 +2832,8 @@ body.brc-mtf-open {
 /* Image widgets */
 .brc-panel-images {
   display: flex;
+  /* BCON-175: images stack vertically (was side-by-side). */
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -2871,6 +2888,72 @@ body.brc-mtf-open {
   background: #f7f6f2;
 }
 
+/* BCON-184: inline image URL editor (replaces the popup). */
+.brc-image-url-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.brc-image-url-input {
+  width: 100%;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1a1a18;
+  box-sizing: border-box;
+}
+
+.brc-image-url-input:focus {
+  outline: none;
+  border-color: #1a1a18;
+}
+
+.brc-image-url-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.brc-image-url-save,
+.brc-image-url-cancel {
+  flex: 1 1 0;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.brc-image-url-save {
+  background: #1a1a18;
+  color: #fff;
+  border-color: #1a1a18;
+  font-weight: 500;
+}
+
+.brc-image-url-save:hover {
+  background: #000;
+}
+
+.brc-image-url-save[disabled] {
+  background: #6b7280;
+  border-color: #6b7280;
+  cursor: not-allowed;
+}
+
+.brc-image-url-cancel {
+  background: #fff;
+  color: #1a1a18;
+}
+
+.brc-image-url-cancel:hover {
+  background: #f7f6f2;
+}
+
 /* Action buttons */
 .brc-panel-action-btn {
   display: block;
@@ -2898,11 +2981,17 @@ body.brc-mtf-open {
 /* Video info table */
 .brc-panel-info-table {
   width: 100%;
-  border-collapse: collapse;
+  /* BCON-175: outer border around the Video Info section. `separate` keeps
+     row dividers + lets the outer border render with rounded corners. */
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .brc-panel-info-table td {
-  padding: 7px 0;
+  padding: 7px 10px;
   border-bottom: 1px solid #f0efea;
   font-size: 13px;
   color: #1a1a18;
@@ -2911,6 +3000,22 @@ body.brc-mtf-open {
 
 .brc-panel-info-table tr:last-child td {
   border-bottom: none;
+}
+
+/* BCON-175: value cells right-justified; label cells stay left. */
+.brc-panel-info-table td:not(.brc-info-label) {
+  text-align: right;
+}
+
+/* BCON-175: Economics renders as a bubble/pill around the value. */
+#divMeta\.economics:not(:empty) {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: #f0efea;
+  font-size: 12px;
+  color: #1a1a18;
+  line-height: 1.4;
 }
 
 .brc-info-label {
@@ -2966,6 +3071,95 @@ body.brc-mtf-open {
   font-size: 12px;
   color: #6b7280;
   line-height: 1;
+}
+
+/* BCON-187: TEXT TRACKS section — pill rows under their own section title. */
+.brc-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brc-track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.brc-track-label {
+  flex: 1 1 auto;
+  color: #1a1a18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brc-track-kind,
+.brc-track-default {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  line-height: 1.4;
+  flex: 0 0 auto;
+}
+
+.brc-track-kind {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.brc-track-kind--captions {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.brc-track-kind--subtitles {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.brc-track-kind--descriptions {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.brc-track-kind--chapters {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.brc-track-kind--metadata {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.brc-track-default {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.brc-track-delete {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.brc-track-delete:hover {
+  background: #f7f6f2;
+  color: #b91c1c;
 }
 
 .brc-label-input {
@@ -3892,6 +4086,8 @@ body.brc-mtf-open {
 .brc-tt-suggestion-item:hover,
 .brc-tt-suggestion-item.is-active {
   background: #f7f6f2;
+}
+
 /* ---- BCON-148: Sync database loading overlay (frame J) ---- */
 .brc-sync-overlay {
   position: fixed;

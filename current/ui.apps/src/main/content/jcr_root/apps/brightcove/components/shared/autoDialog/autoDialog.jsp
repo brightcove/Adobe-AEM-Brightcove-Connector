@@ -143,7 +143,7 @@
 
     <div class="foundation-field-editable">
         <div  class="coral-Form-fieldwrapper foundation-field-edit">
-            <label class="coral-Form-fieldlabel"><b><%=current_field_title%><%=required ? " *":""%></b></label>
+            <label class="coral-Form-fieldlabel"><b><%=current_field_title%></b><%=required ? " <span style=\"color:#d9534f;\">*</span>":""%></label>
             <coral-select class="coral-Form-field" data-metaType="dropdown" name="./jcr:content/metadata/brc_custom_fields/<%=current_field_id%>" data-foundation-validation="" data-validation="">
                 <% if (!required) { %>
                 <coral-select-item value=""></coral-select-item>
@@ -172,7 +172,7 @@
     %>
     <div class="foundation-field-editable">
         <div  class="coral-Form-fieldwrapper foundation-field-edit">
-            <label class="coral-Form-fieldlabel"><b><%=current_field_title%><%=required ? " *":""%></b></label>
+            <label class="coral-Form-fieldlabel"><b><%=current_field_title%></b><%=required ? " <span style=\"color:#d9534f;\">*</span>":""%></label>
             <input <%=required ? "aria-required='true' required='true'":""%> class="coral-Form-field" data-metaType="text" type="text" name="./jcr:content/metadata/brc_custom_fields/<%=current_field_id%>" value="<%=custom_map!=null ? custom_map.get(current_field_id,""):""%>" data-foundation-validation="" data-validation="" is="coral-textfield">
         </div>
     </div>
@@ -261,7 +261,13 @@
                 <input id="brc-variant-language" is="coral-textfield" class="coral-Form-field" type="text" placeholder="e.g. fr, de, es">
             </div>
             <div class="coral-Form-fieldwrapper">
-                <label class="coral-Form-fieldlabel" for="brc-variant-name">Name</label>
+                <label class="coral-Form-fieldlabel" for="brc-variant-name">Name <span style="color:#d9534f;">*</span></label>
+                <%-- No aria-required/required here: the dialog markup lives inside the
+                     asset metadata form, so a validation attribute on this empty field
+                     would flag the whole Brightcove tab as invalid (red icon, no message)
+                     even while the dialog is closed. Required-ness is enforced visually
+                     (the asterisk) and in variant-dialog.js (the "Name is required" check),
+                     matching the Language Code field above. --%>
                 <input id="brc-variant-name" is="coral-textfield" class="coral-Form-field" type="text">
             </div>
             <div class="coral-Form-fieldwrapper">
@@ -284,7 +290,7 @@
                             JSONArray dlgEnums = dlgCf.getJSONArray("enum_values");
             %>
             <div class="coral-Form-fieldwrapper">
-                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%><%=dlgRequired ? " *":""%></b></label>
+                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%></b><%=dlgRequired ? " <span style=\"color:#d9534f;\">*</span>":""%></label>
                 <coral-select class="coral-Form-field brc-variant-cf" data-cf-id="<%=dlgFieldId%>">
                     <% if (!dlgRequired) { %>
                     <coral-select-item value=""></coral-select-item>
@@ -298,7 +304,7 @@
                         } else {
             %>
             <div class="coral-Form-fieldwrapper">
-                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%><%=dlgRequired ? " *":""%></b></label>
+                <label class="coral-Form-fieldlabel"><b><%=dlgFieldTitle%></b><%=dlgRequired ? " <span style=\"color:#d9534f;\">*</span>":""%></label>
                 <input is="coral-textfield" class="coral-Form-field brc-variant-cf" type="text" data-cf-id="<%=dlgFieldId%>">
             </div>
             <%

@@ -22,6 +22,8 @@ public class Constants {
 
     //JSON KEY CONSTANTS
     public static final String ID = "id";
+    public static final String PATH = "path";
+    public static final String ERROR_CODE = "error_code";
     public static final String ACCOUNT_ID = "account_id";
     public static final String NAME = "name";
     public static final String REFERENCE_ID = "reference_id";

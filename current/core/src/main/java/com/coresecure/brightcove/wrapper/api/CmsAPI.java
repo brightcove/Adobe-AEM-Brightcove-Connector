@@ -346,10 +346,35 @@ public class CmsAPI {
                 request.set("labels", labelArray);
                 LOGGER.info("updateVideoParams: {}", request.toPrettyString());
                 String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
-                if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
+                if (response != null && !response.isEmpty()) {
+                    // Brightcove returns an object on success ({ ...video fields... })
+                    // and an array on validation failure
+                    // (e.g. [{"error_code":"VALIDATION_ERROR","message":"foo: ILLEGAL_VALUE"}]).
+                    // The old `(ObjectNode) readTree(...)` cast threw on the array form
+                    // and the exception was swallowed below, so the JS client received
+                    // an empty {} and falsely showed "Labels saved" while nothing
+                    // persisted.
+                    com.fasterxml.jackson.databind.JsonNode parsed = JsonReader.readJsonTree(response);
+                    if (parsed.isObject()) {
+                        json = (ObjectNode) parsed;
+                    } else if (parsed.isArray() && parsed.size() > 0) {
+                        com.fasterxml.jackson.databind.JsonNode first = parsed.get(0);
+                        json.put("error_code", 422);
+                        if (first.has("message")) {
+                            json.put("message", first.get("message").asText());
+                        } else if (first.has("error_code")) {
+                            json.put("message", first.get("error_code").asText());
+                        }
+                    }
+                }
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
+                json.put("error_code", 500);
+                json.put("message", e.getClass().getSimpleName() + ": " + e.getMessage());
             }
+        } else {
+            json.put("error_code", 401);
+            json.put("message", "No auth token");
         }
         return json;
     }
