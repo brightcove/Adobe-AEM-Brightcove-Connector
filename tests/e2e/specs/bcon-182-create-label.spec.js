@@ -98,6 +98,31 @@ test('a duplicate label shows an error and is not added to the dropdown', async 
   await expect(page.locator('#label_list option[value="/Dup Label"]')).toHaveCount(0);
 });
 
+test('a non-duplicate server error shows "Could not create", not "already exists"', async ({ page }) => {
+  // Regression guard for the cursorbot finding on PR #108: BrcApi.createLabel
+  // used to collapse every failure to {"error":409}, so the JS told users
+  // "That label already exists" for 4xx/5xx unrelated to duplicates. After
+  // the fix, non-422 errors propagate as themselves (e.g. 500), and the JS
+  // shows the generic "Could not create" copy.
+  await openAdmin(page);
+
+  await page.route('**/bin/brightcove/api.js**', (route) => {
+    if (route.request().url().includes('a=create_label')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"error":500}' });
+    }
+    return route.continue();
+  });
+
+  await openCreateLabelModal(page);
+  await page.fill('.pml-dialog .input-label-name', 'Server Error Label');
+  await page.locator('.pml-dialog .pml-dialog_footer .btn-primary').click();
+
+  await expect(page.locator('.input-label-error')).toBeVisible();
+  await expect(page.locator('.input-label-error')).toHaveText(/could not create/i);
+  await expect(page.locator('.input-label-error')).not.toHaveText(/already exists/i);
+  await expect(page.locator('#brcToast')).toHaveCount(0);
+});
+
 test('a name already starting with / is not double-prefixed', async ({ page }) => {
   await openAdmin(page);
 

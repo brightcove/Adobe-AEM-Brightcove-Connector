@@ -340,18 +340,41 @@ public class BrcApi extends SlingAllMethodsServlet {
         LOGGER.info("Creating a Label");
         ObjectNode labelResult = brAPI.cms.createLabel(requestParameter.toString());
 
-        // The Brightcove label API returns {"path": ...} on success (201). The
-        // old check keyed on an "id" field the API never returns, so it reported
-        // failure on every successful create. On failure HttpServices synthesises
-        // {"error_code": <status>, ...} — 422 means the path already exists.
+        // The Brightcove label API returns {"path": ...} on success (201). On
+        // failure HttpServices synthesises an error object — but its field
+        // name is method-dependent: executePost writes `"error"` (with the
+        // upstream `error_code` STRING like "RESOURCE_ALREADY_EXISTS" as the
+        // value when the body parsed, or the numeric HTTP status when it
+        // didn't), while executePut/Delete/Patch (and the exception paths)
+        // write `"error_code"` numerically. The previous version only
+        // checked `error_code`, so every POST failure fell through to the
+        // final `else` returning 409 — every error read as "already exists",
+        // even unrelated 4xx/5xx (cursorbot review on PR #108).
         if (labelResult != null && labelResult.has(Constants.PATH)) {
             result = null;
-        } else if (labelResult != null && labelResult.has(Constants.ERROR_CODE)) {
-            int code = labelResult.get(Constants.ERROR_CODE).asInt();
+        } else if (labelResult != null && (labelResult.has(Constants.ERROR_CODE) || labelResult.has(Constants.ERROR))) {
+            com.fasterxml.jackson.databind.JsonNode raw = labelResult.has(Constants.ERROR_CODE)
+                    ? labelResult.get(Constants.ERROR_CODE)
+                    : labelResult.get(Constants.ERROR);
+            String text = raw.asText();
+            int code;
+            try {
+                code = Integer.parseInt(text);
+            } catch (NumberFormatException nfe) {
+                // Upstream code came through as a string (executePost happy-error
+                // path). Map known duplicate signals to 422, everything else to
+                // 500 so the JS surfaces "Could not create" not "already exists".
+                code = ("RESOURCE_ALREADY_EXISTS".equals(text) || "VALIDATION_ERROR".equals(text))
+                        ? 422 : 500;
+            }
             // Surface a duplicate (422) as a 409-style "already exists" for the JS.
             result.put(Constants.ERROR, code == 422 ? 409 : code);
         } else {
-            result.put(Constants.ERROR, 409);
+            // Shape we don't recognise (executePost returning empty / null,
+            // transport-level failure with no body at all). Used to be a hard
+            // 409 — that mislabelled every weird failure as a duplicate. 500
+            // is the honest answer.
+            result.put(Constants.ERROR, 500);
         }
         return result;
     }
