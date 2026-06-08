@@ -1842,7 +1842,9 @@ function buildPlaylistList() {
                 $('<button>', {
                     type: 'button',
                     class: 'edit-playlist brc-playlist-name-btn',
-                    'data-playlist-id': n.id
+                    'data-playlist-id': n.id,
+                    'data-playlist-name': n.name,
+                    'data-playlist-type': n.type || ''
                 }).text(n.name)
             )
         );
