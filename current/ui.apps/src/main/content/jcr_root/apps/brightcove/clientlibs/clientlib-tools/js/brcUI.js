@@ -597,6 +597,14 @@ $(function () {
         Load(getAllPlaylistsURL());
     });
 
+    // Enter in the playlist search input triggers the search.
+    $('#search_pl').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('searchBut_pl').click();
+        }
+    });
+
 });
 
 function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, onCancel) {
