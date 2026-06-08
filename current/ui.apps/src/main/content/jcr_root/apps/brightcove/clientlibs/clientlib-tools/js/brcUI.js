@@ -955,10 +955,11 @@ $(function () {
     });
 
     $('#uttUpload').on('click', function () {
+        var videoId = document.getElementById('divMeta.id').innerHTML;
         var fields = {
             limit: paging.size,
             start: paging.generic,
-            id: document.getElementById('divMeta.id').innerHTML,
+            id: videoId,
             track_lang: $('#uttLanguage').val(),
             track_label: $('#uttLabel').val(),
             track_kind: $('#uttKind').val(),
@@ -969,19 +970,41 @@ $(function () {
             account_id: $('#selAccount').val()
         };
 
+        // BCON-186: in-flight feedback. Disable the modal's Upload button +
+        // swap its label to "Uploading…" so the user sees the action took
+        // effect. The full-page reload that hid this gap previously is now
+        // gone; the panel re-renders in place on success.
+        var $uploadBtn = $('#uttUpload');
+        var originalLabel = $uploadBtn.text();
+        function setUploading(on) {
+            if (on) {
+                $uploadBtn.prop('disabled', true).text('Uploading…');
+            } else {
+                $uploadBtn.prop('disabled', false).text(originalLabel);
+            }
+        }
+
         function doUpload() {
+            setUploading(true);
             $.ajax({
                 url: apiLocation + '.js',
                 type: 'POST',
                 data: fields,
                 success: function () {
-                    window.selectedVideoId = document.getElementById('divMeta.id').innerHTML;
-                    Load(getAllVideosURL());
                     closeUttModal();
-                    location.reload();
+                    setUploading(false);
+                    brcToast('Text track uploaded');
+                    // Re-fetch this video so the new track appears in the
+                    // TEXT TRACKS section without a full page reload (which
+                    // would re-render everything + lose scroll position).
+                    if (videoId) {
+                        window.selectedVideoId = videoId;
+                        showMetaDataByVideoID(videoId);
+                    }
                 },
                 error: function () {
-                    alert('Oops! There was an error with your text track submission. Please try again.');
+                    setUploading(false);
+                    brcToast('Text track upload failed — please try again');
                 }
             });
         }
@@ -996,7 +1019,7 @@ $(function () {
                 doUpload();
             };
             reader.onerror = function () {
-                alert('Oops! Could not read the selected file. Please try again.');
+                brcToast('Could not read the selected file — please try again');
             };
             reader.readAsText(file);
         } else {
