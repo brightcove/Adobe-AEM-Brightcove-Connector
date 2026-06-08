@@ -3007,6 +3007,95 @@ body.brc-mtf-open {
   line-height: 1;
 }
 
+/* BCON-187: TEXT TRACKS section — pill rows under their own section title. */
+.brc-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brc-track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.brc-track-label {
+  flex: 1 1 auto;
+  color: #1a1a18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brc-track-kind,
+.brc-track-default {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  line-height: 1.4;
+  flex: 0 0 auto;
+}
+
+.brc-track-kind {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.brc-track-kind--captions {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.brc-track-kind--subtitles {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.brc-track-kind--descriptions {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.brc-track-kind--chapters {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.brc-track-kind--metadata {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.brc-track-default {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.brc-track-delete {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.brc-track-delete:hover {
+  background: #f7f6f2;
+  color: #b91c1c;
+}
+
 .brc-label-input {
   width: 100%;
   border: 1px solid #e8e6df;

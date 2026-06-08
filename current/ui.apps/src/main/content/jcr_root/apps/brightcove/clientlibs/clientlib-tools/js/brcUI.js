@@ -2062,20 +2062,58 @@ function showMetaData(idx) {
 
     $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
-    // Text tracks
+    // Text tracks — render via shared helper into the BCON-187 section.
     $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
-    var arr = v.text_tracks != null ? v.text_tracks : "";
-    document.getElementById('divMeta.text_tracks').innerHTML = "";
+    renderTextTracksSection(v.text_tracks, v.id);
+}
 
-    if (arr.length > 0) {
-        var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
-        document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
-        for (var x = 0; x < arr.length; x++) {
-            var cur = arr[x];
-            var defTrack = cur["default"] ? "default_track" : "";
-            document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
+// Map a BCP-47 language tag to its English display name (e.g. "en" → "English",
+// "ja-JP" → "Japanese"). Falls back to the raw tag when the runtime doesn't
+// have Intl.DisplayNames.
+function _languageDisplay(srclang) {
+    if (!srclang) return '';
+    try {
+        if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+            var dn = new Intl.DisplayNames(['en'], { type: 'language' });
+            var name = dn.of(srclang);
+            if (name) return name;
         }
+    } catch (e) { /* fall through to the raw tag */ }
+    return srclang;
+}
+
+// BCON-187: render the TEXT TRACKS section as pill rows under its own
+// section header (was an unstyled table jammed into ACTIONS, above the
+// upload button). Hides the section entirely when there are no tracks.
+function renderTextTracksSection(tracks, videoId) {
+    var $section = $('#textTracksSection');
+    var $list = $('#divMeta\\.text_tracks').empty();
+    if (!tracks || !tracks.length) {
+        $section.attr('hidden', '');
+        return;
     }
+    $section.removeAttr('hidden');
+    tracks.forEach(function(t) {
+        var label = t.label || _languageDisplay(t.srclang) || t.srclang || 'Untitled';
+        var kind = (t.kind || 'subtitles').toLowerCase();
+        var kindDisplay = kind.charAt(0).toUpperCase() + kind.slice(1);
+        var $row = $('<div class="brc-track-row">');
+        $row.append($('<span class="brc-track-label">').text(label));
+        $row.append($('<span class="brc-track-kind">').addClass('brc-track-kind--' + kind).text(kindDisplay));
+        if (t['default']) {
+            $row.append($('<span class="brc-track-default">').text('Default'));
+        }
+        var $del = $('<button type="button" class="brc-track-delete" aria-label="Delete track">');
+        $del.append($('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<polyline points="3 6 5 6 21 6"/>' +
+            '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>' +
+            '<path d="M10 11v6"/><path d="M14 11v6"/>' +
+            '<path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>' +
+            '</svg>'));
+        $del.on('click', function() { deleteTrack(t.id, videoId); });
+        $row.append($del);
+        $list.append($row);
+    });
 }
 
 // _cameraIcon / renderLabelPills / keydown #labelInput / saveLabels are
@@ -2164,18 +2202,7 @@ function showMetaDataByVideoID(idx) {
             showVariants(v, vidIdx);
 
             $ACTIVE_TRACKS = v.text_tracks != null ? v.text_tracks : "";
-            var arr = v.text_tracks != null ? v.text_tracks : "";
-            document.getElementById('divMeta.text_tracks').innerHTML = "";
-
-            if (arr.length > 0) {
-                var tableTmpl = "<table class=\"tg\"><thead><tr><th class=\"tg-uqo3\">LABEL</th><th class=\"tg-uqo3\">LANGUAGE</th> <th class=\"tg-uqo3\">TYPE</th> <th class=\"tg-uqo3\">DELETE</th> </tr> </thead><tbody id=\"divMeta.text_tracks_table\"></tbody></table>";
-                document.getElementById('divMeta.text_tracks').innerHTML = tableTmpl;
-                for (var x = 0; x < arr.length; x++) {
-                    var cur = arr[x];
-                    var defTrack = cur["default"] ? "default_track" : "";
-                    document.getElementById('divMeta.text_tracks_table').innerHTML += "<tr class='texttrackrow " + defTrack + "'><td class=\"tg-baqh \">" + cur.label + "</td><td class=\"tg-baqh\">" + cur.srclang + "</td><td class=\"tg-baqh\">" + cur.kind + "</td><td class=\"tg-baqh delete_button\" onClick=\"deleteTrack('" + cur.id + "','" + v.id + "')\">X</td></tr>";
-                }
-            }
+            renderTextTracksSection(v.text_tracks, v.id);
             $('#divMeta\\.folder').text(v.folder_id ? v.folder_id : 'All Videos');
 
             _currentLabels = v.labels ? (Array.isArray(v.labels) ? v.labels.slice() : v.labels.toString().split(',').filter(Boolean)) : [];

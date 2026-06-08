@@ -285,10 +285,15 @@
                                 <!-- ACTIONS -->
                                 <div class="brc-panel-section" id="trackarea">
                                     <div class="brc-panel-section-title">ACTIONS</div>
-                                    <div id="divMeta.text_tracks"></div>
                                     <button class="brc-panel-action-btn" type="button" onclick="uploadtrack()">Upload New Text Track</button>
                                     <button class="brc-panel-action-btn" type="button"
                                             onclick="doPreview(document.getElementById('divMeta.id').innerHTML)">Video Preview</button>
+                                </div>
+
+                                <!-- TEXT TRACKS — BCON-187: separate section AFTER actions, pill rendering. -->
+                                <div class="brc-panel-section" id="textTracksSection" hidden>
+                                    <div class="brc-panel-section-title">TEXT TRACKS</div>
+                                    <div id="divMeta.text_tracks" class="brc-track-list"></div>
                                 </div>
 
                                 <!-- VIDEO INFO -->
