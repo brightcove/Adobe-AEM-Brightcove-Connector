@@ -2771,6 +2771,9 @@ body.brc-mtf-open {
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  /* BCON-175: outer border divides the Properties panel from the list section. */
+  border: 1px solid #e8e6df;
+  background: #fff;
 }
 
 .brc-panel-header {
@@ -2779,6 +2782,8 @@ body.brc-mtf-open {
   justify-content: space-between;
   padding: 16px 16px 12px;
   border-bottom: 1px solid #f0efea;
+  /* BCON-175: header has a grey background, distinct from the section body. */
+  background: #f7f6f2;
 }
 
 .brc-panel-title {
@@ -2827,6 +2832,8 @@ body.brc-mtf-open {
 /* Image widgets */
 .brc-panel-images {
   display: flex;
+  /* BCON-175: images stack vertically (was side-by-side). */
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -2908,11 +2915,17 @@ body.brc-mtf-open {
 /* Video info table */
 .brc-panel-info-table {
   width: 100%;
-  border-collapse: collapse;
+  /* BCON-175: outer border around the Video Info section. `separate` keeps
+     row dividers + lets the outer border render with rounded corners. */
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .brc-panel-info-table td {
-  padding: 7px 0;
+  padding: 7px 10px;
   border-bottom: 1px solid #f0efea;
   font-size: 13px;
   color: #1a1a18;
@@ -2921,6 +2934,22 @@ body.brc-mtf-open {
 
 .brc-panel-info-table tr:last-child td {
   border-bottom: none;
+}
+
+/* BCON-175: value cells right-justified; label cells stay left. */
+.brc-panel-info-table td:not(.brc-info-label) {
+  text-align: right;
+}
+
+/* BCON-175: Economics renders as a bubble/pill around the value. */
+#divMeta\.economics:not(:empty) {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  background: #f0efea;
+  font-size: 12px;
+  color: #1a1a18;
+  line-height: 1.4;
 }
 
 .brc-info-label {

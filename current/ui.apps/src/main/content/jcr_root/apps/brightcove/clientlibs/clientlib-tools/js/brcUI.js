@@ -2004,7 +2004,7 @@ function showMetaData(idx) {
     var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
     if (posterSrc) {
         $posterPreview.append($('<img>').attr('src', posterSrc));
-        $('#posterUrlBtn').text('Change URL');
+        $('#posterUrlBtn').text('ENTER URL');
     } else {
         $posterPreview.append(_cameraIcon());
         $('#posterUrlBtn').text('ENTER URL');
@@ -2015,7 +2015,7 @@ function showMetaData(idx) {
     var thumbSrc = v.thumbnailURL || null;
     if (thumbSrc) {
         $thumbPreview.append($('<img>').attr('src', thumbSrc));
-        $('#thumbUrlBtn').text('Change URL');
+        $('#thumbUrlBtn').text('ENTER URL');
     } else {
         $thumbPreview.append(_cameraIcon());
         $('#thumbUrlBtn').text('ENTER URL');
@@ -2154,13 +2154,13 @@ function showMetaDataByVideoID(idx) {
             // Poster preview
             var $posterPreview = $('#divMeta\\.posterPreview').empty();
             var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
-            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('Change URL'); }
+            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('ENTER URL'); }
             else { $posterPreview.append(_cameraIcon()); $('#posterUrlBtn').text('ENTER URL'); }
 
             // Thumbnail preview
             var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
             var thumbSrc = (v.images && v.images.thumbnail && v.images.thumbnail.src) ? v.images.thumbnail.src : null;
-            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('Change URL'); }
+            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('ENTER URL'); }
             else { $thumbPreview.append(_cameraIcon()); $('#thumbUrlBtn').text('ENTER URL'); }
 
             //v.length is the running time of the video in ms
@@ -2426,7 +2426,7 @@ function uploadPoster()
                 success: function () {
                     var url = $('#upload_poster_dialog_field_source').val();
                     $('#divMeta\\.posterPreview').empty().append($('<img>').attr('src', url));
-                    $('#posterUrlBtn').text('Change URL');
+                    $('#posterUrlBtn').text('ENTER URL');
                     dialog.hide();
                     brcToast('Poster updated');
                 },
@@ -2489,7 +2489,7 @@ function uploadThumbnail()
                 success: function () {
                     var url = $('#upload_thumbnail_dialog_field_source').val();
                     $('#divMeta\\.thumbPreview').empty().append($('<img>').attr('src', url));
-                    $('#thumbUrlBtn').text('Change URL');
+                    $('#thumbUrlBtn').text('ENTER URL');
                     dialog.hide();
                     brcToast('Thumbnail updated');
                 },
