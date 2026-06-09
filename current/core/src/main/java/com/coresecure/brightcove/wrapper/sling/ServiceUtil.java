@@ -1093,7 +1093,7 @@ public class ServiceUtil {
         ObjectNode master = JsonNodeFactory.instance.objectNode();
         ValueMap original_map = original_rendition.getProperties();
         Date orig_lastmod_time = original_map.get(JcrConstants.JCR_LASTMODIFIED,new Date(0));
-        LOGGER.trace("ORGINAL RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,orig_lastmod_time, brc_lastsync_time);
+        LOGGER.trace("ORIGINAL RENDITION : [Rendition Last Mod: {}] VS [Last Sync: {} ]"  ,orig_lastmod_time, brc_lastsync_time);
         ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
         ConfigurationService brcService = cg.getConfigurationService(account_id);
         String ingest_profile = brcService.getIngestProfile();
@@ -1215,7 +1215,7 @@ public class ServiceUtil {
         ObjectNode master = JsonNodeFactory.instance.objectNode();
 
         if (currentVideo.id == null) return false;
-        //ORGINAL RENDITION - REPLACE CHECK -  RENDITION PROCESS
+        //ORIGINAL RENDITION - REPLACE CHECK -  RENDITION PROCESS
         if (original_rendition != null)
         {
             master = setOriginalRendition(original_rendition, brc_lastsync_time, _asset, serviceUtil, currentVideo);
