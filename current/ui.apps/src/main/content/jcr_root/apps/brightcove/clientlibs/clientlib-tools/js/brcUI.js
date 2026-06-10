@@ -1594,11 +1594,14 @@ function epSavePlaylist(showToast) {
         data: qs,
         async: true,
         success: function() {
+            epSetSaving(false);
             if (showToast) {
                 closeEditPlaylistModal();
                 brcToast('Playlist updated');
-            } else {
-                epSetSaving(false);
+                // BCON-174: refresh the playlist list so the updated name shows
+                // immediately — previously it only changed after a hard reload,
+                // making it look like the save hadn't taken.
+                Load(getAllPlaylistsURL());
             }
         },
         error: function() {
