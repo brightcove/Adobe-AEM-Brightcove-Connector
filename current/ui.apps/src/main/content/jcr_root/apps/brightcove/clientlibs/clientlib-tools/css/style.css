@@ -2771,8 +2771,10 @@ body.brc-mtf-open {
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
-  /* BCON-175: outer border divides the Properties panel from the list section. */
-  border: 1px solid #e8e6df;
+  /* BCON-175 #3: only a LEFT divider separates the panel from the list. A full
+     border put a stray vertical bar down the panel's right edge (and doubled
+     the left divider); the sections inside carry their own borders. */
+  border-left: 1px solid #e8e6df;
   background: #fff;
 }
 
@@ -2840,9 +2842,15 @@ body.brc-mtf-open {
 .brc-image-widget {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
+  /* BCON-175 #1 / BCON-184: each image is a white bordered card (the grey
+     placeholder + ENTER URL / inline editor live inside it), per Figma. */
+  background: #fff;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .brc-image-preview {
@@ -2864,9 +2872,15 @@ body.brc-mtf-open {
   object-fit: cover;
 }
 
-.brc-image-label {
-  font-size: 11px;
+/* BCON-184: the camera icon + label are centered INSIDE the grey placeholder
+   (empty state) per Figma; the external label below is suppressed. */
+.brc-image-placeholder-label {
+  font-size: 12px;
   color: #6b7280;
+}
+
+.brc-image-label {
+  display: none;
 }
 
 .brc-image-url-btn {
@@ -2888,16 +2902,18 @@ body.brc-mtf-open {
   background: #f7f6f2;
 }
 
-/* BCON-184: inline image URL editor (replaces the popup). */
+/* BCON-184: inline image URL editor (replaces the popup).
+   BCON-175 #2: input + Save + Cancel sit on ONE row, per Figma. */
 .brc-image-url-edit {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 }
 
 .brc-image-url-input {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   border: 1px solid #e8e6df;
   border-radius: 8px;
   padding: 6px 10px;
@@ -2914,15 +2930,16 @@ body.brc-mtf-open {
 
 .brc-image-url-edit-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 6px;
 }
 
 .brc-image-url-save,
 .brc-image-url-cancel {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   border: 1px solid #e8e6df;
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
@@ -2945,8 +2962,10 @@ body.brc-mtf-open {
   cursor: not-allowed;
 }
 
+/* Cancel is a borderless text button in the Figma. */
 .brc-image-url-cancel {
-  background: #fff;
+  background: transparent;
+  border-color: transparent;
   color: #1a1a18;
 }
 
@@ -2995,6 +3014,13 @@ body.brc-mtf-open {
   border-bottom: 1px solid #f0efea;
   font-size: 13px;
   color: #1a1a18;
+  /* BCON-175 #4: vertically center the label + value (the Economics pill was
+     top-justified). Variants can be multi-line — kept top-aligned below. */
+  vertical-align: middle;
+}
+
+/* Variants value can wrap to several lines; align its label to the top. */
+.brc-panel-info-table tr:has(#divMeta\.variants) td {
   vertical-align: top;
 }
 
@@ -3007,8 +3033,10 @@ body.brc-mtf-open {
   text-align: right;
 }
 
-/* BCON-175: Economics renders as a bubble/pill around the value. */
-#divMeta\.economics:not(:empty) {
+/* BCON-175: Economics renders as a bubble/pill around the value. The pill is
+   an inner span (.brc-economics-pill) so the <td> stays a normal table cell —
+   styling the cell itself as inline-block broke the row layout (#4/#5). */
+.brc-economics-pill {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 99px;
