@@ -2025,27 +2025,15 @@ function showMetaData(idx) {
     var modDate = new Date(v.updated_at);
     document.getElementById('divMeta.lastModifiedDate').innerHTML = 'Updated ' + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
 
-    // Poster preview
-    var $posterPreview = $('#divMeta\\.posterPreview').empty();
+    // Poster preview (BCON-184/BCON-175: bordered card + in-card label)
     var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
-    if (posterSrc) {
-        $posterPreview.append($('<img>').attr('src', posterSrc));
-        $('#posterUrlBtn').text('ENTER URL');
-    } else {
-        $posterPreview.append(_cameraIcon());
-        $('#posterUrlBtn').text('ENTER URL');
-    }
+    _renderImagePreview($('#divMeta\\.posterPreview'), posterSrc, 'Poster');
+    $('#posterUrlBtn').text('ENTER URL');
 
     // Thumbnail preview
-    var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
     var thumbSrc = v.thumbnailURL || null;
-    if (thumbSrc) {
-        $thumbPreview.append($('<img>').attr('src', thumbSrc));
-        $('#thumbUrlBtn').text('ENTER URL');
-    } else {
-        $thumbPreview.append(_cameraIcon());
-        $('#thumbUrlBtn').text('ENTER URL');
-    }
+    _renderImagePreview($('#divMeta\\.thumbPreview'), thumbSrc, 'Thumbnail');
+    $('#thumbUrlBtn').text('ENTER URL');
 
     // Duration
     var sec = String((Math.floor(v.duration * .001)) % 60);
@@ -2079,7 +2067,7 @@ function showMetaData(idx) {
     document.getElementById('divMeta.linkURL').href = linkURL;
     document.getElementById('divMeta.linkText').innerHTML = linkText;
 
-    document.getElementById('divMeta.economics').innerHTML = v.economics;
+    _setEconomics(v.economics);
 
     modDate = new Date(v.published_at);
     document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
@@ -2172,17 +2160,15 @@ function showMetaDataByVideoID(idx) {
             var modDate = new Date(v.updated_at);
             document.getElementById('divMeta.lastModifiedDate').innerHTML = 'Updated ' + (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
 
-            // Poster preview
-            var $posterPreview = $('#divMeta\\.posterPreview').empty();
+            // Poster preview (BCON-184/BCON-175: bordered card + in-card label)
             var posterSrc = (v.images && v.images.poster && v.images.poster.src) ? v.images.poster.src : null;
-            if (posterSrc) { $posterPreview.append($('<img>').attr('src', posterSrc)); $('#posterUrlBtn').text('ENTER URL'); }
-            else { $posterPreview.append(_cameraIcon()); $('#posterUrlBtn').text('ENTER URL'); }
+            _renderImagePreview($('#divMeta\\.posterPreview'), posterSrc, 'Poster');
+            $('#posterUrlBtn').text('ENTER URL');
 
             // Thumbnail preview
-            var $thumbPreview = $('#divMeta\\.thumbPreview').empty();
             var thumbSrc = (v.images && v.images.thumbnail && v.images.thumbnail.src) ? v.images.thumbnail.src : null;
-            if (thumbSrc) { $thumbPreview.append($('<img>').attr('src', thumbSrc)); $('#thumbUrlBtn').text('ENTER URL'); }
-            else { $thumbPreview.append(_cameraIcon()); $('#thumbUrlBtn').text('ENTER URL'); }
+            _renderImagePreview($('#divMeta\\.thumbPreview'), thumbSrc, 'Thumbnail');
+            $('#thumbUrlBtn').text('ENTER URL');
 
             //v.length is the running time of the video in ms
             var sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
@@ -2213,7 +2199,7 @@ function showMetaDataByVideoID(idx) {
 
             document.getElementById('divMeta.linkURL').href = linkURL;
             document.getElementById('divMeta.linkText').innerHTML = linkText;
-            document.getElementById('divMeta.economics').innerHTML = v.economics;
+            _setEconomics(v.economics);
 
             modDate = new Date(v.published_at);
             document.getElementById('divMeta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
@@ -2259,6 +2245,38 @@ function _cameraIcon() {
         '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
         '<circle cx="12" cy="13" r="4" stroke="#6b7280" stroke-width="2"/>' +
         '</svg>');
+}
+
+// BCON-175 #4/#5: render Economics as a pill INSIDE the cell (an inner span),
+// not by turning the <td> itself into an inline-block — doing the latter pulls
+// the cell out of the table layout, left-aligning the pill and breaking the
+// row divider. The span keeps the cell a normal right-aligned table cell.
+function _setEconomics(val) {
+    var el = document.getElementById('divMeta.economics');
+    if (!el) return;
+    el.innerHTML = '';
+    if (val) {
+        var span = document.createElement('span');
+        span.className = 'brc-economics-pill';
+        span.textContent = val;
+        el.appendChild(span);
+    }
+}
+
+// BCON-184/BCON-175: render an image preview. When a src exists the image
+// fills the card; when empty, the camera icon + label are centered INSIDE the
+// grey placeholder (per Figma) and the widget is marked .is-empty.
+function _renderImagePreview($preview, src, labelText) {
+    $preview.empty();
+    var $widget = $preview.closest('.brc-image-widget');
+    if (src) {
+        $preview.append($('<img>').attr('src', src));
+        $widget.removeClass('is-empty');
+    } else {
+        $preview.append(_cameraIcon())
+                .append($('<span class="brc-image-placeholder-label">').text(labelText));
+        $widget.addClass('is-empty');
+    }
 }
 
 function renderLabelPills() {
