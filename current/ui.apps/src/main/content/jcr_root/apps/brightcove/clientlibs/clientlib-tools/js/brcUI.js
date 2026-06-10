@@ -39,14 +39,11 @@ $( document ).ready(function() {
         CQ.Ext.util.Cookies.set('brc_act', $("#selAccount").val());
     }
 
-    // If we just reloaded after switching accounts, surface a toast.
+    // BCON-193: the post-switch confirmation toast was removed per QA. Clear any
+    // stale flag a prior build may have left behind, but show nothing.
     try {
-        var switchedAlias = window.sessionStorage && sessionStorage.getItem('brc_account_switched');
-        if (switchedAlias) {
-            sessionStorage.removeItem('brc_account_switched');
-            brcToast('Switched to ' + switchedAlias);
-        }
-    } catch (e) { /* sessionStorage unavailable — toast skipped */ }
+        if (window.sessionStorage) sessionStorage.removeItem('brc_account_switched');
+    } catch (e) { /* sessionStorage unavailable */ }
 });
 
 function showTableSpinner() {
@@ -290,11 +287,7 @@ $(function () {
                 } else {
                     document.cookie = 'brc_act=' + encodeURIComponent(accountId) + '; path=/';
                 }
-                try {
-                    if (window.sessionStorage) {
-                        sessionStorage.setItem('brc_account_switched', accountAlias);
-                    }
-                } catch (e) { /* sessionStorage unavailable — toast won't appear, switch still happens */ }
+                // BCON-193: no post-switch confirmation toast (removed per QA).
                 window.location.reload();
             },
             null /* Cancel just closes the dialog; no switch */);
@@ -3161,8 +3154,9 @@ function doPageList(total, type) {
 	        for (var i = 0; i < numOpt; i++) {
 	            options += '<option style="width:100%" id="' + i + '">';
 	            if (paging.generic == i) {
-	                num = (numOpt - 1 == i) ? (total - i * paging.size) : paging.size;
-	                document.getElementById('divVideoCount').innerHTML = num;
+	                // BCON-191: the count pill shows the TOTAL number of videos in
+	                // the account, not just how many are on the current page.
+	                document.getElementById('divVideoCount').innerHTML = total;
 	            }
 	            if (numOpt - 1 == i) {
 	                options += 'Page ' + (i+1) + ' (' + type + ' ' + (i * paging.size + 1) + ' to ' + total + ' )</option>';
