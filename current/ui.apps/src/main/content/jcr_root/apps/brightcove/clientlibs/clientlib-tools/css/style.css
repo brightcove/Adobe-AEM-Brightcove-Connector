@@ -140,6 +140,14 @@ betty-titlebar {
   flex-shrink: 0;
 }
 
+/* BCON-192: while a sync is in flight, spin the sync icon so it reads as a
+   loading indicator (matches the design's animated symbol + the app's other
+   spinners, e.g. .brc-spinner). Was a static, dimmed icon. */
+#syncdbutton.brc-sync-btn.is-loading .brc-sync-icon {
+  animation: brc-spin 0.8s linear infinite;
+  transform-origin: 50% 50%;
+}
+
 .brc-account-trigger {
   display: flex;
   align-items: center;
@@ -584,6 +592,11 @@ betty-titlebar {
 #searchBut.brc-pill-search-go,
 #searchBut_pl.brc-pill-search-go {
   height: 28px;
+  /* BCON-189: center the label via flex (the off-centre nudge that caused the
+     misalignment lived in #searchDiv #searchBut — zeroed below). */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 0 0 6px;
   padding: 0 12px;
   background: #1a1a18;
@@ -601,7 +614,6 @@ betty-titlebar {
   cursor: pointer;
   box-shadow: none;
   filter: none;
-  line-height: 28px;
 }
 
 #searchBut.brc-pill-search-go:hover,
@@ -1078,13 +1090,16 @@ div.delConfPop {
   margin-top: 4px;
 }
 
+/* BCON-189: these legacy nudges pushed the Search button off the pill's
+   vertical centre (videos -2px, playlists +3px). With flex centering on the
+   pill the button centres on its own, so zero the offsets. */
 #searchDiv #searchBut {
-  top: -2px;
+  top: 0;
   position: relative;
 }
 
 #searchDiv_pl #searchBut {
-  top: 3px;
+  top: 0;
   position: relative;
 }
 
