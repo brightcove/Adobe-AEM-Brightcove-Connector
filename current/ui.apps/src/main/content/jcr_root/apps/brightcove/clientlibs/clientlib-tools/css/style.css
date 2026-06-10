@@ -1002,6 +1002,26 @@ div.delConfPop {
 .pageDiv {
   float: right;
   padding: 5px 3px 5px 0px;
+  /* Align the "Page Number:" label with its now-styled select. */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1a1a18;
+}
+
+/* Style the page-number dropdown to match the design-system selects
+   (.brc-filter-select) — it was a default native <select>. */
+.pageDiv select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e8e6df;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a1a18;
+  cursor: pointer;
 }
 
 .butDiv {
@@ -3143,14 +3163,16 @@ body.brc-mtf-open {
   color: #3730a3;
 }
 
+/* BCON-187: match the Figma/mock — Captions + Default are olive/green,
+   Subtitles is grey (was red + blue). */
 .brc-track-kind--captions {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #eaf0da;
+  color: #586b2a;
 }
 
 .brc-track-kind--subtitles {
-  background: #dbeafe;
-  color: #1e3a8a;
+  background: #f0efea;
+  color: #6b7280;
 }
 
 .brc-track-kind--descriptions {
