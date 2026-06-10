@@ -214,7 +214,8 @@
                                                     <th id="nameCol" class="tdMainTableHead sortable ASC" style="border-left:0px" data-sortType="" data-sortBy="name" onclick="sort(this)">Name<span class='order'></span></th>
                                                     <th id="lastUpdated" class="tdMainTableHead sortable NONE" data-sortType="-" data-sortBy="updated_at" onclick="sort(this)">Last Updated <span class='order'></span></th>
                                                     <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="reference_id" onclick="sort(this)">Reference ID <span class='order'></span></th>
-                                                    <th class="tdMainTableHead sortable NONE" data-sortType="" data-sortBy="id" onclick="sort(this)">ID <span class='order'></span></th>
+                                                    <!-- BCON-190: ID column is intentionally NOT sortable — the Brightcove CMS API rejects sort=id, so an ID sort could only reorder the current page, not all pages. -->
+                                                    <th class="tdMainTableHead">ID</th>
                                                 </tr>
                                                 </thead>
                                                 <tbody id="tbData"></tbody>
