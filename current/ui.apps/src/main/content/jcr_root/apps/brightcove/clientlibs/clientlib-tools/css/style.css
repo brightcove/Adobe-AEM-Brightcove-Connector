@@ -1153,7 +1153,16 @@ div.hLine {
 }
 
 #divConsole {
-  padding: 0 20px 20px;
+  /* No right gutter — the video details panel (last cell) stretches to the
+     screen's right edge. Left/bottom padding kept for the list. */
+  padding: 0 0 20px 20px;
+}
+
+/* BCON: the video details panel fills its cell to the right edge so the grey
+   header and sections aren't cut off short of the screen edge (the shared
+   td.tdMetadata rule adds a 20px right gutter meant for the list header). */
+#tdMeta.tdMetadata {
+  padding-right: 0;
 }
 
 .foundation-layout-panel-content {
