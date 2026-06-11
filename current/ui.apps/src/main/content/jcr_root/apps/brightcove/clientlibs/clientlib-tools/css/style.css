@@ -2811,6 +2811,17 @@ body.brc-mtf-open {
      the left divider); the sections inside carry their own borders. */
   border-left: 1px solid #e8e6df;
   background: #fff;
+  /* BCON-175 (reopen): the panel scrolls internally (max-height:100vh) so the
+     bottom of a tall panel stays reachable, but on always-show-scrollbar
+     setups that scrollbar reads as a stray vertical "bar" on the panel's right
+     edge. Hide it visually while keeping the panel scrollable. */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge/IE */
+}
+
+.brc-panel-inner::-webkit-scrollbar {  /* Chrome / Safari */
+  width: 0;
+  height: 0;
 }
 
 .brc-panel-header {
@@ -3090,6 +3101,10 @@ body.brc-mtf-open {
 /* Variants in panel */
 .brc-variant-link {
   display: block;
+  /* BCON-175: full width so text-align:right pushes the value to the cell's
+     right edge (a content-width block button stays left, ignoring the align). */
+  width: 100%;
+  box-sizing: border-box;
   background: none;
   border: none;
   padding: 0;
@@ -3097,7 +3112,9 @@ body.brc-mtf-open {
   color: #1a1a18;
   text-decoration: none;
   cursor: pointer;
-  text-align: left;
+  /* BCON-175: variant values right-justify like every other Video Info value
+     (the block link was forcing them left). */
+  text-align: right;
   font-family: inherit;
   line-height: 1.6;
 }
