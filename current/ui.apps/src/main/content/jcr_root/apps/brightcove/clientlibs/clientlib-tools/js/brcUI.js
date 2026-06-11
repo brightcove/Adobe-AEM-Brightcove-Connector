@@ -1284,12 +1284,14 @@ function loadLabels() {
                         return; // keep the dialog open
                     }
 
-                    // Brightcove labels are hierarchical paths and must start
-                    // with '/'. Be forgiving and prepend it when the user omits
-                    // it, rather than rejecting an otherwise-valid name.
-                    if (labelName.charAt(0) !== '/') {
-                        labelName = '/' + labelName;
-                    }
+                    // Brightcove labels are hierarchical paths that must be both
+                    // '/'-prefixed AND '/'-suffixed (e.g. /news/). Normalize fully
+                    // here so (a) we create the canonical path the API stores and
+                    // (b) the optimistic dropdown option below matches the path the
+                    // apply-to-video step computes via normalizeLabelPath — without
+                    // this, a freshly-created label couldn't be applied until a hard
+                    // refresh re-fetched it in canonical form (BCON-182).
+                    labelName = normalizeLabelPath(labelName);
 
                     $input.removeClass('error');
                     $err.hide();

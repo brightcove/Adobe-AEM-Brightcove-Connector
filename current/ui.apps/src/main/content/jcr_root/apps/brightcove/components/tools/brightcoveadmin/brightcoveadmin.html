@@ -33,8 +33,9 @@
                     <h1 class="brc-title">Brightcove Admin</h1>
                     <div class="brc-header-actions">
                         <button type="button" id="syncdbutton" class="brc-sync-btn" alt="Brightcove Dataload" onClick="syncDB()">
-                            <svg class="brc-sync-icon" width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M14 8a6 6 0 1 1-1.757-4.243M14 2v4h-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <!-- BCON-192: two-arrow sync icon to match Figma (was a single-arc refresh arrow). -->
+                            <svg class="brc-sync-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
                             </svg>
                             <span class="brc-sync-btn-label">Sync database</span>
                         </button>
