@@ -980,20 +980,39 @@ $(function () {
         function doUpload() {
             setUploading(true);
             $.ajax({
+                // The .js endpoint returns JSONP ("callback({...})"). Keep this a
+                // POST — the file path sends the VTT bytes in the body, which
+                // can't ride in a JSONP GET query string — and unwrap the
+                // callback(...) wrapper as text. The old plain POST (no dataType)
+                // executed the body as a script with an undefined `callback`, so
+                // success never fired: no toast, nothing visible (BCON-186).
                 url: apiLocation + '.js',
                 type: 'POST',
                 data: fields,
-                success: function () {
+                dataType: 'text',
+                success: function (text) {
+                    var resp = {};
+                    try { var m = String(text).match(/\{[\s\S]*\}/); if (m) resp = JSON.parse(m[0]); } catch (e) {}
+                    if (resp && resp.error_code) {
+                        setUploading(false);
+                        brcToast('Text track upload failed: ' + (resp.message || 'Brightcove rejected the track'));
+                        return;
+                    }
                     closeUttModal();
                     setUploading(false);
                     brcToast('Text track uploaded');
-                    // Re-fetch this video so the new track appears in the
-                    // TEXT TRACKS section without a full page reload (which
-                    // would re-render everything + lose scroll position).
-                    if (videoId) {
-                        window.selectedVideoId = videoId;
-                        showMetaDataByVideoID(videoId);
-                    }
+                    // Brightcove ingests text tracks asynchronously, so an
+                    // immediate re-fetch would NOT include the new track yet —
+                    // that's why the user previously had to reload to see it.
+                    // Render it optimistically from the submitted fields so it
+                    // shows right away (BCON-186). It reconciles to the canonical
+                    // track (with its id) on the next load of this video.
+                    _appendOptimisticTrack({
+                        srclang: fields.track_lang,
+                        label: fields.track_label,
+                        kind: fields.track_kind,
+                        'default': fields.track_default === 'true'
+                    });
                 },
                 error: function () {
                     setUploading(false);
@@ -2128,6 +2147,16 @@ function renderTextTracksSection(tracks, videoId) {
     });
 }
 
+// BCON-186: append a just-uploaded track to the TEXT TRACKS section right away,
+// before Brightcove's async ingest makes it visible to a CMS re-fetch. Keeps
+// the user from having to reload to confirm the upload worked.
+function _appendOptimisticTrack(track) {
+    var existing = Array.isArray($ACTIVE_TRACKS) ? $ACTIVE_TRACKS.slice() : [];
+    existing.push(track);
+    $ACTIVE_TRACKS = existing;
+    renderTextTracksSection(existing, document.getElementById('divMeta.id').innerHTML);
+}
+
 // _cameraIcon / renderLabelPills / keydown #labelInput / saveLabels are
 // defined further down (search for `function _cameraIcon`). They used to
 // live here too — the duplicate top-level binding of the keydown handler
@@ -2527,10 +2556,15 @@ $(document).on('click', '.brc-image-url-save', function() {
     }
 
     $.ajax({
+        // The .js endpoint returns JSONP (callback({...}), content-type
+        // text/javascript). The previous dataType:'json' POST made jQuery try
+        // to JSON.parse "callback({...})", which threw and fired the error
+        // handler — so a SUCCESSFUL queue ({"job_id":...}) was reported to the
+        // user as "Poster update failed". Use JSONP like saveLabels does.
         url: apiLocation + '.js',
-        type: 'POST',
-        data: fields,
-        dataType: 'json',
+        data: $.param(fields),
+        dataType: 'jsonp',
+        jsonp: 'callback',
         success: function(resp) {
             // Brightcove's Dynamic Ingest endpoint is asynchronous — it
             // queues a job and returns {"id":"<job_id>"}. The actual image
