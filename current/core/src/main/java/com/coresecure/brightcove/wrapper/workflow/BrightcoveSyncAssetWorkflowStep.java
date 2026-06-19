@@ -335,7 +335,9 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 		serviceUtil.moveVideoToFolder(folderId, videoId);
 	}
 
-    private String activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
+    // Package-private (not private) so the BGS-1705 concurrency regression test can
+    // drive the create-vs-update gate directly with a mocked ServiceUtil.
+    String activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
 
         // need to either activate a new asset or an updated existing
         // ServiceUtil serviceUtil = new ServiceUtil(accountId);
@@ -374,8 +376,22 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             LOG.info("Activating Modified Brightcove Asset: {}", _asset.getPath());
             brightcoveAssetId = activateModified(_asset, serviceUtil, video, brc_lastsync_map);
         }
-        
+
+        // BGS-1705: persist the sync marker (brc_id / brc_lastsync / brc_state) NOW,
+        // before execute() runs its ~15s ingest-wait. Previously the marker was only
+        // committed at the end of execute(), so a concurrent or redelivered AEMaaCS
+        // publish event would still read brc_lastsync == null and create a second,
+        // duplicate Brightcove video. Committing here closes that window.
+        try {
+            ResourceResolver resolver = assetRes.getResourceResolver();
+            if (resolver != null && resolver.hasChanges()) {
+                resolver.commit();
+            }
+        } catch (PersistenceException e) {
+            LOG.error("Failed to persist Brightcove sync marker for {}: {}", path, e.getMessage());
+        }
+
         return brightcoveAssetId;
 
-    }    
+    }
 }
