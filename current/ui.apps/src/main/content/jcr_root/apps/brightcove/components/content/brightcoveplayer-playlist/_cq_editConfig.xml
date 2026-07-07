@@ -18,8 +18,8 @@
     </cq:dropTargets>
     <cq:listeners
         jcr:primaryType="cq:EditListenersConfig"
-        aftercopy="REFRESH_PAGE"
-        afterdelete="REFRESH_PAGE"
-        afteredit="REFRESH_PAGE"
-        afterinsert="REFRESH_PAGE"/>
+        aftercopy="REFRESH_SELF"
+        afterdelete="REFRESH_SELF"
+        afteredit="REFRESH_SELF"
+        afterinsert="REFRESH_SELF"/>
 </jcr:root>

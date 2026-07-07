@@ -34,8 +34,9 @@
 document.addEventListener("DOMContentLoaded", (event) => {
   createPlayers();
 });
-function createPlayers() {
-    var all = document.getElementsByClassName("brightcove-container");
+function createPlayers(root) {
+    var scope = root || document;
+    var all = scope.getElementsByClassName("brightcove-container");
     for (var i = 0, max = all.length; i < max; i++) {
         var selected_element = all[i];
         var playerID= selected_element.getAttribute("data-playerid");
@@ -109,3 +110,67 @@ function createPlayers() {
         document.body.appendChild(s);
     }
 }
+
+// BGS-1690: In AEM authoring, REFRESH_SELF swaps in new component HTML but
+// DOMContentLoaded never re-fires, so createPlayers() doesn't bootstrap the
+// new container and the live preview stays blank until manual refresh.
+// Watch the document for inserted/replaced .brightcove-container nodes and
+// re-init just the affected subtree. Works for insert / edit / copy / paste
+// regardless of which AEM editor event fires.
+(function () {
+    if (typeof MutationObserver === "undefined") return;
+
+    var pendingRoots = [];
+    var scheduled = false;
+
+    // Bind to window so the native methods retain their receiver — calling
+    // a detached window.requestAnimationFrame throws TypeError: Illegal
+    // invocation in strict mode, and even in non-strict mode it's fragile.
+    var defer = typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame.bind(window)
+        : function (cb) { return window.setTimeout(cb, 0); };
+
+    function flush() {
+        scheduled = false;
+        var roots = pendingRoots;
+        pendingRoots = [];
+        for (var i = 0; i < roots.length; i++) {
+            createPlayers(roots[i]);
+        }
+    }
+
+    function schedule(root) {
+        pendingRoots.push(root);
+        if (!scheduled) {
+            scheduled = true;
+            defer(flush);
+        }
+    }
+
+    var observer = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+            var added = mutations[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+                var node = added[j];
+                if (node.nodeType !== 1) continue;
+                if (node.classList && node.classList.contains("brightcove-container")) {
+                    schedule(node.parentNode || node);
+                } else if (node.querySelector && node.querySelector(".brightcove-container")) {
+                    schedule(node);
+                }
+            }
+        }
+    });
+
+    function start() {
+        if (document.body) {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+    } else {
+        start();
+    }
+})();
