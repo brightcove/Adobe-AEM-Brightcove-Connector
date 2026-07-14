@@ -33,6 +33,34 @@ The main parts of the template are:
 * all: a single content package that embeds all of the compiled modules (bundles and content packages) including any vendor dependencies
 * analyse: this module runs analysis on the project which provides additional validation for deploying into AEMaaCS
 
+## OSGi Configuration
+
+Per-account settings are provided by a factory configuration for the Brightcove service. The service class is `com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl`, so its factory PID is:
+
+    com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl~<alias>
+
+Supply the configuration as a repo-deployed `.cfg.json` under `ui.config` (recommended, so it survives redeploys), or set it transiently in the OSGi console for testing. The property keys are:
+
+| Property key | Label | Default |
+| --- | --- | --- |
+| `accountAlias` | Account Alias | |
+| `accountId` | Account ID | |
+| `clientId` | Client ID | |
+| `clientSecret` | Client Secret | |
+| `allowedGroups` | Allowed Groups | |
+| `playerStorePath` | Player Store Path | `/content/brightcovetools/players` |
+| `proxyServer` | Proxy Server | |
+| `damIntegrationPath` | DAM Integration Path | `/content/dam/brightcove_assets` |
+| `defaultIngestProfile` | Default Ingest Profile | |
+
+### Migrating a configuration to AEM as a Cloud Service
+
+Earlier on-premise versions of the connector used the config class `BrcServiceImpl` with snake_case property keys (for example `asset_integration_path`). The cloud connector uses `ConfigurationServiceImpl` with camelCase keys (`damIntegrationPath`).
+
+A configuration carried over from an on-premise setup that still uses the old class name or the old key will not be read by the cloud service. The affected property silently falls back to its Meta Type default rather than reporting an error. When migrating, recreate the factory config against the `ConfigurationServiceImpl` PID using the camelCase keys above. A non-default DAM path in particular must be set as `damIntegrationPath`, otherwise metadata sync targets the default `/content/dam/brightcove_assets`.
+
+The connector ships a Repo Init script (`RepositoryInitializer-brightcove`) that creates the `brightcove_admin` service user, grants it read, write, and replicate on `/content`, and creates the default `/content/dam/brightcove_assets` folder. A custom DAM integration path is covered by the `/content` ACL but is not created by Repo Init, so the target folder must exist or be created separately.
+
 ## How to build
 
 To build all the modules run in the project root directory the following command with Maven 3:
