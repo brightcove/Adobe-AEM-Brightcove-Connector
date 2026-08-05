@@ -169,6 +169,26 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
         }
     }
 
+    /**
+     * BGS-1705: flush pending Brightcove sync-marker changes for this asset so that a
+     * concurrent or redelivered publish event, running in its own JCR session, can see
+     * them. Never throws — a failed commit is logged and the caller carries on.
+     */
+    private void commitSyncMarker(Asset _asset) {
+        try {
+            Resource assetRes = _asset.adaptTo(Resource.class);
+            if (assetRes == null) {
+                return;
+            }
+            ResourceResolver resolver = assetRes.getResourceResolver();
+            if (resolver != null && resolver.hasChanges()) {
+                resolver.commit();
+            }
+        } catch (PersistenceException e) {
+            LOG.error("Failed to persist Brightcove sync marker for {}: {}", _asset.getPath(), e.getMessage());
+        }
+    }
+
     private String activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
 
         LOG.trace("brc_lastsync was null or zero : asset should be initialized");
@@ -187,7 +207,21 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();
+
+                // BGS-1705: write the COMPLETE sync marker and commit it right here, before
+                // any further work. Two reasons:
+                //  1. Everything below is slow — updateRenditions uploads renditions, and
+                //     syncFolder's retry path can sleep 15s — so deferring the commit leaves
+                //     a wide window in which a concurrent or redelivered AEMaaCS publish
+                //     still reads brc_lastsync == null and creates a second video.
+                //  2. Both calls run on this same JCR session and can discard pending state,
+                //     which could otherwise persist brc_lastsync with no brc_id and route the
+                //     next publish to updateVideo with a null id. Committing up front makes
+                //     that half-written marker impossible by construction.
                 brc_lastsync_map.put(Constants.BRC_ID, brightcoveAssetId);
+                brc_lastsync_map.put(DamConstants.DC_TITLE, video.name);
+                brc_lastsync_map.put(Constants.BRC_LASTSYNC, JcrUtil.now2calendar());
+                commitSyncMarker(_asset);
 
                 LOG.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
@@ -196,10 +230,6 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
                 syncFolder(serviceUtil, api_resp, assetNode);
 
                 LOG.info("BC: ACTIVATION SUCCESSFUL >> {}", _asset.getPath());
-
-                // update the metadata to show the last sync time
-                brc_lastsync_map.put(DamConstants.DC_TITLE, video.name);
-                brc_lastsync_map.put(Constants.BRC_LASTSYNC, JcrUtil.now2calendar());
 
             } else {
 
@@ -296,7 +326,12 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 				} else {
 					LOG.error("*************************** No folder created ***************************");
 					TimeUnit.SECONDS.sleep(15);
-					parentNode.refresh(false);
+					// Re-read the parent from the persistent store in case a concurrent publish
+					// created the folder. keepChanges=true: in Oak refresh() is session-wide, so
+					// refresh(false) would discard pending metadata (e.g. BRC_ID) set before this
+					// call, leaving the BGS-1705 marker commit to persist brc_lastsync with no
+					// brc_id — which routes the next publish to updateVideo with a null id.
+					parentNode.refresh(true);
 					if (!parentNode.hasProperty("brc_folder_id")) {
 						folderId = serviceUtil.createFolder(assetNode.getParent().getName());
 						if (folderId != null && !folderId.isEmpty()) {
@@ -335,7 +370,9 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
 		serviceUtil.moveVideoToFolder(folderId, videoId);
 	}
 
-    private String activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
+    // Package-private (not private) so the BGS-1705 concurrency regression test can
+    // drive the create-vs-update gate directly with a mocked ServiceUtil.
+    String activateAsset(ResourceResolver rr, Asset _asset, ServiceUtil serviceUtil) {
 
         // need to either activate a new asset or an updated existing
         // ServiceUtil serviceUtil = new ServiceUtil(accountId);
@@ -374,8 +411,17 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             LOG.info("Activating Modified Brightcove Asset: {}", _asset.getPath());
             brightcoveAssetId = activateModified(_asset, serviceUtil, video, brc_lastsync_map);
         }
-        
+
+        // BGS-1705: persist the sync marker (brc_id / brc_lastsync / brc_state) NOW,
+        // before execute() runs its ~15s ingest-wait. Previously the marker was only
+        // committed at the end of execute(), so a concurrent or redelivered AEMaaCS
+        // publish event would still read brc_lastsync == null and create a second,
+        // duplicate Brightcove video. Committing here closes that window. On the create
+        // path activateNew has already committed the marker; this catches brc_state and
+        // the update path.
+        commitSyncMarker(_asset);
+
         return brightcoveAssetId;
 
-    }    
+    }
 }

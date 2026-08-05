@@ -211,6 +211,19 @@ public class BrightcovePublishListener implements EventHandler {
 
         }
 
+        // BGS-1705: persist the sync marker for THIS asset immediately, rather than
+        // waiting for the single rr.commit() at the end of handleEvent() (which only
+        // fires after every asset in the event has been processed). A redelivered
+        // distribution/replication event must see brc_lastsync as soon as possible so
+        // it takes the update path instead of creating a duplicate Brightcove video.
+        try {
+            if (rr != null && rr.hasChanges()) {
+                rr.commit();
+            }
+        } catch (PersistenceException e) {
+            LOG.error("Failed to persist Brightcove sync marker for {}: {}", _asset.getPath(), e.getMessage());
+        }
+
     }
 
     private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Node assetNode) {
