@@ -1274,6 +1274,23 @@ public class ServiceUtil {
 
 
 
+    /**
+     * BGS-1705: resolve the Brightcove reference_id for a video to be created/updated.
+     * An explicit brc_reference_id always wins; otherwise fall back to the asset's
+     * stable jcr:uuid. Setting a stable, unique reference_id lets the CMS API reject a
+     * duplicate create attempt (from a concurrent or redelivered AEMaaCS publish event)
+     * instead of silently creating a second video.
+     */
+    static String resolveReferenceId(String explicitReferenceId, String jcrUuid) {
+        if (explicitReferenceId != null && !explicitReferenceId.isEmpty()) {
+            return explicitReferenceId;
+        }
+        if (jcrUuid != null && !jcrUuid.isEmpty()) {
+            return jcrUuid;
+        }
+        return "";
+    }
+
     public Video createVideo(String request, Asset asset, String aState)
     {
 
@@ -1325,7 +1342,13 @@ public class ServiceUtil {
         //STO FROM LOCAL VIDEOS INITIALIZE THESE SO THAT YOU CAN SEND -- COULD COME FROM PROPERTIES VALUE MAP
         String name = map.get(DamConstants.DC_TITLE, asset.getName());
         String id = map.get(Constants.BRC_ID, String.class);
-        String referenceId = map.get(Constants.BRC_REFERENCE_ID, "");
+        // BGS-1705: default reference_id to the asset's stable jcr:uuid when no
+        // explicit brc_reference_id is set, so a duplicate create attempt is rejected
+        // by the CMS API (reference_id is unique per account) rather than producing a
+        // second video. The jcr:uuid lives on the dam:Asset node (assetRes).
+        String referenceId = resolveReferenceId(
+                map.get(Constants.BRC_REFERENCE_ID, ""),
+                assetRes.getValueMap().get("jcr:uuid", String.class));
         String shortDescription = map.get(Constants.BRC_DESCRIPTION,"");
         String longDescription = map.get(Constants.BRC_LONG_DESCRIPTION,"");
         String projection = "equirectangular".equals(map.get(Constants.BRC_PROJECTION,""))? Constants.EQUIRECTANGULAR : "";
