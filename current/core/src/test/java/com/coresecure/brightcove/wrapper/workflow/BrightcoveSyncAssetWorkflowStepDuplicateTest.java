@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.Resource;
@@ -122,6 +123,40 @@ class BrightcoveSyncAssetWorkflowStepDuplicateTest {
 
         verify(serviceUtil, never()).createVideoS3(any(Video.class), anyString(), any(InputStream.class));
         verify(serviceUtil, times(1)).updateVideo(any(Video.class));
+    }
+
+    /**
+     * Invariant #3: the marker is durable BEFORE the slow post-create work runs, and it is
+     * written whole. updateRenditions uploads renditions and syncFolder's retry path can
+     * sleep 15s, so a marker committed only after them leaves the duplicate window wide
+     * open for exactly as long as that work takes. Both also run on this same JCR session
+     * and can discard pending state — in Oak refresh() is session-wide — which could
+     * otherwise persist brc_lastsync with no brc_id and send the next publish to
+     * updateVideo with a null id. Committing up front rules out both.
+     *
+     * Pre-fix this fails: at updateRenditions time brc_id/brc_state are still pending.
+     */
+    @Test
+    void syncMarkerIsDurableBeforePostCreateWorkRuns() throws Exception {
+        ResourceResolver rr = context.resourceResolver();
+        AtomicBoolean pendingAtRenditionTime = new AtomicBoolean(true);
+
+        when(serviceUtil.updateRenditions(any(Asset.class), any(Video.class))).thenAnswer(inv -> {
+            pendingAtRenditionTime.set(rr.hasChanges());
+            return true;
+        });
+
+        Asset asset = rr.getResource(ASSET_PATH).adaptTo(Asset.class);
+        step.activateAsset(rr, asset, serviceUtil);
+
+        verify(serviceUtil, times(1)).updateRenditions(any(Asset.class), any(Video.class));
+        assertFalse(pendingAtRenditionTime.get(),
+                "BGS-1705: sync marker must already be committed when updateRenditions starts");
+
+        // Whole, not half: both halves of the marker are present together.
+        ModifiableValueMap meta = metadata(rr);
+        assertEquals("999111", meta.get(Constants.BRC_ID, String.class), "brc_id must be persisted");
+        assertNotNull(meta.get(Constants.BRC_LASTSYNC), "brc_lastsync must be persisted");
     }
 
     private static ModifiableValueMap metadata(ResourceResolver rr) {
