@@ -10,6 +10,7 @@ vendor/jquery-ui-personalized-1.5.2.packed.js
 vendor/console-shim.js
 
 cookies.js
+brcTransport.js
 brcAdmin.js
 brcUI.js
 
