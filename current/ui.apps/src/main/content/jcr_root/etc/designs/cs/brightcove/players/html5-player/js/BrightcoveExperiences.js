@@ -37,6 +37,12 @@ r(function(){
     createPlayers();
 });
 function createPlayers() {
+    // Registry of injected player-loader <script> tags, keyed by loader src, so the
+    // index.min.js loader is added at most once per page even when multiple containers
+    // share a player or createPlayers() runs again on re-render. Previously the loader was
+    // appended once per container on every call, piling up dozens of duplicate <script>
+    // tags that re-ran the player factory repeatedly.
+    var loaders = createPlayers._loaders || (createPlayers._loaders = {});
     var all = document.getElementsByClassName("brightcove-container");
     for (var i = 0, max = all.length; i < max; i++) {
         var selected_element = all[i];
@@ -53,11 +59,14 @@ function createPlayers() {
         var dataWidth= selected_element.getAttribute("data-width");
         var dataHeight= selected_element.getAttribute("data-height");
         var dataUsage = selected_element.getAttribute("data-usage");
-        var s = document.createElement('script');
-        s.src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
-        s.onload = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
+        var src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_" + dataEmbed + "/index.min.js";
+        var buildPlayer = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
             return function() {
-                playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls width=\"' + dataWidth + '\" height=\"' + dataHeight + '\"></video>';
+                // Only emit width/height when the author supplied them; a missing value was
+                // serialized as the string "null" (e.g. width="null"), triggering VIDEOJS
+                // "Improper value null supplied for width/height" errors on every init.
+                var sizeAttrs = (dataWidth ? ' width=\"' + dataWidth + '\"' : '') + (dataHeight ? ' height=\"' + dataHeight + '\"' : '');
+                playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls' + sizeAttrs + '></video>';
                 selected_element.innerHTML = playerHTML;
                 bc(document.getElementById(playerID));
                 videojs(playerID).ready(function () {
@@ -108,6 +117,41 @@ function createPlayers() {
                 });
             };
         }(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element));
-        document.body.appendChild(s);
+
+        var loader = loaders[src];
+        if (loader && loader.loaded) {
+            // Loader already present on the page: build this container immediately.
+            buildPlayer();
+        } else if (loader) {
+            // Loader request is in flight: register the build keyed by this container's
+            // (server-assigned, unique) playerID rather than appending. If createPlayers()
+            // runs again before the script loads (e.g. a slider re-render), this overwrites
+            // the container's previous pending build instead of stacking a duplicate that
+            // would re-init the same player on load ("Ignoring already initialized player").
+            loader.pending[playerID] = buildPlayer;
+        } else {
+            // First container needing this player: inject the loader <script> exactly once.
+            loader = loaders[src] = { loaded: false, pending: {} };
+            loader.pending[playerID] = buildPlayer;
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = (function(ld) {
+                return function() {
+                    ld.loaded = true;
+                    for (var id in ld.pending) { if (ld.pending.hasOwnProperty(id)) { ld.pending[id](); } }
+                    ld.pending = {};
+                };
+            }(loader));
+            s.onerror = (function(failedSrc) {
+                return function() {
+                    // Loader failed to load: drop the registry entry so a later createPlayers()
+                    // re-injects the script. Otherwise loaded stays false forever and every
+                    // later container only queues against a script whose onload never fires,
+                    // stranding all players for this src until a full page reload.
+                    delete loaders[failedSrc];
+                };
+            }(src));
+            document.body.appendChild(s);
+        }
     }
 }
