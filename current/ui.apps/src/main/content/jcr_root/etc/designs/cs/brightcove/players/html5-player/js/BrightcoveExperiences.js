@@ -123,20 +123,34 @@ function createPlayers() {
             // Loader already present on the page: build this container immediately.
             buildPlayer();
         } else if (loader) {
-            // Loader request is in flight: queue this container until it finishes.
-            loader.queue.push(buildPlayer);
+            // Loader request is in flight: register the build keyed by this container's
+            // (server-assigned, unique) playerID rather than appending. If createPlayers()
+            // runs again before the script loads (e.g. a slider re-render), this overwrites
+            // the container's previous pending build instead of stacking a duplicate that
+            // would re-init the same player on load ("Ignoring already initialized player").
+            loader.pending[playerID] = buildPlayer;
         } else {
             // First container needing this player: inject the loader <script> exactly once.
-            loader = loaders[src] = { loaded: false, queue: [buildPlayer] };
+            loader = loaders[src] = { loaded: false, pending: {} };
+            loader.pending[playerID] = buildPlayer;
             var s = document.createElement('script');
             s.src = src;
             s.onload = (function(ld) {
                 return function() {
                     ld.loaded = true;
-                    for (var q = 0; q < ld.queue.length; q++) { ld.queue[q](); }
-                    ld.queue = [];
+                    for (var id in ld.pending) { if (ld.pending.hasOwnProperty(id)) { ld.pending[id](); } }
+                    ld.pending = {};
                 };
             }(loader));
+            s.onerror = (function(failedSrc) {
+                return function() {
+                    // Loader failed to load: drop the registry entry so a later createPlayers()
+                    // re-injects the script. Otherwise loaded stays false forever and every
+                    // later container only queues against a script whose onload never fires,
+                    // stranding all players for this src until a full page reload.
+                    delete loaders[failedSrc];
+                };
+            }(src));
             document.body.appendChild(s);
         }
     }
