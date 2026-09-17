@@ -621,10 +621,55 @@ Cloud gate at 7.3.3 (after the Phase 4 changes): **35 passed / 1 skipped**
 (`tests/parity/runs/2026-09-17/phase4/gate-cloud-7.3.3.txt`; the settling poll waited 25s).
 On-prem gate at 7.3.3: **35 passed / 1 skipped** (`…/phase4/gate-onprem-7.3.3.txt`). Both
 platforms green at 7.3.3 with the Phase 4 changes in.
-Still open in Phase 4: legacy workflow-model names (`brightcove-sync-asset-workflow`,
-`brightcove-delete-asset-workflow`) and the `/etc/designs`/`/etc/clientlibs` compat decision
-(step 2 items), the full upgrade re-test from a fresh 6.0.12 install (step 3), README supports
-line (step 4).
+**Phase 4 completed 2026-09-17 at pom `7.3.8`.** The three open items were resolved by
+measurement rather than by choosing a policy, and two of them contradicted what the upgrade
+doc had assumed:
+
+- **Legacy workflow-model names: DOCUMENT, no aliases needed.** Measured on the upgraded
+  instance: `/conf/global/settings/workflow/models/brightcove-sync-asset-workflow` and its
+  `/var/workflow/models/…` twin (plus the delete pair) are all still present after the
+  upgrade, because both packages' filters for those trees are `mode="merge"` and the
+  per-model filters only name the NEW models. A querybuilder read shows the legacy model's
+  `nodes/node1/metaData` still carries
+  `PROCESS=com.coresecure.brightcove.wrapper.workflow.BrightcoveSyncAssetWorkflowStep`, and
+  that DS component reports **active** in the 7.x bundle. So existing launchers keep firing
+  and nothing needs changing on upgrade day. The upgrade doc's "update launchers that
+  reference the old names" was wrong and now records the residual risks instead (four models
+  in the list; the 6.0.x models are frozen; deleting them silently stops any launcher still
+  pointing there).
+- **`/etc/designs` + `/etc/clientlibs`: REMOVE them, and this was a live defect.** Measured
+  by installing the real `brightcove_connector.ui.apps` 6.0.12 package back over 7.3.7: it
+  restores `/etc/designs/cs/brightcove/players/html5-player` as a **registered client
+  library** (the request is claimed by `HtmlLibraryServlet`) serving 6250 bytes under the
+  SAME category `brc.html5-player` as the new `/apps` library's 8598 bytes. Nothing deleted
+  it, so an upgraded instance had two libraries per category and every page requesting one
+  loaded the old AND the new player JS. `ui.content` now owns both legacy trees with no
+  content, same pattern as the `/apps/brightcove/{install,runmodes}` filters. After the
+  7.3.8 install: legacy path 404, legacy `html5-player.js` 404, new one still 200/8598.
+  `brc.bootstrap.v2` is the only category with no replacement and has zero references left
+  on this line; it belonged to the replaced 6.0.x admin console.
+  ⚠️ Note the filters had to go in `ui.content` (mutable), not `ui.apps`: an AEMaaCS
+  immutable package may only carry `/apps` and `/oak:index`. The cloud build and gate pass
+  with them, and on cloud the paths do not exist so the filters are a no-op.
+- **Fresh 6.0.12 → 7.x re-test: done, and it is now the recorded procedure.** Sequence and
+  result in `current/docs/onprem-upgrade-6.0-to-7.md` §"The upgrade path that was actually
+  verified". Gate at 7.3.8: **45 passed / 1 skipped on cloud and on-prem**
+  (`tests/parity/runs/2026-09-17b/gate-both-7.3.8-upgrade-from-6012.txt`), the on-prem run
+  being the upgrade-from-6.0.12 instance.
+- **README supports line: updated.** Now names the two artifacts (`*-cloud` for AEMaaCS,
+  `*-prem` for AEM 6.5 LTS), drops the 6.2/6.3/6.4 claim, points at the upgrade doc, and says
+  the connector x AEM x Java compatibility matrix (BGS-1671) is still unpublished rather than
+  implying one exists.
+
+Also learned while doing it: the real 6.0.12 `ui.apps` package creates **neither**
+`/apps/brightcove/install` nor `/apps/brightcove/runmodes` (both 404 after installing it), so
+the two filters added for them in Phase 4 step 2 are defensive only. The 6.0.x bundle and its
+runmode configs shipped in a *separate* package, which is what the original in-place upgrade
+hit. Keep the filters: they cost nothing and cover the customer who has that second package.
+
+Remaining Phase 4 gap: **Java 21 (Phase 2 step 6) is still blocked**, not skipped. The local
+bed is 6.5.0 GA, which Adobe does not support on Java 21; it needs a 6.5 LTS quickstart from
+Adobe Software Distribution.
 
 The realistic customer path is **in-place upgrade from 6.0.x**, not a fresh install.
 

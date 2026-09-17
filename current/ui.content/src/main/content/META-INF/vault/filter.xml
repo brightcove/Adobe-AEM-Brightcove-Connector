@@ -16,4 +16,19 @@
     <filter root="/var/workflow/models" mode="merge"/>
     <filter root="/var/workflow/models/bc-sync-new-asset" mode="update"/>
     <filter root="/var/workflow/models/brightcove-delete-asset" mode="update"/>
+    <!-- Legacy 6.0.x clientlib paths, owned here with NO content so an in-place upgrade
+         removes them. ⚠️ Measured 2026-09-17 on :4602 by installing the real 6.0.12
+         package over 7.3.7: it restored /etc/designs/cs/brightcove/players/html5-player
+         as a registered client library serving 6250 bytes under the SAME category
+         (brc.html5-player) as the new /apps library's 8598 bytes, so every page
+         requesting that category loaded the old AND the new player JS. Nothing else
+         deleted them, because both packages' /conf and /var filters are mode="merge"
+         and neither owns /etc. Same pattern as the /apps/brightcove/install and
+         /apps/brightcove/runmodes filters in ui.apps.
+         Context: ONPREM-PARITY-PLAN.md §3 Phase 4 step 2, current/docs/onprem-upgrade-6.0-to-7.md.
+         Categories: brc.html5-player, brc.smart-player and cq.shared all exist under
+         /apps on this line; brc.bootstrap.v2 does not and is dropped (it belonged to
+         the replaced 6.0.x admin console). -->
+    <filter root="/etc/designs/cs/brightcove"/>
+    <filter root="/etc/clientlibs/brightcove"/>
 </workspaceFilter>

@@ -73,7 +73,7 @@ Ordered by customer value: context-path and proxy handling first (on-prem custom
 
 ### 1. Context-path handling — `c100a16f1587f622be6825b1af291d038aad492d`, `cf674b75ade8c509687deeb5187d6b14164effd4` — effort **L**
 
-**STATUS: ported 2026-09-17 (see the Phase 3 log in `ONPREM-PARITY-PLAN.md` §3).** One shared
+**STATUS: ported 2026-09-17 in `b50a74a` (pom 7.3.4).** One shared
 helper `brc.url()` (`clientlibs/clientlib-url/js/brcUrl.js`, category `brc.url`) declared as a
 `dependencies` entry by all six consumer clientlibs; every connector URL in shipped JS routed
 through it; the admin page publishes `${request.contextPath}` because it has no Granite runtime.
@@ -104,7 +104,7 @@ Needs a design, per plan §1.4/§3: one shared helper that reads the request's c
 
 ### 2. Subfolder-sync / subfoldered-video replication — `d923bdd6258bad7227fbb88f02b8e1d7c0206918`, `1911f571aed0278025032781062174adcd997fc9` — effort **S + S**
 
-**STATUS: ported 2026-09-17.** Both gaps closed in `BrcReplicationHandler`, but not by
+**STATUS: ported 2026-09-17 in `264c7bd` (pom 7.3.5).** Both gaps closed in `BrcReplicationHandler`, but not by
 pasting the on-prem snippets: the mainline's own folder-sync logic (in
 `BrightcovePublishListener` and `BrightcoveSyncAssetWorkflowStep`) is a superset of the
 on-prem version, and it existed in TWO copy-pasted private methods. Pasting a third copy
@@ -134,7 +134,7 @@ Both gaps are in the same file, `current/core/.../webservices/BrcReplicationHand
 
 ### 3. AEM_NO_DAM tag filter on full-scroll import — `ccdaeb2fde4c2dcf19af42436e07ce97df8ef7cd` — effort **S**
 
-**STATUS: ported 2026-09-17.** The one-line default flip, as classified. Pinned by
+**STATUS: ported 2026-09-17 in `4c30bd6` (pom 7.3.6).** The one-line default flip, as classified. Pinned by
 `core/.../ServiceUtilDamOnlyDefaultTest`, which asserts the delegation (`dam_only = true`)
 rather than the outgoing query string, because the `q=%20-tags:AEM_NO_DAM` parameter is
 built two layers down in `CmsAPI` behind an authenticated Brightcove call and the defect
@@ -153,7 +153,7 @@ Matrix row 35 stays `not measured`: the import itself was never fired against th
 
 ### 4. Playlist/label modal centering and add-icon click bug — `afa58e79146d39f3ac9869be8335a5893c9474fd` — effort **S**
 
-**STATUS: split 2026-09-17. Layout half ported; add-icon half obsolete.** The classification
+**STATUS: split 2026-09-17 in `390312f` (pom 7.3.7). Layout half ported; add-icon half obsolete.** The classification
 above assumed both halves had a live surface here. Measured on both instances and across all of
 `ui.apps`, they do not:
 - **Ported (live).** `.pml-dialog` is the admin tool's confirmation dialog, used by switch
