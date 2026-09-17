@@ -61,3 +61,12 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
 - One spec per bug/ticket (e.g. `bcon-172-playlist-search.spec.js`).
 - Prefer read-only flows. Mutating flows (create label, rename playlist) write to
   the live account — clean up after, and gate them clearly.
+
+## Pre-QA gate
+
+`pre-qa-gate.sh` runs version-bump, build+install, deployed-bundle, and
+content-package checks, then this suite, before a ticket goes to Ready for QA.
+It gates cloud (`:4502`), on-prem (`:4602`), or both, and defaults to probing
+both instances. See `./pre-qa-gate.sh --help`; details in
+`wiki/api/aem-connector-local-dev.md` → "Pre-QA gate" and
+`ONPREM-PARITY-PLAN.md` §3 Phase 1.

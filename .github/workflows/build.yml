@@ -1,0 +1,83 @@
+# Compile-level parity guard (ONPREM-PARITY-PLAN.md §3 Phase 1, step 4).
+#
+# Builds both the cloud and on-prem artifacts from the same unified source
+# tree on every push/PR, so a change that breaks one platform's compile is
+# caught immediately rather than at the next manual on-prem build. This does
+# NOT run against a live AEM instance: no deploy, no bundle/content checks,
+# no e2e execution. Those still require `tests/e2e/pre-qa-gate.sh` against a
+# local AEM author before a ticket goes to Ready for QA.
+name: Build
+
+on:
+  push:
+    branches:
+      - cloud-master
+      - main
+      - 'release/**'
+      - 'feat/**'
+  pull_request:
+
+jobs:
+  build:
+    name: build (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [cloud, onprem]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: maven
+
+      - name: Build (cloud, default profile)
+        if: matrix.platform == 'cloud'
+        working-directory: current
+        run: mvn clean package -DskipTests
+
+      - name: Build (onprem profile)
+        if: matrix.platform == 'onprem'
+        working-directory: current
+        run: mvn -Daem.platform=onprem clean package -DskipTests
+
+      - name: List package contents
+        working-directory: current/all/target
+        run: |
+          zip_file=$(ls brightcove.all-*.zip)
+          echo "Built: $zip_file"
+          unzip -l "$zip_file"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: brightcove-all-${{ matrix.platform }}
+          path: current/all/target/brightcove.all-*.zip
+          if-no-files-found: error
+
+  e2e-static:
+    name: e2e spec syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Install e2e deps
+        working-directory: tests/e2e
+        run: npm ci
+
+      - name: List specs (syntax check only; no browser, no AEM instance)
+        working-directory: tests/e2e
+        run: npx playwright test --list
