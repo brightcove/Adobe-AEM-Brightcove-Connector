@@ -6,6 +6,13 @@
     <filter root="/apps/brightcove/components"/>
     <filter root="/apps/brightcove/extensions"/>
     <filter root="/apps/brightcove/templates"/>
+    <!-- Legacy 6.0.x paths, owned here with NO content so an in-place upgrade removes them.
+         Measured 2026-09-17: left in place, the 6.0.12 bundle jar under install/ stayed Active
+         next to brightcove.core (duplicate servlets), and runmodes/ kept a service-user mapping
+         naming the old bundle symbolic name, which would have failed every brightcoveWrite login.
+         Context: ONPREM-PARITY-PLAN.md §3 Phase 4 step 2. -->
+    <filter root="/apps/brightcove/install"/>
+    <filter root="/apps/brightcove/runmodes"/>
     <filter root="/apps/cq/core/content/nav" mode="merge"/>
     <filter root="/apps/cq/core/content/nav/brightcove"/>
     <filter root="/apps/dam/gui" mode="update"/>

@@ -501,6 +501,31 @@ Both instances green.
 
 ### Phase 4. Upgrade path for existing on-prem customers
 
+**Steps 1, 2 (paths) and 4 (doc) landed 2026-09-17, measured on :4602 (6.5.0 GA, upgraded
+in place from 6.0.12):**
+- `sling/LegacyConfigurationServiceImpl` binds the 6.0.x factory PID `…sling.BrcServiceImpl`
+  (snake_case keys) and exposes it as a `ConfigurationService`; `ConfigurationGrabberImpl`
+  holds current and legacy configurations in two maps and prefers current at lookup. Test:
+  both configs → 1 account (current alias); delete current → 1 account via legacy alias and
+  `api.js` search returns items; recreate current → current alias again. One WARN per legacy
+  account plus one when both exist.
+  🔴 Two design traps met on the way: (a) deciding at bind time and dropping the loser loses
+  the legacy account for good, because DS never re-offers an already-bound reference when the
+  winner is deleted; (b) OSGi component-property-type naming maps a SINGLE underscore to a
+  DOT, so `client_id()` read `client.id` and every legacy value except `key` came back empty;
+  the accessor names use double underscores and `LegacyConfigurationServiceImplTest` pins the
+  generated metatype ids.
+- `ui.apps` filter owns `/apps/brightcove/install` and `/apps/brightcove/runmodes` with no
+  content: planted nodes there were gone after install (404/404), so the 6.0.x bundle jar and
+  its runmode configs are removed by the upgrade.
+- `docs/onprem-upgrade-6.0-to-7.md` written (key table, what the package does, what to check).
+- Version bumped 7.3.0 → 7.3.3 across three redeploys (same-version redeploys do not refresh
+  the bundle; a 7.3.0 rebuild with new code was silently not picked up on :4602 until bumped).
+Still open in Phase 4: legacy workflow-model names (`brightcove-sync-asset-workflow`,
+`brightcove-delete-asset-workflow`) and the `/etc/designs`/`/etc/clientlibs` compat decision
+(step 2 items), the full upgrade re-test from a fresh 6.0.12 install (step 3), README supports
+line (step 4).
+
 The realistic customer path is **in-place upgrade from 6.0.x**, not a fresh install.
 
 1. Legacy config keys: fallback reading in `ConfigurationServiceImpl` (§1.3) with a
