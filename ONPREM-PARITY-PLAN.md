@@ -499,6 +499,15 @@ Exit gate: `git cherry origin/cloud-master origin/onprem-master` items are each 
 as *present / ported (commit) / obsolete (reason)* in `tests/parity/onprem-commit-ledger.md`.
 Both instances green.
 
+**Classification done 2026-09-17** (ledger, every verdict cites the HEAD file/function that
+proves it): 60 commits → **33 present, 6 port, 21 obsolete, 0 unclear**. Proxy handling
+(`d3743ea`) is already present via the shared `HttpServices` proxy plumbing. The six ports form
+four items, in the ledger's "Port plan": (1) context-path handling, effort L, six JS files, needs
+the shared helper design; (2) subfolder replication in `BrcReplicationHandler`
+(`d923bdd`, `1911f57`), S+S; (3) `AEM_NO_DAM` default on the 6-arg `ServiceUtil.getList`
+(`ccdaeb2`), S; (4) playlist/label dialog centering and add-icon click (`afa58e7`), S.
+**Nothing ported yet.**
+
 ### Phase 4. Upgrade path for existing on-prem customers
 
 **Steps 1, 2 (paths) and 4 (doc) landed 2026-09-17, measured on :4602 (6.5.0 GA, upgraded
