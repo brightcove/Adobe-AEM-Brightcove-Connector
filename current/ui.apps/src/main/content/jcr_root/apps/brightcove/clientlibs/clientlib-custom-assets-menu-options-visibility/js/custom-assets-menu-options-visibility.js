@@ -8,7 +8,7 @@
             paths: assetsPathList
         };
         Granite.$.ajax({
-            url: "/bin/brightcove/custom-menu-option-visibility",
+            url: brc.url("/bin/brightcove/custom-menu-option-visibility"),
             type: "GET",
             data: param,
             async: false,
@@ -31,7 +31,7 @@
     function getCurrentUserInfo() {
 
         Granite.$.ajax({
-            url: "/bin/brightcove/author/users/current-user-info",
+            url: brc.url("/bin/brightcove/author/users/current-user-info"),
             type: "GET",
             async: false,
             success: function (data, status) {

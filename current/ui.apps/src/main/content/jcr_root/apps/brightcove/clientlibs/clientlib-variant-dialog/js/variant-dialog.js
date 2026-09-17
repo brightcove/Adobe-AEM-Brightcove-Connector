@@ -133,7 +133,7 @@
         });
 
         Granite.$.ajax({
-            url: "/bin/brightcove/api.json",
+            url: brc.url("/bin/brightcove/api.json"),
             type: "POST",
             data: {
                 a:             currentMode === "add" ? "add_variant" : "update_variant",
@@ -216,7 +216,7 @@
         if (!window.confirm("Delete the \"" + language + "\" variant? This cannot be undone.")) return;
 
         Granite.$.ajax({
-            url: "/bin/brightcove/api.json",
+            url: brc.url("/bin/brightcove/api.json"),
             type: "POST",
             data: {
                 a:          "delete_variant",

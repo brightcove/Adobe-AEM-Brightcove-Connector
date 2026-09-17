@@ -73,6 +73,24 @@ Ordered by customer value: context-path and proxy handling first (on-prem custom
 
 ### 1. Context-path handling — `c100a16f1587f622be6825b1af291d038aad492d`, `cf674b75ade8c509687deeb5187d6b14164effd4` — effort **L**
 
+**STATUS: ported 2026-09-17 (see the Phase 3 log in `ONPREM-PARITY-PLAN.md` §3).** One shared
+helper `brc.url()` (`clientlibs/clientlib-url/js/brcUrl.js`, category `brc.url`) declared as a
+`dependencies` entry by all six consumer clientlibs; every connector URL in shipped JS routed
+through it; the admin page publishes `${request.contextPath}` because it has no Granite runtime.
+Two departures from the on-prem original, both deliberate:
+- the on-prem fix called `Granite.HTTP.externalize()` directly at each site, which assumes a
+  Granite runtime on the page. The admin tool is a plain HTML page, so the helper asks three
+  sources in order (page-published value, `Granite.HTTP`, `CQ.shared.HTTP`) and distinguishes
+  "a source said the root" from "no source could answer" (one `console.warn`, never a silent
+  default).
+- the `extensions/contentfinder/*` ExtJS files that `cf674b7` patched do not exist on HEAD, so
+  only its `syncDB()` falsy-guard equivalent carries over. Four live cloud-era files the on-prem
+  commit never saw (`variant-dialog.js`, `custom-assets-menu-options-visibility.js`) had the same
+  defect and are included.
+Verified by `tests/e2e/specs/bcon-context-path.spec.js` (4 tests, in the gate on both platforms,
+including a negative control that bypasses the helper and requires the check to go red). Matrix
+row 38. Residual `not measured`: dialog XML `storePath`/`options`/`src` attributes.
+
 Needs a design, per plan §1.4/§3: one shared helper that reads the request's context path, used everywhere the admin tool, dialogs, and the Touch UI asset finder build a `/bin/brightcove/...` URL. Highest customer value because AEMaaCS never has a context root but every on-prem customer behind a dispatcher does; this is the one gap that silently breaks the connector under a real on-prem deployment topology today.
 
 - Add the helper (client-side JS equivalent of "read context path or fall back to empty string") and route every relative API call through it:

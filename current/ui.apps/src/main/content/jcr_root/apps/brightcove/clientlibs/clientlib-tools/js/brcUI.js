@@ -368,7 +368,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -393,7 +393,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -420,7 +420,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -437,7 +437,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -512,7 +512,7 @@ $(function () {
                 ids.forEach(function (id) {
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'delete_playlist', playlist: id },
                         async: true,
                         complete: onDone
@@ -710,7 +710,7 @@ function openMoveToFolderModal() {
         $('#mtfFolderList').html('<li class="brc-mtf-empty">Loading\u2026</li>');
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: { a: 'list_folders', account_id: $('#selAccount').val(), callback: 'mtfFolderLoadCallback' },
             async: true
         });
@@ -801,7 +801,7 @@ $(function () {
         $.each(paging.selectedVideos, function (i, checkbox) {
             requests.push($.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'move_video_to_folder',
                     folder: folderId,
@@ -1081,7 +1081,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1164,7 +1164,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1246,7 +1246,7 @@ function loadFolders() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1317,7 +1317,7 @@ function loadLabels() {
 
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'create_label', label: labelName },
                         async: true,
                         // Inspect the raw response in `complete` rather than
@@ -1376,7 +1376,7 @@ function loadLabels() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1454,7 +1454,7 @@ function openEditPlaylistModal(playlistId, playlistName, playlistType) {
     if (!isSmart) {
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: {
                 a: 'list_videos_in_playlist',
                 callback: 'editPlaylistListingCallback',
@@ -1604,7 +1604,7 @@ function epSavePlaylist(showToast) {
 
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: qs,
         async: true,
         success: function() {
@@ -2367,7 +2367,7 @@ function saveLabels() {
     var savedLabels = _currentLabels.slice();
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         // The endpoint is JSONP — let jQuery wire the callback so the response
         // body is actually parsed into `resp`. The prior `dataType` omission
         // caused the response to be executed as a script (`cb({...})`) and the
@@ -2457,7 +2457,7 @@ CQ.Ext.brightcove.economics = new CQ.Ext.data.JsonStore({
 function syncDB()
 {
     syncStart();
-    var url = window.location.origin + "/bin/brightcove/dataload";
+    var url = window.location.origin + brc.url("/bin/brightcove/dataload");
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
@@ -3098,7 +3098,7 @@ function cpSubmit() {
     var videoIds = _cpVideos.map(function(v) { return v.id; }).join(',');
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: {
             a: 'create_playlist',
             account_id: $('#selAccount').val(),

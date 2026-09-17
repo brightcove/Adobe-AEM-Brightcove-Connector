@@ -506,7 +506,35 @@ four items, in the ledger's "Port plan": (1) context-path handling, effort L, si
 the shared helper design; (2) subfolder replication in `BrcReplicationHandler`
 (`d923bdd`, `1911f57`), S+S; (3) `AEM_NO_DAM` default on the 6-arg `ServiceUtil.getList`
 (`ccdaeb2`), S; (4) playlist/label dialog centering and add-icon click (`afa58e7`), S.
-**Nothing ported yet.**
+
+**Item 1 (context-path handling) ported 2026-09-17 at pom `7.3.4`.** One shared helper
+`brc.url()` in a new clientlib (`clientlibs/clientlib-url`, category `brc.url`), declared as a
+`dependencies` entry by all six consumer clientlibs; every `/bin/brightcove` URL in shipped JS
+routed through it; the admin tool page publishes `${request.contextPath}` because it is a plain
+HTML page with no Granite runtime. Design notes and the source order (page → Granite → Classic
+UI, with "no source could answer" kept distinct from "the root"):
+`current/docs/clientlibs-context-path.md`. Ledger entry has the two deliberate departures from
+the on-prem original.
+Measured by `tests/e2e/specs/bcon-context-path.spec.js`, four tests, in the gate on both
+platforms: a full admin-tool session driven through a simulated context path (the page's
+published value is rewritten and the spec then stands in for the servlet container), the Touch UI
+half on the DAM metadata editor asserting a real source answered rather than the root default, a
+source guard over all shipped clientlib JS, and **a negative control** that bypasses the helper
+and requires the same check to go red, so each run re-proves the harness can still see the
+defect. Gates: cloud `38 passed / 1 skipped`
+(`tests/parity/runs/2026-09-17b/gate-cloud-7.3.4-ctxpath.txt`), on-prem the same
+(`…/gate-onprem-7.3.4-ctxpath.txt`). Matrix row 38: cloud 7.2.3 `broken` (demonstrated by the
+negative control), 7.3.x `works`, on-prem 6.0.12 still `not measured`.
+
+🔴 Found while porting item 3's neighbourhood, NOT part of any port and not fixed:
+`ServiceUtil.getList(…, dam_only, clips_only)` applies neither flag to its FIRST page. Line ~214
+calls `brAPI.cms.getVideos(query, limit, offset, sort)`, whose 4-arg overload hardcodes
+`dam_only=true, clips_only=false`, while the full-scroll continuation pages at ~222 pass the
+caller's values. `getVideosCount(query)` likewise always filters, so `totals` does not match an
+unfiltered first page. A caller asking for unfiltered results silently gets a filtered page 1;
+ticket candidate, listed in §3b.
+
+Items 2, 3 and 4 not ported yet.
 
 ### Phase 4. Upgrade path for existing on-prem customers
 
@@ -620,6 +648,18 @@ the parity phases; they are listed so they are not silently folded into "parity"
    re-enable it while the request is in flight, allowing a double submit. Reproduces inside
    the full e2e suite (validation lands late), not in isolation. Covered by a `test.fixme`
    in `bcon-186-text-track-upload-feedback.spec.js`; flip it to `test` when fixed.
+
+10. **`ServiceUtil.getList` drops `dam_only` and `clips_only` on its first page.** Found
+    2026-09-17 while porting Phase 3 item 3, in shared `core`, not introduced by it. The
+    8-arg `getList` takes both flags but line ~214 fetches page 1 through
+    `brAPI.cms.getVideos(query, limit, offset, sort)`, whose 4-arg overload hardcodes
+    `dam_only=true, clips_only=false`; only the full-scroll continuation pages (~222) pass
+    the caller's values. `getVideosCount(query)` also always filters, so the reported
+    `totals` does not describe an unfiltered first page. Net effect: a caller asking for
+    unfiltered results gets a filtered page 1 and unfiltered pages 2+, and there is no way
+    to get `clips_only` applied to page 1 at all. Item 3's port makes the *default*
+    consistent but does not fix the parameter being ignored. Fix: pass `dam_only` and
+    `clips_only` through on the first page and to the count call.
 
 Also learned: `get_videos_with_label` / `get_videos_in_folder` are index-backed and lag; to
 verify a label/folder write, re-fetch the video record (`a=search_videos&isID=true&query=<id>`).
