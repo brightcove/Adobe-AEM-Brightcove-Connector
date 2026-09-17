@@ -8,10 +8,19 @@
 //   1. No popup dialog is created when ENTER URL is clicked.
 //   2. The inline edit row becomes visible inside the image widget.
 //   3. The URL input is in the side panel (no global overlay).
-//   4. Save POSTs the correct field (poster_source / thumbnail_source) and
+//   4. Save sends the correct field (poster_source / thumbnail_source) and
 //      updates the preview without a page reload.
 //   5. Cancel returns the widget to button view without sending anything.
 //   6. Switching videos resets a stuck edit-mode (no carryover state).
+//
+// commit 764e5f2 (2026-06-11, "JSONP response parsing") changed the save call
+// from a POST with dataType:'json' to a GET-via-JSONP call: the .js endpoint
+// always responds `callback({...})` (BrcApi's `.js` branch pins HTTP 200
+// always, since a script-tag JSONP load can't surface an error status), and
+// the old dataType:'json' POST made jQuery try to JSON.parse that wrapper,
+// throw, and report a successful queue as "update failed". Tests 3 and 4
+// mock the query-string GET and echo the caller's `callback` param back,
+// matching the shape brcUI.js's `.brc-image-url-save` handler parses.
 const { test, expect, openAdmin } = require('../fixtures');
 
 async function openFirstVideoPanel(page) {
@@ -48,8 +57,11 @@ test('Cancel returns the widget to button view without sending anything', async 
   const $thumb = page.locator('.brc-image-widget[data-image-kind="thumbnail"]');
 
   let uploadFired = false;
-  await page.route(/api\.js$/, async (route) => {
-    if (route.request().method() === 'POST' && (route.request().postData() || '').includes('a=upload_image')) {
+  // Match on the URL, not the method: the save request is now a GET/JSONP
+  // call (commit 764e5f2), so filtering on POST here would never catch a
+  // regression where Cancel accidentally still fires the save.
+  await page.route('**/bin/brightcove/api.js**', async (route) => {
+    if (route.request().url().includes('a=upload_image')) {
       uploadFired = true;
     }
     return route.continue();
@@ -72,18 +84,21 @@ test('Save posts the correct field, queues the ingest, no popup, no page reload'
   // Sentinel — survives if there's no full page reload.
   await page.evaluate(() => { window.__bcon184Sentinel = 'alive'; });
 
-  let postedBody = null;
-  // Mock with the real success shape: BrcApi.uploadImage now returns
-  // {"job_id":"<id>"} on a queued ingest (instead of plain `true`).
-  await page.route(/api\.js$/, async (route) => {
-    if (route.request().method() !== 'POST') return route.continue();
-    const body = route.request().postData() || '';
-    if (!body.includes('a=upload_image')) return route.continue();
-    postedBody = body;
+  let requestUrl = null;
+  // GET/JSONP mock (commit 764e5f2): match on URL, echo the caller-supplied
+  // `callback` query param back wrapping the real success shape
+  // ({"job_id":"<id>"}), content-type text/javascript, status 200 — exactly
+  // what BrcApi's `.js` branch always sends (it never sets a non-200 status,
+  // since a script-tag JSONP load can't surface one to the browser).
+  await page.route('**/bin/brightcove/api.js**', async (route) => {
+    const url = route.request().url();
+    if (!url.includes('a=upload_image')) return route.continue();
+    requestUrl = url;
+    const callback = new URL(url).searchParams.get('callback') || 'callback';
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
-      body: '{"job_id":"fake-job-id-12345"}',
+      contentType: 'text/javascript',
+      body: `${callback}({"job_id":"fake-job-id-12345"});`,
     });
   });
 
@@ -92,11 +107,11 @@ test('Save posts the correct field, queues the ingest, no popup, no page reload'
   await $poster.locator('.brc-image-url-input').fill(url);
   await $poster.locator('.brc-image-url-save').click();
 
-  // Outgoing POST carries poster_source (NOT thumbnail_source).
-  await expect.poll(() => postedBody, { timeout: 10_000 }).not.toBeNull();
-  expect(postedBody).toContain('a=upload_image');
-  expect(postedBody).toContain('poster_source=' + encodeURIComponent(url));
-  expect(postedBody).not.toContain('thumbnail_source=');
+  // Outgoing GET carries poster_source (NOT thumbnail_source) as a query param.
+  await expect.poll(() => requestUrl, { timeout: 10_000 }).not.toBeNull();
+  expect(requestUrl).toContain('a=upload_image');
+  expect(requestUrl).toContain('poster_source=' + encodeURIComponent(url));
+  expect(requestUrl).not.toContain('thumbnail_source=');
 
   // Optimistic preview updated (real CDN URL appears on refresh once
   // Brightcove finishes processing — see toast copy).
@@ -127,14 +142,19 @@ test('Brightcove ingest error surfaces a real error toast (not phantom success)'
     ? await page.locator('#divMeta\\.thumbPreview img').getAttribute('src')
     : null;
 
-  await page.route(/api\.js$/, async (route) => {
-    if (route.request().method() !== 'POST') return route.continue();
-    const body = route.request().postData() || '';
-    if (!body.includes('a=upload_image')) return route.continue();
+  // GET/JSONP mock (commit 764e5f2): the server ALWAYS returns HTTP 200 for
+  // the `.js` endpoint (a script-tag JSONP load can't surface a non-200
+  // status), so the failure is communicated purely via the wrapped body's
+  // error_code/message — exactly what BrcApi.uploadImage emits when
+  // Brightcove's Dynamic Ingest rejects the queue request.
+  await page.route('**/bin/brightcove/api.js**', async (route) => {
+    const url = route.request().url();
+    if (!url.includes('a=upload_image')) return route.continue();
+    const callback = new URL(url).searchParams.get('callback') || 'callback';
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
-      body: '{"error_code":422,"message":"Invalid URL: must be HTTPS and reachable"}',
+      contentType: 'text/javascript',
+      body: `${callback}({"error_code":422,"message":"Invalid URL: must be HTTPS and reachable"});`,
     });
   });
 

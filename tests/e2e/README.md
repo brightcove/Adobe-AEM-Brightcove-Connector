@@ -33,6 +33,20 @@ npm run test:headed      # watch it drive the browser
 npx playwright test specs/smoke.spec.js   # a single spec
 ```
 
+## Running against more than one instance
+
+Everything target-specific is derived from `AEM_BASE` in `target.js`: the saved
+login state is `.auth/state-<host>-<port>.json` and results go to
+`test-results/<host>-<port>/`. Concurrent runs against different instances
+(e.g. cloud `:4502` and on-prem `:4602`) are therefore safe. ⚠️ Before this
+existed both runs shared one `state.json` and, because `localhost` cookies
+ignore the port, one run silently drove the other's instance.
+
+```bash
+AEM_BASE=http://localhost:4602 npm test          # on-prem
+AEM_BASE=http://localhost:4502 npm test          # cloud
+```
+
 ## How it works
 
 - `global-setup.js` logs into AEM via `j_security_check` and saves the session
