@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.2.3</version>
+        <version>7.3.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -125,6 +125,25 @@
     <!-- P R O F I L E S                                                        -->
     <!-- ====================================================================== -->
     <profiles>
+        <!-- On-prem artifact is named brightcove.all-<version>-prem.zip so both platforms'
+             packages can sit in one release. Done via finalName rather than the filevault
+             <classifier>: with 1.1.6 the classifier makes generate-metadata write to
+             target/vault-work-prem while the package goal still reads target/vault-work
+             ("basedir ... vault-work does not exist"). finalName also keeps autoInstallPackage
+             pointed at the right file for free. Same activation as the parent POM
+             (-Daem.platform=onprem). Context: ../../ONPREM-PARITY-PLAN.md §2. -->
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <build>
+                <finalName>${project.artifactId}-${project.version}-prem</finalName>
+            </build>
+        </profile>
         <profile>
             <id>autoInstallSinglePackage</id>
             <activation>

@@ -20,7 +20,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.2.3</version>
+        <version>7.3.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>brightcove.core</artifactId>
@@ -95,10 +95,8 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <groupId>com.adobe.aem</groupId>
             <artifactId>uber-jar</artifactId>
         </dependency> -->
-        <dependency>
-            <groupId>com.adobe.aem</groupId>
-            <artifactId>aem-sdk-api</artifactId>
-        </dependency>
+        <!-- The AEM platform API (aem-sdk-api for cloud, uber-jar for on-prem) is declared in the
+             platform profiles at the bottom of this POM, selected by -Daem.platform. -->
         <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
         <dependency>
             <groupId>org.osgi</groupId>
@@ -205,4 +203,37 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <!-- Platform API. Same ids/activation as the parent POM; see the comment there. -->
+        <profile>
+            <id>cloud</id>
+            <activation>
+                <property>
+                    <name>!aem.platform</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.adobe.aem</groupId>
+                    <artifactId>aem-sdk-api</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.adobe.aem</groupId>
+                    <artifactId>uber-jar</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

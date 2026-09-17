@@ -21,7 +21,7 @@
     <groupId>com.coresecure</groupId>
     <artifactId>brightcove</artifactId>
     <packaging>pom</packaging>
-    <version>7.2.3</version>
+    <version>7.3.0</version>
     <description>Brightcove Connector</description>
 
     <modules>
@@ -33,7 +33,7 @@
         <module>ui.content</module>
         <module>it.tests</module>
         <module>ui.tests</module>
-        <module>analyse</module>
+        <!-- `analyse` (AEMaaCS analyser) is added by the `cloud` platform profile below. -->
     </modules>
 
     <properties>
@@ -50,6 +50,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <aem.sdk.api>2025.9.22450.20250911T131210Z-250800</aem.sdk.api>
+        <!-- On-prem floor: AEM 6.5 LTS. Compile the on-prem artifact against THIS uber-jar and
+             nothing newer, or bnd computes Import-Package ranges the runtime cannot satisfy.
+             Context: ../ONPREM-PARITY-PLAN.md §0 and §2. -->
+        <aem.uber.version>6.5.22</aem.uber.version>
         <aemanalyser.version>1.6.12</aemanalyser.version>
         <componentGroupName>Brightcove Connector</componentGroupName>
         <!-- AEM Core Components Version -->
@@ -396,6 +400,40 @@ Bundle-DocURL:
 
     <profiles>
         <!-- ====================================================== -->
+        <!-- P L A T F O R M   P R O F I L E S                        -->
+        <!-- One source tree, two runtimes. Selected by the aem.platform property, NOT by -P,
+             because an explicit -P would deactivate the activeByDefault adobe-public profile
+             (and its repositories) in this same POM.
+               cloud  (default):  mvn clean install                      -> brightcove.all-<v>.zip
+               onprem:            mvn -Daem.platform=onprem clean install -> brightcove.all-<v>-prem.zip
+             Each module that needs the platform API declares the same two profiles.
+             Context: ../ONPREM-PARITY-PLAN.md §2 (target end state). -->
+        <!-- ====================================================== -->
+        <profile>
+            <id>cloud</id>
+            <activation>
+                <property>
+                    <name>!aem.platform</name>
+                </property>
+            </activation>
+            <modules>
+                <module>analyse</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <properties>
+                <aem.port>4602</aem.port>
+            </properties>
+        </profile>
+
+        <!-- ====================================================== -->
         <!-- A D O B E P U B L I C P R O F I L E -->
         <!-- ====================================================== -->
         <profile>
@@ -567,7 +605,7 @@ Bundle-DocURL:
             <dependency>
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>uber-jar</artifactId>
-                <version>6.5.22</version>
+                <version>${aem.uber.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
