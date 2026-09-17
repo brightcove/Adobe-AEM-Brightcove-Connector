@@ -551,7 +551,29 @@ Verified by `BrcReplicationHandlerFolderSyncTest` (4 tests) + `FolderSyncUtilTes
 the gate via surefire. Measured control: reverting all three port points turns 3 of those 4
 red while the thin-input test stays green.
 
-Items 3 and 4 not ported yet.
+**Item 3 (`AEM_NO_DAM` default) ported 2026-09-17 at pom `7.3.6`.** One-line flip on the
+6-arg `ServiceUtil.getList`, pinned by `ServiceUtilDamOnlyDefaultTest` (delegation, plus a
+second test that an explicitly-passed `false` is still honoured). Measured control:
+reverting the line turns the first test red. The deeper first-page defect is §3b item 10
+and is deliberately NOT fixed here. Matrix row 35 stays `not measured`: the import was
+never fired against the account.
+
+⚠️ **Environment finding from the 7.3.6 on-prem gate, not a code defect.** The run came
+back 1 passed / 39 failed on :4602 while cloud passed 39/1 from the same commit, and the
+JCR content was byte-identical to the previous green on-prem gate. Cause: the package
+install triggered an OSGi refresh that cascaded into Sling's OWN scripting bundles and
+left `sightly...ExtensionRegistryService` and `...JavaUseProvider` in **failed
+activation**. Every HTL script using `data-sly-use` then silently fell back to its
+`resourceSuperType`, so `/brightcove/admin.html` served an EMPTY Granite shell with
+HTTP 200, and every admin spec timed out on `#tbData tr` with nothing in error.log but a
+shell-internal warning. The connector bundle was Active and the correct version the whole
+time, which is what makes this so slow to diagnose. Recovery was a stop/start of
+`org.apache.sling.scripting.sightly` (no reinstall, ~15s), after which on-prem passed
+39/1. The gate now checks for failed-activation components in step 3 and prints the
+recovery commands, with a distinct NOT MEASURED verdict when the component list cannot be
+read. Detector verified against healthy / broken / unparseable / empty inputs.
+
+Item 4 not ported yet.
 
 ### Phase 4. Upgrade path for existing on-prem customers
 

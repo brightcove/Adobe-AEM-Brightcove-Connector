@@ -269,6 +269,45 @@ print('yes' if lines[0] == '1' and rows and rows[0][2] == 'Active' else 'no')
   echo "$active" | grep -q "$ver_local" || fail "$platform: deployed bundle is not $ver_local (got: $active) — clientlib/bundle cache served stale code."
   echo "$active" | grep -qi Active || fail "$platform: brightcove.core is not Active (got: $active)."
 
+  # 3b. No DS component anywhere may be in "failed activation".
+  #     ⚠️ Measured 2026-09-17 on :4602: installing a package triggered an OSGi
+  #     refresh that cascaded into Sling's own scripting bundles and left
+  #     sightly's ExtensionRegistryService and JavaUseProvider in "failed
+  #     activation". Every HTL script using data-sly-use then silently fell back
+  #     to its resourceSuperType, so /brightcove/admin.html rendered an EMPTY
+  #     Granite shell: 200 OK, no error, 39 of 40 e2e specs timing out on
+  #     "#tbData tr" with nothing in the log but a shell-internal warning. The
+  #     connector bundle itself was Active and the right version throughout,
+  #     which is exactly why this check is not about the connector's components.
+  #     Recovery is a stop/start of the affected bundle, no reinstall needed.
+  #     Both instances read ZERO here when healthy, so any count is a signal.
+  raw_components=$(curl -s -u "$AUTH" "$url/system/console/components.json" 2>/dev/null) || raw_components=""
+  failed_components=$(printf '%s' "$raw_components" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin).get('data', [])
+except Exception:
+    print('UNREADABLE'); sys.exit(0)
+for c in data:
+    if 'fail' in str(c.get('state', '')).lower():
+        print('%s | %s' % (c.get('state'), c.get('name')))
+" 2>/dev/null) || failed_components="UNREADABLE"
+
+  if [ "$failed_components" = "UNREADABLE" ] || [ -z "$raw_components" ]; then
+    # Not measured, and said so: never silently treated as clean.
+    echo "   ⚠️ could not read the component list; failed-activation check NOT MEASURED"
+  elif [ -n "$failed_components" ]; then
+    echo "$failed_components" | while read -r line; do echo "     ✗ $line"; done
+    fail "$platform: OSGi components in failed activation (above). A package install can
+   cascade an OSGi refresh into Sling's own bundles; if sightly/scripting components are
+   listed, every HTL data-sly-use script falls back to its resourceSuperType and pages
+   render empty with HTTP 200. Recover with a stop/start of the owning bundle:
+     curl -u $AUTH -X POST -d action=stop  $url/system/console/bundles/<id>
+     curl -u $AUTH -X POST -d action=start $url/system/console/bundles/<id>"
+  else
+    echo "   OSGi components in failed activation: 0"
+  fi
+
   # 4a. Content-package check: the on-prem 6.0.12 clientlib shipped the
   #     legacy com.iskitz.ajile vendor bundle; the unified source ships
   #     brcTransport.js instead (BGS-1706). Confirm the deployed clientlib

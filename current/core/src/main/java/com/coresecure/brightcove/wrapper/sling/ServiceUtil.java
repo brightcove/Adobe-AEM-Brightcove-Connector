@@ -197,8 +197,15 @@ public class ServiceUtil {
     public ArrayNode getVideoSources(String videoID) {
         return brAPI.cms.getVideoSources(videoID);
     }
+    /**
+     * ⚠️ dam_only defaults to TRUE: videos tagged AEM_NO_DAM must stay out of the DAM.
+     * This overload used to pass false, so a full-scroll import pulled in tagged videos
+     * from page 2 onwards while page 1 excluded them (CmsAPI's own 4-arg getVideos
+     * forces the filter). Ported from on-prem ccdaeb2; see ONPREM-PARITY-PLAN.md §3
+     * Phase 3 item 3 and the §3b entry for the first-page inconsistency that remains.
+     */
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
-        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false, false);
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, true, false);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
         return getList(exportCSV,  offset,  limit, full_scroll, query, sort, dam_only, false);

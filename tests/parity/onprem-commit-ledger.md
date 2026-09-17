@@ -134,6 +134,20 @@ Both gaps are in the same file, `current/core/.../webservices/BrcReplicationHand
 
 ### 3. AEM_NO_DAM tag filter on full-scroll import — `ccdaeb2fde4c2dcf19af42436e07ce97df8ef7cd` — effort **S**
 
+**STATUS: ported 2026-09-17.** The one-line default flip, as classified. Pinned by
+`core/.../ServiceUtilDamOnlyDefaultTest`, which asserts the delegation (`dam_only = true`)
+rather than the outgoing query string, because the `q=%20-tags:AEM_NO_DAM` parameter is
+built two layers down in `CmsAPI` behind an authenticated Brightcove call and the defect
+was entirely in the value this overload passed on. A second test pins that the explicit
+overload still honours a caller-supplied `false`, so the fix cannot be mistaken for
+"always filter". Measured control: reverting the one line turns the first test red.
+🔴 The deeper defect this exposes is NOT fixed and is filed as plan §3b item 10: the
+8-arg `getList` ignores BOTH flags on its first page (`CmsAPI.getVideos(q, limit, offset,
+sort)` hardcodes `dam_only=true, clips_only=false`), and `getVideosCount(query)` always
+filters, so `totals` does not describe an unfiltered page 1. The port makes the default
+consistent; it does not make the parameter work.
+Matrix row 35 stays `not measured`: the import itself was never fired against the account.
+
 - One-line default flip: `ServiceUtil.getList(Boolean, int, int, boolean, String, String)` (the 6-arg overload, ~line 200) should default `dam_only=true`, matching the already-fixed sibling overloads and `CmsAPI.getVideos`/`getVideosCount`.
 - Verify: tag a video `AEM_NO_DAM` in the target account, run a full-scroll import via this specific overload's call path, confirm the tagged video is excluded.
 
