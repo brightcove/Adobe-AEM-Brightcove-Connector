@@ -38,6 +38,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.FolderSyncUtil;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.DamConstants;
@@ -52,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import java.io.InputStream;
 import java.util.*;
@@ -174,6 +176,22 @@ public class BrcReplicationHandler implements TransportHandler {
         return result;
     }
 
+    /**
+     * The account folder the asset being replicated belongs to.
+     *
+     * <p>⚠️ With subfolder sync the asset's parent can be a Brightcove subfolder rather
+     * than the account folder, and reading its name then yields a folder id where an
+     * account id is expected: the configuration lookup misses and the asset is skipped
+     * with "Account not existing". Ported from on-prem d923bdd.
+     * Context: current/docs/core-folder-sync.md</p>
+     *
+     * Package-private so BrcReplicationHandlerFolderSyncTest can drive it directly.
+     */
+    static String accountIdFor(Resource parent) {
+        String accountId = FolderSyncUtil.resolveAccountId(parent.adaptTo(Node.class));
+        return accountId != null ? accountId : parent.getName();
+    }
+
     private ReplicationResult replicateAssets(ResourceResolver rr, String current_path, ReplicationAction replicationAction, ReplicationActionType replicationType) throws RepositoryException, ReplicationException{
         Resource asset_res = rr.getResource(current_path);
         ReplicationResult result = ReplicationResult.OK;
@@ -184,7 +202,7 @@ public class BrcReplicationHandler implements TransportHandler {
         if (parent == null) {
             return result;
         }
-        String account_id = parent.getName();
+        String account_id = accountIdFor(parent);
         Asset _asset = asset_res.adaptTo(Asset.class);
         if (_asset == null){
             LOGGER.warn("Asset removed or not existing");
@@ -362,7 +380,10 @@ public class BrcReplicationHandler implements TransportHandler {
             throws ReplicationException {
         return doDeactivate(ctx, tx, accountId, propertiesMap);
     }
-    private ReplicationResult activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    // Package-private (not private) so BrcReplicationHandlerFolderSyncTest can drive the
+    // activation paths directly with a mocked ServiceUtil; same reason as the BGS-1705
+    // test's access to BrightcoveSyncAssetWorkflowStep.activateAsset.
+    ReplicationResult activateNew(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
         ReplicationResult result = ReplicationResult.OK;
         LOGGER.trace("brc_lastsync was null or zero : asset should be initialized");
         try {
@@ -378,6 +399,7 @@ public class BrcReplicationHandler implements TransportHandler {
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
 
+                syncFolder(serviceUtil, api_resp, _asset);
 
                 replicationLog.info("BC: ACTIVATION SUCCESSFUL >> {}" , _asset.getPath());
                 result = ReplicationResult.OK;
@@ -392,7 +414,10 @@ public class BrcReplicationHandler implements TransportHandler {
         }
         return result;
     }
-    private ReplicationResult activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
+    // Package-private (not private) so BrcReplicationHandlerFolderSyncTest can drive the
+    // activation paths directly with a mocked ServiceUtil; same reason as the BGS-1705
+    // test's access to BrightcoveSyncAssetWorkflowStep.activateAsset.
+    ReplicationResult activateModified(Asset _asset, ServiceUtil serviceUtil, Video video, ModifiableValueMap brc_lastsync_map) {
         ReplicationResult result = ReplicationResult.OK;
         try {
             LOGGER.trace("CREATE VIDEO - THUMBNAIL / POSTER TEST>>");
@@ -405,6 +430,8 @@ public class BrcReplicationHandler implements TransportHandler {
                 //REPLICATION - AFTER METADATA HAS BEEN UPDATED - TRY TO UPDATE THE RENDITIONS
                 LOGGER.trace("UPDATING RENDITIONS FOR THIS ASSET");
                 serviceUtil.updateRenditions(_asset, video);
+
+                syncFolder(serviceUtil, api_resp, _asset);
 
                 replicationLog.info(Constants.REP_ACTIVATION_SUCCESS_TMPL, _asset.getPath());
                 long current_time_millisec = new Date().getTime();
@@ -419,6 +446,30 @@ public class BrcReplicationHandler implements TransportHandler {
         }
         return result;
     }
+    /**
+     * Keep the video's Brightcove folder in step with the DAM subfolder the asset lives
+     * in, the same way the DAM publish listener and the workflow step do. ⚠️ This
+     * transport handler never had it: a customer whose publish path still goes through
+     * the classic replication agent rather than BrightcovePublishListener /
+     * BrightcoveSyncAssetWorkflowStep got every subfoldered video at the account root.
+     * Ported from on-prem 1911f57. Context: current/docs/core-folder-sync.md
+     */
+    private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Asset _asset) {
+        try {
+            Node assetNode = _asset.adaptTo(Node.class);
+            if (assetNode == null) {
+                LOGGER.warn("Asset {} is not JCR-backed; cannot sync its Brightcove folder",
+                        _asset.getPath());
+                return;
+            }
+            // Runs on the replication agent's queue thread, so it must not sleep.
+            FolderSyncUtil.syncFolder(serviceUtil, api_resp.get(Constants.VIDEOID).asText(),
+                    assetNode, FolderSyncUtil.NO_RETRY_DELAY);
+        } catch (Exception e) {
+            LOGGER.error("Error syncing folder", e);
+        }
+    }
+
     private ReplicationResult activateVideo(@Nonnull Asset _asset, String account_id)
     {
 

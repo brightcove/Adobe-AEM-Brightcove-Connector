@@ -28,6 +28,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.objects.Video;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.FolderSyncUtil;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 
 import com.day.cq.dam.api.Asset;
@@ -227,78 +228,16 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
+    // Delegates to the shared helper so all three publish paths (this listener, the
+    // workflow step and BrcReplicationHandler) behave identically.
+    // Context: current/docs/core-folder-sync.md
     private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Node assetNode) {
         try {
-            LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
-            Node parentNode = assetNode.getParent();
-            String videoId = api_resp.get(Constants.VIDEOID).asText();
-
-            // Skip folder sync if the asset lives directly in the account root folder.
-            // The account root (e.g. /content/dam/brightcove_assets/{accountId}) has no
-            // brc_folder_id, so without this guard syncFolder would create a spurious
-            // Brightcove folder named after the account ID and move the video into it.
-            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-            for (String accountId : cg.getAvailableServices()) {
-                ConfigurationService cs = cg.getConfigurationService(accountId);
-                if (cs == null) continue;
-                String integrationPath = cs.getAssetIntegrationPath();
-                String normalized = integrationPath.endsWith("/")
-                        ? integrationPath.substring(0, integrationPath.length() - 1)
-                        : integrationPath;
-                String accountRootPath = normalized + "/" + accountId;
-                if (parentNode.getPath().equals(accountRootPath)) {
-                    LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", accountRootPath);
-                    return;
-                }
-            }
-
-            if (!parentNode.hasProperty("brc_folder_id")) {
-                String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
-                if (folderId != null && !folderId.isEmpty()) {
-                    setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
-                } else {
-                    LOG.error("*************************** No folder created ***************************");
-                    // Re-read the parent from the persistent store in case a concurrent publish
-                    // created the folder. keepChanges=true: in Oak refresh() is session-wide, so
-                    // refresh(false) would discard pending metadata (e.g. BRC_ID) set before this
-                    // call. No sleep here: this runs on a shared OSGi EventAdmin delivery thread
-                    // and must not block.
-                    parentNode.refresh(true);
-                    if (!parentNode.hasProperty("brc_folder_id")) {
-                        folderId = serviceUtil.createFolder(assetNode.getParent().getName());
-                        if (folderId != null && !folderId.isEmpty()) {
-                            setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
-                        } else {
-                            LOG.error("*************************** No folder created attempt 2 ***************************");
-                        }
-                    } else {
-                        // this is in a subfolder so we need to formally move the asset to this folder
-                        String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
-                        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
-                        serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
-                    }
-                }
-            } else {
-                // this is in a subfolder so we need to formally move the asset to this folder
-                String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
-                LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
-                serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
-            }
-
+            FolderSyncUtil.syncFolder(serviceUtil, api_resp.get(Constants.VIDEOID).asText(),
+                    assetNode, FolderSyncUtil.NO_RETRY_DELAY);
         } catch (Exception e) {
-
-            // log the error
-            LOG.error("Error syncing folder");
-
+            LOG.error("Error syncing folder", e);
         }
-    }
-
-    private void setFolderIdMoveAssetInBC(ServiceUtil serviceUtil, Node parentNode, String videoId, String folderId) throws Exception {
-        parentNode.setProperty("brc_folder_id", folderId);
-        parentNode.getSession().save();
-
-        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
-        serviceUtil.moveVideoToFolder(folderId, videoId);
     }
 
     private void deactivateAsset(ResourceResolver rr, Asset _asset, String accountId) {

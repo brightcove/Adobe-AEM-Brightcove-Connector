@@ -104,6 +104,28 @@ Needs a design, per plan §1.4/§3: one shared helper that reads the request's c
 
 ### 2. Subfolder-sync / subfoldered-video replication — `d923bdd6258bad7227fbb88f02b8e1d7c0206918`, `1911f571aed0278025032781062174adcd997fc9` — effort **S + S**
 
+**STATUS: ported 2026-09-17.** Both gaps closed in `BrcReplicationHandler`, but not by
+pasting the on-prem snippets: the mainline's own folder-sync logic (in
+`BrightcovePublishListener` and `BrightcoveSyncAssetWorkflowStep`) is a superset of the
+on-prem version, and it existed in TWO copy-pasted private methods. Pasting a third copy
+was the wrong shape, so the logic moved to `utils/FolderSyncUtil` and all three publish
+paths now call it; the only per-caller difference, the 15s retry wait that only the
+workflow step's own thread can afford, is a parameter.
+- `d923bdd`: account-id resolution now walks up past a synced subfolder, behind the
+  testable seam `BrcReplicationHandler.accountIdFor(Resource)`.
+- `1911f57`: both activation paths (`activateNew`, `activateModified`) sync the folder
+  after `updateRenditions`.
+Two things found while extracting, both kept: the account-root guard needed OSGi and
+would NPE outside it (caught by the outer catch, i.e. the sync was silently skipped), so
+it now reports three states and the caller refuses to create a folder on an unanswered
+question; and the already-synced-subfolder branch moved ahead of that guard, since an
+account root never carries `brc_folder_id`.
+Verified by `core/.../BrcReplicationHandlerFolderSyncTest` (4 tests) plus
+`FolderSyncUtilTest` (the three-state pin). Measured control: reverting all three port
+points turns 3 of the 4 red. The BGS-1705 test still passes, which is what covers the
+extraction as a refactor. Doc: `current/docs/core-folder-sync.md`.
+Residual `not measured`: a live subfoldered activation through a real replication agent.
+
 Both gaps are in the same file, `current/core/.../webservices/BrcReplicationHandler.java`, which is still an active `@Component(service = TransportHandler.class)` wired to `/etc/replication/agents.author/brightcove`. Customers with subfolder-per-Brightcove-folder DAM organization (the mainline subfolder-sync feature is otherwise fully ported, see rows 144f9b5/8ee7087/ec5819d above) hit this daily if their publish path still goes through the classic replication agent rather than `BrightcovePublishListener`/`BrightcoveSyncAssetWorkflowStep` (which already have the fix).
 
 - `d923bdd`: fix `account_id` resolution in `getReplicationResult` (~line 187) to walk up past a `brc_folder_id` subfolder before reading the account name, mirroring the identical guard already in `BrightcovePublishListener.java` and `BrightcoveSyncAssetWorkflowStep.java`.

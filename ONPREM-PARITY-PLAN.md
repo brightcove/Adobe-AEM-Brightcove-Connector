@@ -534,7 +534,24 @@ caller's values. `getVideosCount(query)` likewise always filters, so `totals` do
 unfiltered first page. A caller asking for unfiltered results silently gets a filtered page 1;
 ticket candidate, listed in §3b.
 
-Items 2, 3 and 4 not ported yet.
+**Item 2 (subfolder replication) ported 2026-09-17 at pom `7.3.5`.** The mainline already
+had a richer version of this logic than the on-prem commits, in two copy-pasted private
+methods, and missing from the third publish path. Rather than a third copy it moved to
+`core/utils/FolderSyncUtil`, called by `BrightcovePublishListener`,
+`BrightcoveSyncAssetWorkflowStep` and now `BrcReplicationHandler`; the 15s retry wait is a
+parameter, because only the workflow step runs on a thread that can afford to sleep.
+`d923bdd`'s account-id walk sits behind the seam `BrcReplicationHandler.accountIdFor`.
+Doc: `current/docs/core-folder-sync.md`; ledger entry has the detail.
+🔴 Found while extracting: the account-root guard called `ServiceUtil.getConfigurationGrabber()`,
+which NPEs outside an OSGi container; the outer `catch (Exception)` swallowed it, so the
+folder sync was silently skipped rather than reported. It now returns `Boolean` with
+`null` for "cannot tell" and the caller refuses to create a folder on an unanswered
+question, because `false` there would create a Brightcove folder named after an account id.
+Verified by `BrcReplicationHandlerFolderSyncTest` (4 tests) + `FolderSyncUtilTest`, both in
+the gate via surefire. Measured control: reverting all three port points turns 3 of those 4
+red while the thin-input test stays green.
+
+Items 3 and 4 not ported yet.
 
 ### Phase 4. Upgrade path for existing on-prem customers
 
