@@ -205,15 +205,24 @@ run_platform() {
   #    (Phase 0 trap: an orphaned duplicate co-Active bundle broke the
   #    accounts servlet after an uninstall without refreshPackages).
   step "3/4 [$platform] deployed bundle"
-  sleep 3
-  # curl is decoupled from the python pipe on purpose: under `set -o pipefail`
-  # a failed curl (connection refused) still lets python exit 0 (it handles
-  # empty stdin itself), and pipefail then reports the pipeline as failed
-  # anyway, which used to make the `|| echo UNREACHABLE` fallback fire on top
-  # of python's own "UNREACHABLE" line and duplicate it. Capture curl's raw
-  # output first so there is exactly one pipe, and it never fails.
-  raw_bundles=$(curl -s -u "$AUTH" "$url/system/console/bundles.json" 2>/dev/null) || raw_bundles=""
-  bundle_report=$(printf '%s' "$raw_bundles" | python3 -c "
+  # The JCR installer swaps bundles asynchronously after the package manager
+  # returns: on a version UPGRADE (7.2.3 -> 7.3.0) the old bundle is gone and
+  # the new one not yet Active for several seconds, and a single read there
+  # reported "no brightcove.core bundle installed" (2026-09-17). Poll until
+  # exactly one brightcove.core is present AND Active, or give up after
+  # BUNDLE_WAIT_SECS (default 120) and report whatever was last seen.
+  BUNDLE_WAIT_SECS="${BUNDLE_WAIT_SECS:-120}"
+  waited=0
+  bundle_report=""
+  while :; do
+    # curl is decoupled from the python pipe on purpose: under `set -o pipefail`
+    # a failed curl (connection refused) still lets python exit 0 (it handles
+    # empty stdin itself), and pipefail then reports the pipeline as failed
+    # anyway, which used to make the `|| echo UNREACHABLE` fallback fire on top
+    # of python's own "UNREACHABLE" line and duplicate it. Capture curl's raw
+    # output first so there is exactly one pipe, and it never fails.
+    raw_bundles=$(curl -s -u "$AUTH" "$url/system/console/bundles.json" 2>/dev/null) || raw_bundles=""
+    bundle_report=$(printf '%s' "$raw_bundles" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -225,6 +234,18 @@ print(len(bundles))
 for b in bundles:
     print(b.get('id'), b.get('version'), b.get('state'))
 ")
+    settled=$(echo "$bundle_report" | python3 -c "
+import sys
+lines = sys.stdin.read().splitlines()
+if not lines or lines[0] == 'UNREACHABLE': print('no'); sys.exit(0)
+rows = [l.split() for l in lines[1:] if l.strip()]
+print('yes' if lines[0] == '1' and rows and rows[0][2] == 'Active' else 'no')
+")
+    [ "$settled" = "yes" ] && break
+    [ "$waited" -ge "$BUNDLE_WAIT_SECS" ] && break
+    sleep 5; waited=$((waited + 5))
+  done
+  [ "$waited" -gt 0 ] && echo "   (waited ${waited}s for the installer to settle)"
 
   if [ "$bundle_report" = "UNREACHABLE" ]; then
     fail "$platform: could not read $url/system/console/bundles.json"
