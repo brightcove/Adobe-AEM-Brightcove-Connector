@@ -444,8 +444,28 @@ Exit gate: same e2e suite green on both instances from the same commit. Matrix c
 
 - Step 2 second deploy (CC-free `-prem`, GA-compiled): **single `brightcove.core 7.3.0 Active`,
   stock `core.wcm.components.core 2.3.2` untouched, account visible, `api.js` search returns items.**
-  Cloud package listing still identical to the Phase 0 baseline. Steps 2.3 (repoinit/service user,
-  runmode configs), 2.5 (full e2e on :4602) and 2.6 (Java 21 boot) still open.
+  Cloud package listing still identical to the Phase 0 baseline.
+- Step 3 measured on :4602: (a) 🔴 the shipped repoinit script **fails to parse on 6.5.0 GA**
+  (`repoinit.parser 1.2.2`: `Encountered "set"` at the `set properties` block), and a parse error
+  aborts the whole script, so a fresh 6.5.0 would get no `brightcove_admin` and no ACLs. Fixed
+  by keeping the script to `create path` / `create service user` / `set ACL` and moving the
+  folder title + `cq:conf` into `ui.content` (`/content/dam/brightcove_assets`, filter mode
+  `merge`). `README-repoinit.md` sits next to the config. (b) The legacy `/apps/brightcove/runmodes`
+  config folder from 6.0.12 kept its `ServiceUserMapperImpl.amended~brightcove_admin` value active
+  (`com.coresecure.brightcove.cq5.brightcove-services:brightcoveWrite=…`), which names the OLD
+  bundle, so 7.x's `getServiceResourceResolver("brightcoveWrite")` would have failed on the
+  first replication or scheduler run. Deleting `/apps/brightcove/runmodes` and `/apps/brightcove/install`
+  flipped the active mapping to the shipped `brightcove.core:brightcoveWrite=[brightcove_admin]`.
+  **Phase 4 must make the package own and clear both paths.** (c) `LoginAdminWhitelist` fragment
+  gone with the legacy folder; nothing in 7.x needs it. Step 2.5 first result: the full suite via `pre-qa-gate.sh --platform onprem` against
+  7.3.0-prem on 6.5.0 GA = **32 passed / 3 failed / 1 skipped** (was 6/28/1 on 6.0.12 this
+  morning). The 3 failures are all `bcon-176-177-variant-dialog`, which opens the DAM metadata
+  editor for one specific synced asset that exists only on :4502 ("There is no content to
+  display" on :4602): a fixture gap, not a code gap. Resolved by importing the account's
+  videos into the on-prem DAM through the connector's own `dataload` and re-running.
+  ⚠️ Hygiene: that spec hardcodes the test account id and a video id in a committed file in a
+  public repo (pre-existing since June); Phase 5 should read them from the accounts servlet /
+  the asset folder at runtime instead. Step 2.6 (Java 21 boot) still open.
 
 ### Phase 3. Port the on-prem-only fixes into shared code
 
