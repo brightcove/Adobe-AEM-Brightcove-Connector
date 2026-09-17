@@ -406,6 +406,18 @@ while up to four worked; run large re-run sets in batches.
 Exit gate: same e2e suite green on both instances from the same commit. Matrix column
 *on-prem 7.3.0* filled with no `absent` where cloud says `works`.
 
+**Gate MET 2026-09-17 (commit `e5ee202`+`3afc7cc`):** `pre-qa-gate.sh --platform both` →
+cloud 7.3.0 on :4502 **35 passed / 1 skipped**, on-prem 7.3.0-prem (GA-compiled) on :4602
+**35 passed / 1 skipped** (`tests/parity/runs/2026-09-17/phase2/gate-both-run2.txt`). The
+skip is the known-defect `test.fixme` (§3b item 7) on both. Matrix third column still being
+filled for rows 5-27.
+Step 6 (Java 21) is **blocked, not skipped**: the local on-prem instance is 6.5.0 GA, which
+Adobe does not support on Java 17/21, so a Java 21 boot there would measure the quickstart, not
+the connector, and risks the test bed. It needs a 6.5 LTS quickstart (Adobe Software
+Distribution; download access exists per the `adobe-partner-software-access` wiki page). The
+connector-side fix (`HttpServices` PATCH fallback) is in the shared core and already proven on
+AEMaaCS Java 21 by customers on 7.0.3+.
+
 **Phase 2 log 2026-09-17.**
 - Step 1 done: `utils/JsonUtil.pretty()` replaces all 36 `toPrettyString()` sites; `webservices/AccountsList`
   is the single accounts-listing implementation for `/bin/brightcove/accounts` and the Granite
