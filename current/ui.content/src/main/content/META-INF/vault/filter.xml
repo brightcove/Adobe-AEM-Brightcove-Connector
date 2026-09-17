@@ -3,9 +3,13 @@
     <filter root="/conf/brightcove" mode="update"/>
     <filter root="/conf/global" mode="merge"/>
     <filter root="/content/brightcovetools" mode="update"/>
-    <!-- Default DAM integration folder: created by repoinit (portable grammar only); title and
-         cq:conf come from here. merge = never overwrite what a customer already has there. -->
-    <filter root="/content/dam/brightcove_assets" mode="merge"/>
+    <!-- Default DAM integration folder (repoinit creates it with portable grammar; title, cq:conf
+         and the Brightcove metadataSchema come from here). mode="update", not "merge": merge
+         leaves an EXISTING folder's properties alone, so an instance upgraded from 6.0.x (or one
+         whose folder repoinit created first) would never get the metadataSchema and therefore no
+         Brightcove tab. update sets these three properties and deletes nothing. A customer's own
+         damIntegrationPath is a different folder and is untouched. -->
+    <filter root="/content/dam/brightcove_assets/jcr:content" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/bc-sync-new-asset" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/brightcove-delete-asset" mode="update"/>
     <filter root="/var/workflow" mode="merge"/>

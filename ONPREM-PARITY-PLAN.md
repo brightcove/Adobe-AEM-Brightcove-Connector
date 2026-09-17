@@ -466,6 +466,13 @@ Exit gate: same e2e suite green on both instances from the same commit. Matrix c
   ⚠️ Hygiene: that spec hardcodes the test account id and a video id in a committed file in a
   public repo (pre-existing since June); Phase 5 should read them from the accounts servlet /
   the asset folder at runtime instead. Step 2.6 (Java 21 boot) still open.
+  After the DAM import (52/54 videos in 58s through `brightcove_admin`, proving the mapping) the
+  three variant specs STILL failed: the on-prem editor showed the default video schema tabs.
+  Root cause is §3b item 9 (folder `metadataSchema` never shipped); fixed via `ui.content`.
+  Also: the `invalid_scope` OAuth errors seen in the on-prem connector log are all from the
+  morning's blank-credential window (first at 11:14), none during the 7.3.0 import; and the
+  imported asset lacks `brc_variants` that the cloud asset has, because a variant was created
+  on cloud through the UI during the matrix pass, not because the import differs.
 
 ### Phase 3. Port the on-prem-only fixes into shared code
 
@@ -545,6 +552,18 @@ the parity phases; they are listed so they are not silently folded into "parity"
    empty body.** Same anti-pattern as (2), in param parsing.
 6. **404 on `/bin/brightcove/author/users/current-user-info`** from the DAM asset editor page.
    Non-fatal; check whether that servlet is meant to exist.
+8. **Import aborts for videos whose tags contain `;` or `:`.** `dataload` on 6.5.0 imported 52 of
+   54 videos; two failed with `RuntimeException: error while checking tag creation permissions
+   for '/content/cq:tags/meta/;:a sampletag:;:yeaah'` (`VideoImportCallable`). The cloud log has no
+   such line but the cloud instance also holds fewer assets, so whether AEMaaCS tolerates the tag
+   id or simply never imported those two needs a cloud `dataload` to settle (Phase 3). Either way
+   a tag name should be sanitised or the failure isolated to the tag, not the whole video.
+9. **The Brightcove metadata-editor tab depended on an undocumented manual step.** Nothing in
+   the connector set `metadataSchema` on `/content/dam/brightcove_assets`; on the cloud test
+   instance it had been assigned by hand (`jcr:lastModifiedBy=admin`), and a fresh 6.5.0 showed
+   the default video schema with no Brightcove tab. Fixed in this branch: `ui.content` ships the
+   folder's `jcr:content` (title, `cq:conf`, `metadataSchema`) in filter mode `update`.
+
 7. **Text-track upload button is re-enabled mid-upload.** The click handler disables
    `#uttUpload` and sets "Uploading…", but the language field's async BCP-47 validation
    (`brcUI.js`, `prop('disabled', !(langOk && sourceOk))`) can resolve after the click and
