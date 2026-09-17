@@ -530,6 +530,9 @@ in place from 6.0.12):**
 - `docs/onprem-upgrade-6.0-to-7.md` written (key table, what the package does, what to check).
 - Version bumped 7.3.0 → 7.3.3 across three redeploys (same-version redeploys do not refresh
   the bundle; a 7.3.0 rebuild with new code was silently not picked up on :4602 until bumped).
+Cloud gate at 7.3.3 (after the Phase 4 changes): **35 passed / 1 skipped**
+(`tests/parity/runs/2026-09-17/phase4/gate-cloud-7.3.3.txt`; the settling poll waited 25s).
+On-prem gate at 7.3.3 pending the matrix pass on :4602.
 Still open in Phase 4: legacy workflow-model names (`brightcove-sync-asset-workflow`,
 `brightcove-delete-asset-workflow`) and the `/etc/designs`/`/etc/clientlibs` compat decision
 (step 2 items), the full upgrade re-test from a fresh 6.0.12 install (step 3), README supports
