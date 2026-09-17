@@ -409,8 +409,8 @@ Exit gate: same e2e suite green on both instances from the same commit. Matrix c
 **Gate MET 2026-09-17 (commit `e5ee202`+`3afc7cc`):** `pre-qa-gate.sh --platform both` →
 cloud 7.3.0 on :4502 **35 passed / 1 skipped**, on-prem 7.3.0-prem (GA-compiled) on :4602
 **35 passed / 1 skipped** (`tests/parity/runs/2026-09-17/phase2/gate-both-run2.txt`). The
-skip is the known-defect `test.fixme` (§3b item 7) on both. Matrix third column still being
-filled for rows 5-27.
+skip is the known-defect `test.fixme` (§3b item 7) on both. Matrix third column complete (2e7d7a1): every on-prem 7.3.0 cell matches the cloud cell,
+including the two known defects reproducing identically.
 Step 6 (Java 21) is **blocked, not skipped**: the local on-prem instance is 6.5.0 GA, which
 Adobe does not support on Java 17/21, so a Java 21 boot there would measure the quickstart, not
 the connector, and risks the test bed. It needs a 6.5 LTS quickstart (Adobe Software
@@ -532,7 +532,8 @@ in place from 6.0.12):**
   the bundle; a 7.3.0 rebuild with new code was silently not picked up on :4602 until bumped).
 Cloud gate at 7.3.3 (after the Phase 4 changes): **35 passed / 1 skipped**
 (`tests/parity/runs/2026-09-17/phase4/gate-cloud-7.3.3.txt`; the settling poll waited 25s).
-On-prem gate at 7.3.3 pending the matrix pass on :4602.
+On-prem gate at 7.3.3: **35 passed / 1 skipped** (`…/phase4/gate-onprem-7.3.3.txt`). Both
+platforms green at 7.3.3 with the Phase 4 changes in.
 Still open in Phase 4: legacy workflow-model names (`brightcove-sync-asset-workflow`,
 `brightcove-delete-asset-workflow`) and the `/etc/designs`/`/etc/clientlibs` compat decision
 (step 2 items), the full upgrade re-test from a fresh 6.0.12 install (step 3), README supports
