@@ -153,6 +153,33 @@ Matrix row 35 stays `not measured`: the import itself was never fired against th
 
 ### 4. Playlist/label modal centering and add-icon click bug — `afa58e79146d39f3ac9869be8335a5893c9474fd` — effort **S**
 
+**STATUS: split 2026-09-17. Layout half ported; add-icon half obsolete.** The classification
+above assumed both halves had a live surface here. Measured on both instances and across all of
+`ui.apps`, they do not:
+- **Ported (live).** `.pml-dialog` is the admin tool's confirmation dialog, used by switch
+  account, bulk-delete playlists and create-new-label. `align-items`/`justify-content` on the
+  overlay, `.pml-dialog_container` de-positioned (the flex parent centers it), and
+  `overflow-y:auto; max-height:50vh` moved to `.pml-dialog_content`, which is the live
+  scrolling region on this line (the on-prem fix bounded `.playlist-listing`/`.label-listing`,
+  see below). `showPopup()` now sets `display:flex` instead of jQuery `.show()`, which would
+  set `display:block` and silently drop the centering: that is the trap that makes the CSS
+  change look ineffective.
+- **Obsolete (dead code).** `.label-add-input`, `.playlist-add-input`, `.label-listing` and
+  `.playlist-listing` exist NOWHERE: not in `brightcoveadmin.html`, not anywhere else in
+  `ui.apps`, and not in the served DOM of either instance (measured 2026-09-17). The cloud line
+  replaced those listings with `#editPlaylistModal` and the label pills, so
+  `suggestLabelsForVideo` / `suggestVideosForPlaylist` and their two keyup binders are
+  unreachable. The `$item.localName == 'img'` bug is real but sits in that dead code, so the
+  fix is deliberately NOT ported: a fix to unreachable code cannot be verified and would claim
+  behaviour nothing exercises. The block carries a 🔴 comment naming the defect, the on-prem
+  commit and the two ways out (delete it, or restore the markup and then port).
+  No capability is lost: matrix rows 13 and 18 already record label apply/remove and playlist
+  rename as `works` on 7.3.x through the newer surfaces.
+Verified by `tests/e2e/specs/bcon-pml-dialog-layout.spec.js`: 6 tests (centered-from-the-real-UI,
+tall-dialog-stays-in-viewport-and-scrolls, and a negative control that re-applies the pre-fix CSS
+and requires the checks to go red) at two viewports, all geometry as numbers. Doc:
+`current/docs/pml-dialog-layout.md`.
+
 Daily-use bug in the playlist/label management dialogs (`.pml-dialog`) that on-prem customers using 6.0.x fixed years ago.
 
 - CSS: add `align-items:center;justify-content:center` to `.pml-dialog`, drop `position:absolute` from `.pml-dialog_container`, add `overflow-y:auto;max-height:50vh` to `.pml-dialog .playlist-listing`/`.label-listing` (`clientlib-tools/css/style.css`).

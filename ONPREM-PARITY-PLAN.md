@@ -573,7 +573,27 @@ time, which is what makes this so slow to diagnose. Recovery was a stop/start of
 recovery commands, with a distinct NOT MEASURED verdict when the component list cannot be
 read. Detector verified against healthy / broken / unparseable / empty inputs.
 
-Item 4 not ported yet.
+**Item 4 (dialog layout) split 2026-09-17 at pom `7.3.7`: layout half ported, add-icon
+half obsolete.** The classification had assumed both halves had a live surface; measured,
+they do not. `.pml-dialog` is live (the admin tool's confirmation dialog) and got the
+centering and scrolling fix, plus the `showPopup()` change from jQuery `.show()` to
+`display:flex` without which the CSS does nothing. But `.label-add-input`,
+`.playlist-add-input`, `.label-listing` and `.playlist-listing` exist nowhere in `ui.apps`
+or in either instance's served DOM: the cloud line replaced them with `#editPlaylistModal`
+and the label pills, so `suggestLabelsForVideo` / `suggestVideosForPlaylist` are
+unreachable and the `$item.localName` bug they carry is NOT ported, only marked 🔴 in
+place. No capability is lost (matrix rows 13 and 18 already record those flows as `works`
+through the newer surfaces). Doc: `current/docs/pml-dialog-layout.md`; verified by
+`tests/e2e/specs/bcon-pml-dialog-layout.spec.js`, 6 tests at two viewports with all
+geometry as numbers and a pre-fix-CSS negative control.
+
+**Phase 3 exit gate met 2026-09-17.** All 60 on-prem-only commits are recorded in the
+ledger as present / ported (commit) / obsolete (reason), the four Port-plan items are
+resolved (3 ported, 1 split ported+obsolete), and both instances are green at pom `7.3.7`:
+**45 passed / 1 skipped** on cloud and on-prem
+(`tests/parity/runs/2026-09-17b/gate-both-7.3.7-dialog.txt`). The suite grew from 36 to 46
+tests across the four ports, 9 of the new ones being discriminating checks and 3 of those
+negative controls.
 
 ### Phase 4. Upgrade path for existing on-prem customers
 

@@ -627,9 +627,26 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
 
-    $popup.show();
+    // NOT .show(): jQuery would set display:block, and .pml-dialog centers its
+    // container with flexbox. Context: current/docs/pml-dialog-layout.md
+    $popup.css('display', 'flex');
 }
 
+// ⚠️ DEAD CODE, measured 2026-09-17. suggestLabelsForVideo and
+// suggestVideosForPlaylist are JSONP callbacks for the keyup handlers on
+// '.label-add-input input' / '.playlist-add-input input', and that markup exists
+// NOWHERE: not in brightcoveadmin.html, not anywhere else in ui.apps, and not in
+// the served DOM of either instance. The cloud line replaced these .pml-dialog
+// listings with #editPlaylistModal and the label pills, so nothing ever creates
+// the nodes these two functions append to.
+// 🔴 Both also carry a live bug if they are ever revived: `$item.localName` on a
+// jQuery object is always undefined, so a click landing on the add-icon <img>
+// keeps the <img> as $item and reads data-name/data-id off it, i.e. undefined.
+// The on-prem line fixed exactly this in afa58e7 ($item.get(0).nodeName). It is
+// NOT ported here, because a fix to unreachable code cannot be verified and
+// would claim a behaviour nothing exercises. Recorded in
+// tests/parity/onprem-commit-ledger.md, Port plan item 4. Delete both functions
+// and their two keyup binders, or restore the markup and then port the fix.
 function suggestLabelsForVideo(data) {
     $('.pml-dialog .autocomplete').empty();
     if (data.items.length > 0) {
