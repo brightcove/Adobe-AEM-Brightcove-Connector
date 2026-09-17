@@ -337,9 +337,30 @@ Exit gate: matrix filled, both *before* e2e runs archived under `tests/parity/ru
    now derives the login-state file and results dir from `AEM_BASE`, because two concurrent
    runs (cloud :4502, on-prem :4602) shared one `.auth/state.json` and, since `localhost`
    cookies ignore the port, one run silently drove the other's instance. Both first-pass
-   baselines were re-run after the fix. `pre-qa-gate.sh` itself is still cloud-only.
+   baselines were re-run after the fix. **Completed 2026-09-17:** `pre-qa-gate.sh` now takes
+   `--platform cloud|onprem|both` (default: probe both instances' `bundles.json`, gate on
+   whichever answer, error if neither), `--base`/`PARITY_BASE_REF`, `--aem-cloud`/`--aem-onprem`,
+   `--skip-build`, and `--dry-run`. It runs the right Maven invocation per platform, fails on
+   more than one `brightcove.core` bundle (the Phase 0 duplicate-bundle trap, printing each
+   bundle's id), checks `clientlib-tools/js.txt` for `brcTransport.js`/absence of `com.iskitz`,
+   and writes each platform's e2e JSON report to `tests/parity/runs/<date>/gate-<platform>-<pomversion>.json`.
 4. Add `.github/workflows/build.yml`: matrix `{cloud, onprem}` × `mvn -DskipTests package`,
    upload both `all` zips as artifacts. Compile-level parity guard from day one.
+   **Done 2026-09-17:** `.github/workflows/build.yml` builds both platforms on push/PR and
+   uploads both zips; an `e2e-static` job runs `playwright test --list`. It does NOT deploy or
+   run e2e (no AEM in CI); that remains `tests/e2e/pre-qa-gate.sh`, now platform-aware
+   (`--platform cloud|onprem|both`, duplicate-bundle and content checks, per-platform JSON
+   reports, `PARITY_MVN_FLAGS_ONPREM` for the local GA floor).
+
+   **Completed 2026-09-17:** the workflow builds both platforms on push (`cloud-master`,
+   `main`, `release/**`, `feat/**`) and on pull request, using `actions/setup-java@v4`
+   (temurin 11, Maven cache) and the same `mvn clean package` / `mvn -Daem.platform=onprem
+   clean package` invocations documented above, then `unzip -l`s and uploads each `all` zip
+   as `brightcove-all-cloud` / `brightcove-all-onprem`. A third job, `e2e-static`, runs
+   `npm ci` and `npx playwright test --list` in `tests/e2e` to catch spec syntax errors. It
+   does **not** cover: no AEM instance runs in CI, so there is no deploy, no bundle/content
+   check, and no actual e2e execution against a live instance. That remains
+   `pre-qa-gate.sh`'s job, run locally before Ready for QA.
 
 Exit gate: `mvn clean package` (cloud, default) produces a `brightcove.all-7.2.3.zip`
 whose **content listing is identical** to the pre-change build (`unzip -l | sort | diff`).
@@ -384,6 +405,47 @@ while up to four worked; run large re-run sets in batches.
 
 Exit gate: same e2e suite green on both instances from the same commit. Matrix column
 *on-prem 7.3.0* filled with no `absent` where cloud says `works`.
+
+**Phase 2 log 2026-09-17.**
+- Step 1 done: `utils/JsonUtil.pretty()` replaces all 36 `toPrettyString()` sites; `webservices/AccountsList`
+  is the single accounts-listing implementation for `/bin/brightcove/accounts` and the Granite
+  datasource, so `utils/SlingUtils` and its `request.builder` dependency are gone; the unused Oak
+  import is gone. `core` compiles against the cloud SDK, uber-jar 6.5.22 and uber-jar 6.5.0 `apis`.
+  ⚠️ The platform dependency must stay FIRST in a module's `<dependencies>`: moved into a profile
+  it landed last on the classpath and an older commons-collections4 from aem-mock shadowed the
+  SDK's (`NoSuchMethodError SetUtils.unmodifiableSet`). Coordinates now come from `aem.api.*`
+  properties the `onprem` profile overrides (`aem.uber.classifier=apis` + `aem.uber.version=6.5.0`
+  compile the GA floor).
+- Step 2 first deploy: `brightcove.all-7.3.0-prem.zip` (GA-compiled) installed on :4602 →
+  **`brightcove.core 7.3.0 Active` on 6.5.0 GA.** Import ranges: jackson `[2.9,3)`, servlet `[2.6,3)`,
+  sling.api ≤ 2.18. Found on the same deploy, all predicted:
+  1. The legacy `brightcove-services 6.0.12` bundle stayed Active next to 7.3.0 (its jar lives at
+     `/apps/brightcove/install`, outside the new package's filters), plus `/apps/brightcove/runmodes`
+     configs remain. Removed by hand on the test bed; **Phase 4 must make the package own and
+     clear `/apps/brightcove/install` and `/apps/brightcove/runmodes`.**
+  2. With only 7.3.0 running, `/bin/brightcove/accounts` returned `[]`: the instance's account
+     config is under the `BrcServiceImpl` PID with snake_case keys (§1.3), invisible to 7.x. A second
+     config under `ConfigurationServiceImpl` with camelCase keys was added for Phase 2 testing; the
+     legacy one stays for the Phase 4 fallback test.
+  3. 🔴 Embedded `core.wcm.components.core 2.27.0` was taken by the OSGi installer as an **upgrade
+     of the instance's stock Core Components 2.3.2** (same symbolic name, higher version) and then
+     could not resolve on 6.5.0 GA (state Installed; imports on `granite.ui.components 1.20`,
+     `cq.dam.cfm 1.12`, `wcm.spi` … unsatisfied). A connector package must never replace a
+     site-wide library. Decision: **the on-prem artifact embeds no Core Components** (the three
+     embeds moved into the `cloud` profile of `all/pom.xml`; cloud listing unchanged), and
+     `core.wcm.components.core` is removed from `core/pom.xml` altogether: no main-code class
+     imports it, and its presence on the test classpath was what made aem-mock initialise
+     `LinkManagerImpl` and fail with `NoSuchMethodError SetUtils.unmodifiableSet` under the
+     on-prem profile. Test bed repaired by deleting the three embedded CC nodes under
+     `/apps/brightcove-packages/application/install` + `refreshPackages`; stock 2.3.2 came back Active.
+     Follow-up for the on-prem docs: the connector's `ui.content` uses `core/wcm/components/container/v1`
+     and `page/v3` resource types, so Core Components must already be present on the target
+     (they are on every 6.5; check the `page/v3` minimum when writing the compatibility matrix).
+
+- Step 2 second deploy (CC-free `-prem`, GA-compiled): **single `brightcove.core 7.3.0 Active`,
+  stock `core.wcm.components.core 2.3.2` untouched, account visible, `api.js` search returns items.**
+  Cloud package listing still identical to the Phase 0 baseline. Steps 2.3 (repoinit/service user,
+  runmode configs), 2.5 (full e2e on :4602) and 2.6 (Java 21 boot) still open.
 
 ### Phase 3. Port the on-prem-only fixes into shared code
 

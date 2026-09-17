@@ -32,6 +32,7 @@
  */
 package com.coresecure.brightcove.wrapper.schedulers.asset_integrator.callables;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
@@ -281,7 +282,7 @@ public class VideoImportCallable implements Callable<String> {
             LOGGER.trace(">>>>START>>>>> {} >> {}", id ,active);
 
             if (!active) {
-                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + innerObj.toPrettyString());
+                LOGGER.warn("VIDEO INITIALIZATION FAILED - NOT ACTIVE / NO ID - skipping: " + JsonUtil.pretty(innerObj));
                 if (resourceResolver != null) {
                     resourceResolver.close();
                 }

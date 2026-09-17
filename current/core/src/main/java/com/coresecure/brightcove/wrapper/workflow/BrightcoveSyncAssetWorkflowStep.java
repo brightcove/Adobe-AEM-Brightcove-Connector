@@ -1,5 +1,6 @@
 package com.coresecure.brightcove.wrapper.workflow;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
 import org.osgi.service.component.annotations.Component;
@@ -203,7 +204,7 @@ public class BrightcoveSyncAssetWorkflowStep implements WorkflowProcess{
             // // make the actual video upload call
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
-            // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            // LOGGER.trace("API-RESP >>" + JsonUtil.pretty(api_resp));
             boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 brightcoveAssetId = api_resp.get(Constants.VIDEOID).asText();

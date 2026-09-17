@@ -32,6 +32,7 @@
 
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
@@ -118,7 +119,7 @@ public class GetBrightcoveAssetPath extends SlingAllMethodsServlet {
             LOGGER.debug("Brightcove Videos Asset Path is {}", assetsPath);
 
             root.put("brightcoveAssetPath", assetsPath);
-            outWriter.write(root.toPrettyString());
+            outWriter.write(JsonUtil.pretty(root));
         } catch (Exception e) {
             LOGGER.error("Exception", e);
             outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");

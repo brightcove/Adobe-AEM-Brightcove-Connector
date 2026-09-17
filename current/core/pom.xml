@@ -95,8 +95,16 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <groupId>com.adobe.aem</groupId>
             <artifactId>uber-jar</artifactId>
         </dependency> -->
-        <!-- The AEM platform API (aem-sdk-api for cloud, uber-jar for on-prem) is declared in the
-             platform profiles at the bottom of this POM, selected by -Daem.platform. -->
+        <!-- The AEM platform API: aem-sdk-api (cloud, default) or uber-jar (-Daem.platform=onprem),
+             coordinates from the parent's aem.api.* properties. Must stay FIRST in this list; see
+             the parent POM comment on classpath order. -->
+        <dependency>
+            <groupId>com.adobe.aem</groupId>
+            <artifactId>${aem.api.artifactId}</artifactId>
+            <version>${aem.api.version}</version>
+            <classifier>${aem.api.classifier}</classifier>
+            <scope>provided</scope>
+        </dependency>
         <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
         <dependency>
             <groupId>org.osgi</groupId>
@@ -194,9 +202,14 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
         </dependency>
 
         <dependency>
-            <groupId>com.adobe.cq</groupId>
-            <artifactId>core.wcm.components.core</artifactId>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.servlets.annotations</artifactId>
         </dependency>
+        <!-- WCM Core Components deliberately NOT a dependency of this bundle: no main-code class
+             imports them (grep com.adobe.cq.wcm.core.components = 0 hits, 2026-09-17), and having
+             the 2.27.0 jar on the test classpath made aem-mock initialise its LinkManagerImpl,
+             which needs a newer commons-collections4 than the 6.5 uber-jar provides
+             (NoSuchMethodError SetUtils.unmodifiableSet under -Daem.platform=onprem). -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-imaging</artifactId>
@@ -204,22 +217,10 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
         </dependency>
     </dependencies>
 
+
     <profiles>
-        <!-- Platform API. Same ids/activation as the parent POM; see the comment there. -->
-        <profile>
-            <id>cloud</id>
-            <activation>
-                <property>
-                    <name>!aem.platform</name>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.adobe.aem</groupId>
-                    <artifactId>aem-sdk-api</artifactId>
-                </dependency>
-            </dependencies>
-        </profile>
+        <!-- Test-only: real Jackson matching the uber-jar's version; see the parent POM comment on
+             aem.uber.jackson.version. Same activation as the parent's onprem profile. -->
         <profile>
             <id>onprem</id>
             <activation>
@@ -230,8 +231,22 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             </activation>
             <dependencies>
                 <dependency>
-                    <groupId>com.adobe.aem</groupId>
-                    <artifactId>uber-jar</artifactId>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                    <version>${aem.uber.jackson.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                    <version>${aem.uber.jackson.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-annotations</artifactId>
+                    <version>${aem.uber.jackson.version}</version>
+                    <scope>test</scope>
                 </dependency>
             </dependencies>
         </profile>

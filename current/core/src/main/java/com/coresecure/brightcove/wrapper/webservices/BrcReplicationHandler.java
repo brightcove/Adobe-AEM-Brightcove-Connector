@@ -32,6 +32,7 @@
  */
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.objects.Video;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -369,7 +370,7 @@ public class BrcReplicationHandler implements TransportHandler {
 
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is); //ACTUAL VIDEO UPLOAD CALL - WITH METADATA
 
-            //LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            //LOGGER.trace("API-RESP >>" + JsonUtil.pretty(api_resp));
             boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
                 brc_lastsync_map.put(Constants.BRC_ID, api_resp.get(Constants.VIDEOID).asText());
@@ -395,7 +396,7 @@ public class BrcReplicationHandler implements TransportHandler {
         ReplicationResult result = ReplicationResult.OK;
         try {
             LOGGER.trace("CREATE VIDEO - THUMBNAIL / POSTER TEST>>");
-            LOGGER.trace(video.toJSON().toPrettyString());
+            LOGGER.trace(JsonUtil.pretty(video.toJSON()));
 
             //do update video
             ObjectNode api_resp = serviceUtil.updateVideo(video); //ONLY UPDATE METADATA - DO NOT SEND BINARY

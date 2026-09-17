@@ -32,6 +32,7 @@
 */
 package com.coresecure.brightcove.wrapper.sling;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.*;
@@ -239,7 +240,7 @@ public class ServiceUtil {
             } else {
                 items.set("items", videos);
                 items.put("totals", totalItems);
-                result = items.toPrettyString();
+                result = JsonUtil.pretty(items);
             }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -412,7 +413,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, videos.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -430,7 +431,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, videos.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -457,7 +458,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, folders.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -476,7 +477,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, labelsArr.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -504,7 +505,7 @@ public class ServiceUtil {
             }
             items.put("playlist", id);
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -521,7 +522,7 @@ public class ServiceUtil {
         try {
             items = brAPI.cms.getExperiences(q, Constants.NAME);
             LOGGER.info("getExperiences count(): " + items.size());
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -563,7 +564,7 @@ public class ServiceUtil {
             } else {
                 items.set("items", playlists);
                 items.put("totals", totalItems);
-                result = items.toPrettyString();
+                result = JsonUtil.pretty(items);
             }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -693,7 +694,7 @@ public class ServiceUtil {
                 result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
                 brAPI.cms.deleteVideo(newVideoId);
             }
-            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, JsonUtil.pretty(result));
 
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -721,7 +722,7 @@ public class ServiceUtil {
 
             boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.get(Constants.SIGNED_URL).asText()), is , HttpServices.getProxy());
             result.put(Constants.SENT, sent);
-            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, JsonUtil.pretty(result));
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
             result.put(Constants.SENT, false);

@@ -1,5 +1,6 @@
 package com.coresecure.brightcove.wrapper.api;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -97,7 +98,7 @@ public class CmsAPI {
                 {
                     payload.put("profile", profile);
                 }
-                String response = account.platform.postDIRequest_API(targetURL, payload.toPrettyString(), headers);
+                String response = account.platform.postDIRequest_API(targetURL, JsonUtil.pretty(payload), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -115,7 +116,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + aVideo.id + Constants.INGEST_REQUEST;
             try {
-                String response = account.platform.postDI_API(targetURL, aIngest.toJSON().toPrettyString(), headers);
+                String response = account.platform.postDI_API(targetURL, JsonUtil.pretty(aIngest.toJSON()), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -257,7 +258,7 @@ public class CmsAPI {
             try {
                 ObjectNode videoObj = aVideo.toJSON();
                 videoObj.remove(Constants.ACCOUNT_ID);
-                String response = account.platform.postAPI(targetURL, videoObj.toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(videoObj), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -282,7 +283,7 @@ public class CmsAPI {
                 video.remove(Constants.ID);
                 video.remove(Constants.ACCOUNT_ID);
 
-                String response = account.platform.patchAPI(targetURL, video.toPrettyString(), headers);
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(video), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -318,8 +319,8 @@ public class CmsAPI {
                 if (name != null && !name.isEmpty()) {
                     request.put("name", name);
                 }
-                LOGGER.info("updatePlaylistParams: {}", request.toPrettyString());
-                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
+                LOGGER.info("updatePlaylistParams: {}", JsonUtil.pretty(request));
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(request), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -344,8 +345,8 @@ public class CmsAPI {
                     labelArray.add(item);
                 }
                 request.set("labels", labelArray);
-                LOGGER.info("updateVideoParams: {}", request.toPrettyString());
-                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
+                LOGGER.info("updateVideoParams: {}", JsonUtil.pretty(request));
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(request), headers);
                 if (response != null && !response.isEmpty()) {
                     // Brightcove returns an object on success ({ ...video fields... })
                     // and an array on validation failure
@@ -438,7 +439,7 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
             try {
                 LOGGER.debug("Playlist {}", aPlaylist.toJSON().toString());
-                String response = account.platform.postAPI(targetURL, aPlaylist.toJSON().toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(aPlaylist.toJSON()), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -849,7 +850,7 @@ public class CmsAPI {
             headers.put(Constants.CONTENT_TYPE_HEADER, "application/json");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants";
             try {
-                String response = account.platform.postAPI(targetURL, variantBody.toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(variantBody), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -867,7 +868,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants/" + language;
             try {
-                String response = account.platform.patchAPI(targetURL, variantBody.toPrettyString(), headers);
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(variantBody), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);

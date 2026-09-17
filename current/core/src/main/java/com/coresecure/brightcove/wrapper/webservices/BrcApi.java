@@ -33,6 +33,7 @@
 
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.enums.PlaylistTypeEnum;
 import com.coresecure.brightcove.wrapper.objects.Playlist;
 import com.coresecure.brightcove.wrapper.objects.Text_track;
@@ -321,7 +322,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         playlist.setVideoIds(videoIDs);
         ObjectNode videoItem = brAPI.cms.createPlaylist(playlist);
-        LOGGER.info("New Playlist id: " + videoItem.toPrettyString());
+        LOGGER.info("New Playlist id: " + JsonUtil.pretty(videoItem));
         if (!videoItem.has(Constants.ID)) {
             result.put(Constants.ERROR, 409);
         } else {
@@ -546,10 +547,10 @@ public class BrcApi extends SlingAllMethodsServlet {
                     updated_tracks
             );
 
-            //LOGGER.debug("GOT VIDEO: "+ down_video.toPrettyString());
-            LOGGER.debug("REBUILT VIDEO: {}", video.toJSON().toPrettyString());
+            //LOGGER.debug("GOT VIDEO: "+ JsonUtil.pretty(down_video));
+            LOGGER.debug("REBUILT VIDEO: {}", JsonUtil.pretty(video.toJSON()));
             ObjectNode videoItem = brAPI.cms.updateVideo(video);
-            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toPrettyString());
+            LOGGER.trace("RESP TXT TRACK : {}", JsonUtil.pretty(videoItem));
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         }
@@ -573,7 +574,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         text_track.put(Constants.DEFAULT, "true".equals(request.getParameter(Constants.TRACK_DEFAULT)));
         text_track.put(Constants.MIME_TYPE, request.getParameter(Constants.TRACK_MIME_TYPE));
-        //LOGGER.trace(text_track.toPrettyString());
+        //LOGGER.trace(JsonUtil.pretty(text_track));
 
 
         //FILE UPLOAD CASE***
@@ -608,7 +609,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
 
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
-        //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toPrettyString());
+        //DEBUGGER PRINT - LOGGER.trace("**:" + JsonUtil.pretty(videoItem));
 
         if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
             com.fasterxml.jackson.databind.JsonNode parsedResponse = MAPPER.readTree(videoItem.get(Constants.RESPONSE).asText());
@@ -642,10 +643,10 @@ public class BrcApi extends SlingAllMethodsServlet {
             images_payload.set(Constants.POSTER, poster);
         }
 
-        LOGGER.trace("UploadImagesPayload>> {}", images_payload.toPrettyString());
+        LOGGER.trace("UploadImagesPayload>> {}", JsonUtil.pretty(images_payload));
 
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
-        LOGGER.trace(videoItem.toPrettyString());
+        LOGGER.trace(JsonUtil.pretty(videoItem));
 
         // Parse the DI response so the JS can tell whether the QUEUE succeeded.
         // (The actual image processing is async — Brightcove returns 200 +

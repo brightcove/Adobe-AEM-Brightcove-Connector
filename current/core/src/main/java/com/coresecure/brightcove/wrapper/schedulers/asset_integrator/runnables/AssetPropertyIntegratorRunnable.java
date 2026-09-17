@@ -43,7 +43,6 @@ import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.day.cq.commons.jcr.JcrUtil;
 import com.day.crx.JcrConstants;
 
-import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import com.fasterxml.jackson.databind.node.ArrayNode;
