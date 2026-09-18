@@ -710,14 +710,17 @@ the later rename will not break it; ⚠️ it is compile-level only and runs no 
 asset at run time instead, which is the pattern to copy); scan every commit message and diff in
 `git log origin/cloud-master..HEAD` for customer identifiers and internal URLs.
 
-⚠️ **Open decision before anything is cut: what version releases.** This section says `7.3.0`,
-but the pom is at **7.3.8**, because the gate requires a bump per deploy (AEM silently ignores a
-same-version redeploy) and eight dev bumps happened without a release. Release 7.3.8 as-is, or
-reset to 7.4.0 to mark the unified build. Also open: whether the on-prem artifact shares that
-number at all, since `<version>-prem` is a new tag shape (the convention is observed only for
-`-cloud`, and the on-prem line used its own 6.0.x numbering).
+**Version decided 2026-09-18 by the maintainer: the unified build releases as `7.4.0`**, cut
+as `7.4.0-cloud` and `7.4.0-prem` from the same commit; the on-prem artifact shares the number
+(`brightcove.all-7.4.0-prem.zip`), a new tag shape with no precedent in the repo's history, chosen
+so a `6.0.12` install sees a plain OSGi upgrade and the suffix alone tells the lines apart. The pom
+was bumped `7.3.8` → `7.4.0` in all ten module poms and gated green on both instances the same day
+(45 passed / 1 skipped each, zero components in failed activation,
+`tests/parity/runs/2026-09-18/gate-both-7.4.0.txt`). Why not `7.3.0`: the gate needs a bump per
+deploy (AEM ignores a same-version redeploy), so eight dev bumps had passed it; why not `7.3.8`
+as-is: a fresh minor marks the point where the on-prem line joined.
 
-1. Cut `<version>-cloud` and `<version>-prem` from the same commit per `aem-connector-release`
+1. Cut `7.4.0-cloud` and `7.4.0-prem` from the same commit per `aem-connector-release`
    (detached worktree, `mvn clean package -DskipTests` not `-PautoInstallPackage`,
    `gh release create --target <full SHA>` — a short SHA returns HTTP 422 — both assets each).
 2. Rename `cloud-master` → `main`; `onprem-master` → `legacy/onprem-6.0.x`;
