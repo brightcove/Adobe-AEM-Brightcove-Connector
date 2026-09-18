@@ -760,20 +760,28 @@ the parity phases; they are listed so they are not silently folded into "parity"
    drops the empty `labels` param, `BrcApi#updateLabels` only acts when the param is non-null,
    so the CMS never sees the removal while the UI toasts "Labels saved". Phantom success.
    (`row13-defect-summary.json`.) Server should treat a present-but-empty list as "clear".
+   Pinned (`test.fixme`, red on 7.4.0) in `bcon-admin-regressions.spec.js`.
 2. **Sync throws an uncaught JS exception every run.** `/bin/brightcove/dataload` returns
    HTTP 200 with an EMPTY body and `syncDB()` unconditionally `$.parseJSON`s it. The
    overlay recovers, the console does not. Also an instance of the "200 with empty body"
    anti-pattern the repo rules forbid. (`row22-sync-overlay.png`, `dataload-response.txt`.)
+   **Widened 2026-09-18:** a well-formed JSON body does not help either. jQuery already
+   parses an `application/json` response before the success callback, so `$.parseJSON` then
+   runs on an object and throws `"[object Object]" is not valid JSON`. The parse has to go,
+   not just the empty body. Pinned by two `test.fixme`s in
+   `tests/e2e/specs/bcon-admin-regressions.spec.js`; both were red on 7.4.0 when written.
 3. **No UI path to remove a video from a folder.** `#moveToFolderModal` lists only real
    folders; the `data-folder-id="none"` markup and its handler still ship but nothing renders
-   them. The API action `remove_video_from_folder` works. (`row15-*`.)
+   them. The API action `remove_video_from_folder` works. (`row15-*`.) Pinned (`test.fixme`) in
+   `bcon-admin-regressions.spec.js`.
 4. **Refreshing a player whose video failed to initialise throws two uncaught exceptions**
    (`reading 'options'`, `Invalid target for null#trigger`). BGS-1690 itself is fine on a
    healthy player; the refresh path lacks a guard. (`row26-*`.) Trigger was fixture drift:
    the setup script's mid-page player references a video id that now 403s
    `VIDEO_CLOUD_ERR_VIDEO_NOT_PLAYABLE`; refresh the fixture too.
 5. **`get_videos_with_label` without `start` → server `NumberFormatException` → HTTP 500 with
-   empty body.** Same anti-pattern as (2), in param parsing.
+   empty body.** Same anti-pattern as (2), in param parsing. Pinned (`test.fixme`, API-level) in
+   `bcon-admin-regressions.spec.js`.
 6. **404 on `/bin/brightcove/author/users/current-user-info`** from the DAM asset editor page.
    Non-fatal; check whether that servlet is meant to exist.
 8. **Import aborts for videos whose tags contain `;` or `:`.** `dataload` on 6.5.0 imported 52 of

@@ -7,6 +7,8 @@ local AEM author, against a real configured Brightcove account.
 
 - Local AEM author at `http://localhost:4502` (admin/admin), connector deployed
   (`cd current && mvn clean install -PautoInstallPackage`).
+- For the Sites editor specs: the `test-site` scaffold from
+  `current/scripts/setup-local-dev.sh` (run once per fresh instance).
 - A Brightcove account configured in AEM. Verify with:
   ```bash
   curl -s -u admin:admin http://localhost:4502/bin/brightcove/accounts
@@ -59,6 +61,20 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
   `firstBrightcoveAsset(request)`, which read the account and a fixture asset from
   the running instance. Never hard-code an account, video or playlist id in a
   spec: this is a public repo.
+- `fixtures.js` also carries the Sites editor kit: `firstVideos(request)` (live
+  videos through the connector's api servlet), `slingPost(request, url, form)`
+  (a POST from the cookie session, with the Referer and CSRF-Token headers the
+  Sling and Granite filters demand), `createSitesTestPage(request, name)` /
+  `deletePage(request, path)` (a per-run page with all three Brightcove
+  components, copied from `current/scripts/setup-local-dev.sh`) and
+  `editorScrollTop(page)` (the Touch UI editor scrolls `#ContentScrollView`, not
+  the window, on both the AEMaaCS SDK and AEM 6.5 shells).
+- `specs/sites-editor-components.spec.js` drives the Sites editor: component
+  placement, the Video Player / Playlist Player / Experiences dialogs against the
+  live account, the BGS-1690 in-place refresh, and the Assets rail's "Brightcove
+  Videos" source. It needs the site scaffold from `setup-local-dev.sh` (template
+  plus a responsivegrid policy allowing `group:Brightcove`) and fails with a
+  named error when that is missing, rather than skipping.
 - Each `specs/*.spec.js` drives a real user flow and asserts on the rendered UI
   and/or the outgoing `/bin/brightcove/api.js` request.
 
@@ -67,6 +83,13 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
 - One spec per bug/ticket (e.g. `bcon-172-playlist-search.spec.js`).
 - Prefer read-only flows. Mutating flows (create label, rename playlist) write to
   the live account — clean up after, and gate them clearly.
+- Pin known, unfixed defects with `test.fixme` in the spec for their surface,
+  named for the plan item (`§3b-1`, …) or ticket. A pin must be RED on current
+  code when written (run it once as `test` to prove it), so the count of
+  skipped tests in a run is the count of known open defects, and flipping a
+  pin to `test` is part of the fix. `bcon-admin-regressions.spec.js` carries
+  the Phase 0 pins; `bcon-186-text-track-upload-feedback.spec.js` the BCON-186
+  double-submit one.
 
 ## Pre-QA gate
 
