@@ -43,7 +43,7 @@ cd /tmp/bcon-probe/current
 # in core/pom.xml replace the aem-sdk-api dependency with
 #   com.adobe.aem:uber-jar:6.5.22 (scope provided, no classifier)
 JAVA_HOME=$(/usr/libexec/java_home -v 11) mvn -pl core -am -DskipTests -Dbnd.baseline.skip=true compile
-git -C ~/Documents/brightcove/internal/connectors/Adobe-AEM-Brightcove-Connector worktree remove /tmp/bcon-probe --force
+git -C <live-tree> worktree remove /tmp/bcon-probe --force
 ```
 
 **AEM 6.4, measured 2026-09-17:** the same probe against uber-jar `6.4.8.4` (last 6.4 SP),
@@ -59,7 +59,7 @@ and `jackson.databind;version="[2.19,3)"`. The 6.5.0 runtime exports Servlet 3.1
 Jackson 2.9.5. The current cloud artifact cannot resolve on 6.5.0 regardless of source
 compatibility; the on-prem artifact must be compiled against the floor uber-jar.
 
-**Support floor: DECIDED by Laurence 2026-09-17: AEM 6.5 LTS** (the line customers are
+**Support floor: DECIDED by the maintainer 2026-09-17: AEM 6.5 LTS** (the line customers are
 migrating to per BGS-1671).
 6.5.0 GA without a service pack is *not* a target, but the local instance IS 6.5.0 GA, so
 Phase 2 shims the two API usages above anyway. That costs about ten lines, makes the local
@@ -75,7 +75,7 @@ version mapping against Adobe's release notes before publishing a compatibility 
 ### 1.1 Branch topology
 
 ```bash
-cd ~/Documents/brightcove/internal/connectors/Adobe-AEM-Brightcove-Connector && git fetch origin --prune
+cd <live-tree> && git fetch origin --prune
 git merge-base origin/cloud-master origin/onprem-master        # d8f8132, 2021-05-03, "release/5.6"
 git rev-list --left-right --count origin/onprem-master...origin/cloud-master   # 75 / 182
 git rev-list --left-right --count origin/master...origin/onprem-master         # 10 / 25
@@ -90,7 +90,7 @@ git rev-list --left-right --count origin/master...origin/onprem-master         #
   has a broken Brightcove Admin tool (25 `Load(` call sites, no definition). Same failure
   shape as `7.2.2-cloud`. `master` is also the only protected branch and nothing releases
   from it (wiki: `aem-connector-repo-governance`).
-- 🔴 **The live working tree at that path is Laurence's.** It has untracked planning files
+- 🔴 **The live working tree at that path is the maintainer's.** It has untracked planning files
   and often a feature branch checked out. Never `checkout`/`pull` there. All work in this
   plan happens in `git worktree add` directories.
 
@@ -182,7 +182,7 @@ the message.
 
 | | Cloud SDK | On-prem 6.5.0 GA |
 |---|---|---|
-| Jar | `~/opt/aem/aem-author-p4502.jar` (AEMaaCS SDK `2026.2.24678`) | `~/Downloads/cq-author-p4602.jar` (`cq-quickstart-6.5.0`, no SP) |
+| Jar | `aem-author-p4502.jar` (AEMaaCS SDK `2026.2.24678`) | `cq-author-p4602.jar` (`cq-quickstart-6.5.0`, no SP) |
 | Port | 4502 | **4602** |
 | Java | 11 | Corretto **11** (pid via `pgrep -f cq-author-p4602`) |
 | State 2026-09-17 | not running | **running, licensed** (`productinfo` = `Adobe Experience Manager (6.5.0)`; `/crx/packmgr/service.jsp` and `/sites.html` resolve to themselves, no license redirect), 581 bundles active, `we-retail` + `wknd-events` sample content, **no connector installed**, no Brightcove account configured |
@@ -250,7 +250,7 @@ Rules the shared code follows:
 ## 3. Phases, each with an exit gate
 
 Work in a worktree: `git worktree add ../bcon-parity -b feat/unified-build origin/cloud-master`.
-**Created 2026-09-17** at `~/Documents/brightcove/internal/connectors/bcon-parity`; Phase 0 started the
+**Created 2026-09-17** at `<worktree>`; Phase 0 started the
 same day (matrix skeleton + `tests/parity/` in place, baselines dispatched to two Sonnet agents).
 Open PRs against `cloud-master` per phase (merge-commit, the repo convention). Keep the
 `onprem-master` and `master` branches untouched until Phase 5.
@@ -692,7 +692,7 @@ Exit gate: in-place upgrade on :4602 passes matrix + e2e; the fresh-install path
 
 ### Phase 5. Release, branches, governance
 
-**Not started. Every step here is outward-facing and needs Laurence's go-ahead in the turn it
+**Not started. Every step here is outward-facing and needs the maintainer's go-ahead in the turn it
 happens; approval of one step is not approval of the next.**
 
 **Step 0, required before step 1 and missing from the original list: get the work onto
@@ -812,10 +812,10 @@ verify a label/folder write, re-fetch the video record (`a=search_videos&isID=tr
   `toPrettyString` sweep, spec porting) → Sonnet. Design calls (context-path helper, compat
   overlay scope, unresolved-import triage) → Opus. Do not set a global subagent model.
 - **Do not touch the live working tree**; do not merge to `cloud-master` without a PR;
-  do not rename branches or touch protection until Phase 5 and Laurence's go-ahead.
-- **Ask Laurence** only for: whether any 6.0.x customer needs the `legacy/` branch kept
+  do not rename branches or touch protection until Phase 5 and the maintainer's go-ahead.
+- **Ask the maintainer** only for: whether any 6.0.x customer needs the `legacy/` branch kept
   hotfix-able, and the go-ahead for Phase 5. (Floor decided: 6.5 LTS.)
-- **Subagent routing decided by Laurence 2026-09-17:** straightforward tasks go to lower
+- **Subagent routing decided by the maintainer 2026-09-17:** straightforward tasks go to lower
   models (Sonnet); keep Opus for design calls and triage.
 - Log substantive findings to the wiki (`aem-connector-*` pages) as they land, not at the
   end. The `aem-connector-unified-build` page holds the probe results this plan is built on.
