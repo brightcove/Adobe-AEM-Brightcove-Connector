@@ -4,7 +4,7 @@
 // Reuses the auth state captured by the e2e harness's global-setup.
 //
 // Run:
-//   NODE_PATH=/Users/lmaultsby/Documents/brightcove/internal/connectors/bcon-parity/tests/e2e/node_modules \
+//   NODE_PATH="$(pwd)/tests/e2e/node_modules" \
 //     node tests/parity/probes/onprem/admin-matrix-probe.js
 //
 // No account IDs are hardcoded; the account id is read at runtime from
