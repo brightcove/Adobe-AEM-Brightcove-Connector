@@ -724,7 +724,13 @@ as-is: a fresh minor marks the point where the on-prem line joined.
    (detached worktree, `mvn clean package -DskipTests` not `-PautoInstallPackage`,
    `gh release create --target <full SHA>` — a short SHA returns HTTP 422 — both assets each).
 2. Rename `cloud-master` → `main`; `onprem-master` → `legacy/onprem-6.0.x`;
-   `master` → `legacy/master-2021` with a README note that it is broken (§1.1). Update the
+   `master` → `legacy/master-2021` with a README note that it is broken (§1.1).
+   **Decided 2026-09-18 by the maintainer: `legacy/onprem-6.0.x` is FROZEN**, not hotfix-able:
+   renamed and kept for reference with a README note pointing at the `7.x-prem` artifact, no
+   further releases from it. Reasons: the unified floor (AEM 6.5 LTS) serves every on-prem
+   install known to the team; `onprem-master` still bundles the BGS-1706 file so a hotfix from it
+   would need fixing first; and a second line recreates the drift Phase 3 measured (60 commits).
+   Revive only if a customer below AEM 6.5 appears. Update the
    `pre-qa-gate` base and any docs that name `cloud-master`.
 3. Request branch protection on `main` and `release/**` through the central tooling the
    governance page identifies. ⚠️ Do NOT hand-edit a ruleset: the disabled
@@ -740,7 +746,11 @@ as-is: a fresh minor marks the point where the on-prem line joined.
 
 ---
 
-## 3b. Defects surfaced during Phase 0 (cloud 7.2.3; NOT parity work, file as their own tickets)
+## 3b. Defects surfaced during Phase 0 (cloud 7.2.3; NOT parity work)
+
+**Disposition decided 2026-09-18 by the maintainer: these become actionable TODOs recorded once
+the 7.4.0 release is confirmed, not Jira tickets.** Keep the list here as the source; the TODO
+recording is Phase 5 step 5.
 
 Found by the cloud matrix pass on 2026-09-17, evidence under
 `tests/parity/runs/2026-09-17/cloud-7.2.3/matrix/` (row files named). None of these block
@@ -816,8 +826,8 @@ verify a label/folder write, re-fetch the video record (`a=search_videos&isID=tr
   overlay scope, unresolved-import triage) → Opus. Do not set a global subagent model.
 - **Do not touch the live working tree**; do not merge to `cloud-master` without a PR;
   do not rename branches or touch protection until Phase 5 and the maintainer's go-ahead.
-- **Ask the maintainer** only for: whether any 6.0.x customer needs the `legacy/` branch kept
-  hotfix-able, and the go-ahead for Phase 5. (Floor decided: 6.5 LTS.)
+- **Ask the maintainer** only for the go-ahead on each Phase 5 step. (Decided: floor 6.5 LTS;
+  release 7.4.0 with a shared `-prem` number; `legacy/onprem-6.0.x` frozen; §3b as TODOs.)
 - **Subagent routing decided by the maintainer 2026-09-17:** straightforward tasks go to lower
   models (Sonnet); keep Opus for design calls and triage.
 - Log substantive findings to the wiki (`aem-connector-*` pages) as they land, not at the
