@@ -11,7 +11,9 @@ local AEM author, against a real configured Brightcove account.
   ```bash
   curl -s -u admin:admin http://localhost:4502/bin/brightcove/accounts
   ```
-  Expect a non-empty `accounts` array (e.g. `My account [5822937471001]`).
+  Expect a non-empty `accounts` array (each entry `{ id, text, value }`, where
+  `value` is the 13-digit account id). The suite reads the first entry at run
+  time; set `BRC_ACCOUNT_ID` to pin a specific one.
 - The tool itself is served at `http://localhost:4502/brightcove/admin.html`.
 
 See `wiki/api/aem-connector-local-dev.md` → "Admin tool e2e testing" for the full
@@ -52,7 +54,11 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
 - `global-setup.js` logs into AEM via `j_security_check` and saves the session
   cookie to `.auth/state.json` (HTTP basic auth alone gets redirected to the
   Granite sign-in page).
-- `fixtures.js` exposes `openAdmin(page)` and `waitForVideoRows(page)` helpers.
+- `fixtures.js` exposes `openAdmin(page)` and `waitForVideoRows(page)` helpers, plus
+  `resolveAccountId(request)`, `brightcoveAssetsRoot(request)` and
+  `firstBrightcoveAsset(request)`, which read the account and a fixture asset from
+  the running instance. Never hard-code an account, video or playlist id in a
+  spec: this is a public repo.
 - Each `specs/*.spec.js` drives a real user flow and asserts on the rendered UI
   and/or the outgoing `/bin/brightcove/api.js` request.
 

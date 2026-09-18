@@ -32,28 +32,11 @@
 // current/docs/clientlibs-context-path.md.
 const fs = require('fs');
 const path = require('path');
-const { test, expect, openAdmin, ACCOUNT_ID } = require('../fixtures');
+const { test, expect, openAdmin, firstBrightcoveAsset } = require('../fixtures');
 
 const CTX = '/aemctx';
 const ADMIN = '/brightcove/admin.html';
-const ASSETS_ROOT = `/content/dam/brightcove_assets/${ACCOUNT_ID}`;
 const METADATA_EDITOR = '/mnt/overlay/dam/gui/content/assets/metadataeditor.external.html';
-
-// Resolved at run time rather than hard-coded: no video ids in a public repo,
-// and the fixture asset differs between the two instances.
-async function firstBrightcoveAsset(request) {
-  const res = await request.get(`${ASSETS_ROOT}.1.json`);
-  if (!res.ok()) {
-    throw new Error(`cannot list ${ASSETS_ROOT} (HTTP ${res.status()}): no asset to measure on`);
-  }
-  const body = await res.json();
-  const name = Object.keys(body).find(
-    (k) => body[k] && body[k]['jcr:primaryType'] === 'dam:Asset');
-  if (!name) {
-    throw new Error(`no dam:Asset under ${ASSETS_ROOT}: run a Brightcove sync first`);
-  }
-  return `${ASSETS_ROOT}/${name}`;
-}
 
 // The literal the admin page's HTL renders on a root-served instance. Asserted
 // rather than assumed: if the page stops publishing it, test 1 must error out
