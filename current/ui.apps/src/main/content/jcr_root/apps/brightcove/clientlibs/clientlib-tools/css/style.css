@@ -1983,6 +1983,9 @@ body {
   border-radius: 2px;
 }
 
+/* Shown by showPopup() as display:flex (NOT jQuery .show(), which would set
+   display:block and drop the centering below).
+   Context: current/docs/pml-dialog-layout.md */
 .pml-dialog {
   display: none;
   position: absolute;
@@ -1994,14 +1997,17 @@ body {
   overflow: hidden;
   z-index: 2000;
   background: rgba(0, 0, 0, 0.25);
+  align-items: center;
+  justify-content: center;
 }
 
+/* ⚠️ Deliberately NOT positioned: the flex parent centers it, so a tall dialog
+   grows about the center and stays inside the viewport. It used to be
+   position:absolute with top:calc(50% - 10vh), which pins the TOP near the
+   middle and lets tall content run off the bottom of the screen. */
 .pml-dialog_container {
-  position: absolute;
   width: 36vw;
   min-height: 20vh;
-  top: calc(50% - 10vh);
-  left: calc(50% - 18vw);
   background: #fff;
   font-size: 1rem;
   flex-direction: column;
@@ -2016,9 +2022,14 @@ body {
   height: auto;
 }
 
+/* The scrolling region. The header and footer stay put and only the body
+   scrolls, so a long list (e.g. the bulk-delete confirmation's playlist names)
+   cannot push the buttons off-screen. */
 .pml-dialog_content {
   padding: 1rem;
   flex: 1;
+  overflow-y: auto;
+  max-height: 50vh;
 }
 
 .pml-dialog_content input[name*='plst'] {

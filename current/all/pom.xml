@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.2.3</version>
+        <version>7.4.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -77,23 +77,14 @@
                             <type>zip</type>
                             <target>/apps/brightcove-packages/application/install</target>
                         </embedded>
-                        <embedded>
-                            <groupId>com.adobe.cq</groupId>
-                            <artifactId>core.wcm.components.content</artifactId>
-                            <type>zip</type>
-                            <target>/apps/brightcove-packages/application/install</target>
-                        </embedded>
-                        <embedded>
-                            <groupId>com.adobe.cq</groupId>
-                            <artifactId>core.wcm.components.core</artifactId>
-                            <target>/apps/brightcove-packages/application/install</target>
-                        </embedded>
-                        <embedded>
-                            <groupId>com.adobe.cq</groupId>
-                            <artifactId>core.wcm.components.config</artifactId>
-                            <type>zip</type>
-                            <target>/apps/brightcove-packages/application/install</target>
-                        </embedded>
+                        <!-- WCM Core Components are embedded ONLY by the cloud profile below.
+                             🔴 Never embed them in the on-prem artifact: the OSGi installer treats
+                             a higher-versioned bundle of the same symbolic name as an UPGRADE of
+                             the customer's stock Core Components, and 2.27.0 does not resolve on
+                             older 6.5 service packs (measured on 6.5.0 GA, 2026-09-17: stock
+                             2.3.2 replaced by an unresolvable 2.27.0, state Installed). A connector
+                             must not change a site-wide library. Context: ../../ONPREM-PARITY-PLAN.md
+                             §3 Phase 2 step 4. -->
                     </embeddeds>
                 </configuration>
             </plugin>
@@ -125,6 +116,106 @@
     <!-- P R O F I L E S                                                        -->
     <!-- ====================================================================== -->
     <profiles>
+        <profile>
+            <!-- Cloud artifact: additionally embeds WCM Core Components (AEMaaCS customers install
+                 them through this package). The embeddeds list is OVERRIDDEN here (not appended:
+                 combine.children="append" duplicated entries across the plugin's executions and
+                 dropped the core jar from the zip on 2026-09-17), so it must repeat the four base
+                 entries. Same activation as the parent POM. -->
+            <id>cloud</id>
+            <activation>
+                <property>
+                    <name>!aem.platform</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.adobe.cq</groupId>
+                    <artifactId>core.wcm.components.content</artifactId>
+                    <type>zip</type>
+                </dependency>
+                <dependency>
+                    <groupId>com.adobe.cq</groupId>
+                    <artifactId>core.wcm.components.config</artifactId>
+                    <type>zip</type>
+                </dependency>
+                <dependency>
+                    <groupId>com.adobe.cq</groupId>
+                    <artifactId>core.wcm.components.core</artifactId>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.jackrabbit</groupId>
+                        <artifactId>filevault-package-maven-plugin</artifactId>
+                        <configuration>
+                            <embeddeds combine.self="override">
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.apps</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.core</artifactId>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.content</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/content/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.config</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.adobe.cq</groupId>
+                                    <artifactId>core.wcm.components.content</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.adobe.cq</groupId>
+                                    <artifactId>core.wcm.components.core</artifactId>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.adobe.cq</groupId>
+                                    <artifactId>core.wcm.components.config</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                            </embeddeds>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- On-prem artifact is named brightcove.all-<version>-prem.zip so both platforms'
+             packages can sit in one release. Done via finalName rather than the filevault
+             <classifier>: with 1.1.6 the classifier makes generate-metadata write to
+             target/vault-work-prem while the package goal still reads target/vault-work
+             ("basedir ... vault-work does not exist"). finalName also keeps autoInstallPackage
+             pointed at the right file for free. Same activation as the parent POM
+             (-Daem.platform=onprem). Context: ../../ONPREM-PARITY-PLAN.md §2. -->
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <build>
+                <finalName>${project.artifactId}-${project.version}-prem</finalName>
+            </build>
+        </profile>
         <profile>
             <id>autoInstallSinglePackage</id>
             <activation>
@@ -201,12 +292,7 @@
             <version>${project.version}</version>
             <type>zip</type>
         </dependency>
-        <dependency>
-            <groupId>com.adobe.cq</groupId>
-            <artifactId>core.wcm.components.content</artifactId>
-            <type>zip</type>
-        </dependency>
-        <dependency>
+<dependency>
             <groupId>com.adobe.cq</groupId>
             <artifactId>core.wcm.components.config</artifactId>
             <type>zip</type>

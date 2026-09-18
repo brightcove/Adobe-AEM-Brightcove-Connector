@@ -1,8 +1,13 @@
 // BCON-182 — "Create New Label modal does not work".
 // Old behaviour: any name not starting with '/' just turned the input red with
 // no message (Brightcove labels are paths and must start with '/'). The fix:
-// show a real message for an empty name, and auto-prepend '/' otherwise so a
-// normal name is accepted.
+// show a real message for an empty name, and normalize otherwise so a normal
+// name is accepted.
+//
+// commit 5a9cfc8 (2026-06-11) later changed that normalization from
+// leading-slash-only to leading AND trailing slash (normalizeLabelPath), so
+// the label a user creates matches the canonical path the apply-to-video step
+// computes without requiring a hard refresh first.
 //
 // The create_label request is mocked so the test is deterministic and does NOT
 // mutate the live Brightcove account (the connector has no delete-label
@@ -43,8 +48,21 @@ test('empty label name shows a message and does not fire a request', async ({ pa
   expect(createCalls).toBe(0);
 });
 
-test('a plain name is accepted and sent as a /-prefixed path', async ({ page }) => {
+test('a plain name is accepted and sent as a fully slash-normalized path', async ({ page }) => {
   await openAdmin(page);
+
+  // commit 5a9cfc8 (BCON-182) fully normalizes the label name on create (both
+  // a leading AND a trailing slash, e.g. /name/) so the created path matches
+  // what normalizeLabelPath() computes at apply-to-video time — previously
+  // only the leading slash was added, so a freshly-created label couldn't be
+  // applied until a hard refresh re-fetched it in canonical form.
+  //
+  // The create_label call is mocked (see file header), so this never reaches
+  // the live account, but use a timestamp-suffixed name anyway: the connector
+  // has no delete-label endpoint, so a fixed name risks colliding with a
+  // dropdown option a prior run's mock left in a shared browser profile.
+  const labelName = `QA Test Label ${Date.now()}`;
+  const normalizedPath = `/${labelName}/`;
 
   let createUrl = null;
   // Intercept create_label: record the URL and return a success (empty body).
@@ -58,21 +76,23 @@ test('a plain name is accepted and sent as a /-prefixed path', async ({ page }) 
   });
 
   await openCreateLabelModal(page);
-  await page.fill('.pml-dialog .input-label-name', 'QA Test Label');
+  await page.fill('.pml-dialog .input-label-name', labelName);
 
   const reqPromise = page.waitForRequest((r) => r.url().includes('a=create_label'));
   await page.locator('.pml-dialog .pml-dialog_footer .btn-primary').click();
   await reqPromise;
 
-  // The fix prepends '/'; a bare name must not be rejected.
-  expect(createUrl).toContain('label=/QA Test Label');
+  // The fix normalizes to leading AND trailing slash, not just leading.
+  expect(createUrl).toContain(`label=${normalizedPath}`);
 
   // Because Brightcove's GET /labels index lags, success must NOT depend on a
   // reload: the new label is added to the dropdown optimistically and a toast
-  // confirms it.
+  // confirms it, in the exact canonical form the apply-to-video step expects.
   await expect(page.locator('#brcToast')).toBeVisible();
-  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText('/QA Test Label');
-  await expect(page.locator('#label_list option[value="/QA Test Label"]')).toHaveCount(1);
+  await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(normalizedPath);
+  await expect(
+    page.locator(`#label_list option[value="${normalizedPath}"]`)
+  ).toHaveCount(1);
 });
 
 test('a duplicate label shows an error and is not added to the dropdown', async ({ page }) => {
@@ -123,7 +143,7 @@ test('a non-duplicate server error shows "Could not create", not "already exists
   await expect(page.locator('#brcToast')).toHaveCount(0);
 });
 
-test('a name already starting with / is not double-prefixed', async ({ page }) => {
+test('a name already starting with / is not double-prefixed, and gets a single trailing slash', async ({ page }) => {
   await openAdmin(page);
 
   let createUrl = null;
@@ -143,6 +163,9 @@ test('a name already starting with / is not double-prefixed', async ({ page }) =
   await page.locator('.pml-dialog .pml-dialog_footer .btn-primary').click();
   await reqPromise;
 
-  expect(createUrl).toContain('label=/already/pathy');
+  // normalizeLabelPath() (commit 5a9cfc8) leaves an existing leading slash
+  // alone and adds exactly one trailing slash.
+  expect(createUrl).toContain('label=/already/pathy/');
   expect(createUrl).not.toContain('label=//');
+  expect(createUrl).not.toContain('pathy//');
 });

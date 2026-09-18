@@ -4,7 +4,15 @@ This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.co
 
 <https://integrations.support.brightcove.com/adobe/getting-started-brightcove-video-connect-adobe-experience-manager.html>
 #### Supports
- - AEM 6.2, 6.3, 6.4, 6.5
+ - **AEM as a Cloud Service** — the `*-cloud` artifact
+ - **AEM 6.5 LTS** on-premise — the `*-prem` artifact
+
+Both artifacts are built from the same commit. AEM 6.2, 6.3 and 6.4 are no longer
+supported: 6.5 LTS is the on-premise migration target, and the shared code needs a
+Sling API and Jackson version that the earlier lines do not ship. Upgrading an
+existing on-premise install from the 6.0.x connector: `docs/onprem-upgrade-6.0-to-7.md`.
+The full compatibility matrix (connector x AEM x Java) is tracked in BGS-1671 and has
+not been published yet.
 
 ## Features
 - Components for Authoring Videos and Playlists

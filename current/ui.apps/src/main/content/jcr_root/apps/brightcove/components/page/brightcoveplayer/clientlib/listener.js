@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function() {
 			placeholder.textContent = "Select";
 			selectedPlayer.appendChild(placeholder);
 
-			const response = await fetch("/bin/brightcove/api?a=players&account_id=" + encodeURIComponent(selectedAccount));
+			const response = await fetch(brc.url("/bin/brightcove/api?a=players&account_id=" + encodeURIComponent(selectedAccount)));
 			if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
 			const options = await response.json();

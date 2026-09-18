@@ -368,7 +368,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -393,7 +393,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -420,7 +420,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -437,7 +437,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -512,7 +512,7 @@ $(function () {
                 ids.forEach(function (id) {
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'delete_playlist', playlist: id },
                         async: true,
                         complete: onDone
@@ -627,9 +627,26 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
 
-    $popup.show();
+    // NOT .show(): jQuery would set display:block, and .pml-dialog centers its
+    // container with flexbox. Context: current/docs/pml-dialog-layout.md
+    $popup.css('display', 'flex');
 }
 
+// ⚠️ DEAD CODE, measured 2026-09-17. suggestLabelsForVideo and
+// suggestVideosForPlaylist are JSONP callbacks for the keyup handlers on
+// '.label-add-input input' / '.playlist-add-input input', and that markup exists
+// NOWHERE: not in brightcoveadmin.html, not anywhere else in ui.apps, and not in
+// the served DOM of either instance. The cloud line replaced these .pml-dialog
+// listings with #editPlaylistModal and the label pills, so nothing ever creates
+// the nodes these two functions append to.
+// 🔴 Both also carry a live bug if they are ever revived: `$item.localName` on a
+// jQuery object is always undefined, so a click landing on the add-icon <img>
+// keeps the <img> as $item and reads data-name/data-id off it, i.e. undefined.
+// The on-prem line fixed exactly this in afa58e7 ($item.get(0).nodeName). It is
+// NOT ported here, because a fix to unreachable code cannot be verified and
+// would claim a behaviour nothing exercises. Recorded in
+// tests/parity/onprem-commit-ledger.md, Port plan item 4. Delete both functions
+// and their two keyup binders, or restore the markup and then port the fix.
 function suggestLabelsForVideo(data) {
     $('.pml-dialog .autocomplete').empty();
     if (data.items.length > 0) {
@@ -710,7 +727,7 @@ function openMoveToFolderModal() {
         $('#mtfFolderList').html('<li class="brc-mtf-empty">Loading\u2026</li>');
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: { a: 'list_folders', account_id: $('#selAccount').val(), callback: 'mtfFolderLoadCallback' },
             async: true
         });
@@ -801,7 +818,7 @@ $(function () {
         $.each(paging.selectedVideos, function (i, checkbox) {
             requests.push($.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'move_video_to_folder',
                     folder: folderId,
@@ -1081,7 +1098,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1164,7 +1181,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1246,7 +1263,7 @@ function loadFolders() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1317,7 +1334,7 @@ function loadLabels() {
 
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'create_label', label: labelName },
                         async: true,
                         // Inspect the raw response in `complete` rather than
@@ -1376,7 +1393,7 @@ function loadLabels() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1454,7 +1471,7 @@ function openEditPlaylistModal(playlistId, playlistName, playlistType) {
     if (!isSmart) {
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: {
                 a: 'list_videos_in_playlist',
                 callback: 'editPlaylistListingCallback',
@@ -1604,7 +1621,7 @@ function epSavePlaylist(showToast) {
 
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: qs,
         async: true,
         success: function() {
@@ -1692,7 +1709,7 @@ function sort(object) {
         if (window.brcCurrentView === 'playlists') {
             var asc = sortType === '';
             // Brightcove playlist IDs are integer strings of varying lengths
-            // (e.g. 5822937673001 vs 1860563059155019833). Sorting them via
+            // (e.g. a 13-digit id vs a 16-digit one). Sorting them via
             // localeCompare gives lexicographic order, which puts shorter
             // (smaller) IDs after longer (larger) ones. Compare by length
             // first to get correct numeric order. JS Number can't safely
@@ -2367,7 +2384,7 @@ function saveLabels() {
     var savedLabels = _currentLabels.slice();
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         // The endpoint is JSONP — let jQuery wire the callback so the response
         // body is actually parsed into `resp`. The prior `dataType` omission
         // caused the response to be executed as a script (`cb({...})`) and the
@@ -2457,7 +2474,7 @@ CQ.Ext.brightcove.economics = new CQ.Ext.data.JsonStore({
 function syncDB()
 {
     syncStart();
-    var url = window.location.origin + "/bin/brightcove/dataload";
+    var url = window.location.origin + brc.url("/bin/brightcove/dataload");
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
@@ -3098,7 +3115,7 @@ function cpSubmit() {
     var videoIds = _cpVideos.map(function(v) { return v.id; }).join(',');
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: {
             a: 'create_playlist',
             account_id: $('#selAccount').val(),

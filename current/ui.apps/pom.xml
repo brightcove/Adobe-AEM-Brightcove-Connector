@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.2.3</version>
+        <version>7.4.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -119,13 +119,15 @@
             <type>zip</type>
         </dependency>
 
+        <!-- Platform API for HTL compile-time validation: same property-driven coordinates as
+             core, so -Daem.platform=onprem (and the 6.5.0 GA floor override) applies here too.
+             Previously this module pulled BOTH uber-jar and aem-sdk-api unconditionally. -->
         <dependency>
             <groupId>com.adobe.aem</groupId>
-            <artifactId>uber-jar</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.adobe.aem</groupId>
-            <artifactId>aem-sdk-api</artifactId>
+            <artifactId>${aem.api.artifactId}</artifactId>
+            <version>${aem.api.version}</version>
+            <classifier>${aem.api.classifier}</classifier>
+            <scope>provided</scope>
         </dependency>
         <!-- OSGi APIs & annotations (all scope=provided via dependencyManagement) -->
         <dependency>

@@ -21,7 +21,7 @@
     <groupId>com.coresecure</groupId>
     <artifactId>brightcove</artifactId>
     <packaging>pom</packaging>
-    <version>7.2.3</version>
+    <version>7.4.0</version>
     <description>Brightcove Connector</description>
 
     <modules>
@@ -33,7 +33,7 @@
         <module>ui.content</module>
         <module>it.tests</module>
         <module>ui.tests</module>
-        <module>analyse</module>
+        <!-- `analyse` (AEMaaCS analyser) is added by the `cloud` platform profile below. -->
     </modules>
 
     <properties>
@@ -50,6 +50,30 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <aem.sdk.api>2025.9.22450.20250911T131210Z-250800</aem.sdk.api>
+        <!-- On-prem floor: AEM 6.5 LTS. Compile the on-prem artifact against THIS uber-jar and
+             nothing newer, or bnd computes Import-Package ranges the runtime cannot satisfy.
+             Context: ../ONPREM-PARITY-PLAN.md §0 and §2. -->
+        <aem.uber.version>6.5.22</aem.uber.version>
+        <!-- The platform API dependency's coordinates. Cloud by default; the onprem profile
+             below overrides them. Modules declare ONE dependency using these so it keeps its
+             place at the TOP of the dependency list: when it was moved into a profile it landed
+             at the end of the classpath and an older commons-collections4 from the aem-mock
+             stack shadowed the SDK's copy (NoSuchMethodError SetUtils.unmodifiableSet in the
+             core unit tests). Classpath order is part of the contract here. -->
+        <aem.api.artifactId>aem-sdk-api</aem.api.artifactId>
+        <aem.api.version>${aem.sdk.api}</aem.api.version>
+        <aem.api.classifier></aem.api.classifier>
+        <!-- Unit tests under -Daem.platform=onprem need a REAL Jackson on the test classpath: the
+             uber-jar carries Jackson's API classes but not its internals
+             (NoClassDefFoundError jackson.databind.util.internal.PrivateMaxEntriesMap). Match the
+             version the chosen uber-jar bundles: 6.5.22 -> 2.16.2; 6.5.0 GA -> 2.9.5. Test scope
+             only, never in the bundle. -->
+        <aem.uber.jackson.version>2.16.2</aem.uber.jackson.version>
+        <!-- Empty for 6.5.22 (its uber-jar has no classifier). To compile core against the 6.5.0
+             GA floor of the local test bed: -Daem.uber.version=6.5.0 -Daem.uber.classifier=apis
+             Used only by core/pom.xml's onprem profile (an empty classifier inside
+             dependencyManagement would stop matching the plain uber-jar entries). -->
+        <aem.uber.classifier></aem.uber.classifier>
         <aemanalyser.version>1.6.12</aemanalyser.version>
         <componentGroupName>Brightcove Connector</componentGroupName>
         <!-- AEM Core Components Version -->
@@ -396,6 +420,43 @@ Bundle-DocURL:
 
     <profiles>
         <!-- ====================================================== -->
+        <!-- P L A T F O R M   P R O F I L E S                        -->
+        <!-- One source tree, two runtimes. Selected by the aem.platform property, NOT by -P,
+             because an explicit -P would deactivate the activeByDefault adobe-public profile
+             (and its repositories) in this same POM.
+               cloud  (default):  mvn clean install                      -> brightcove.all-<v>.zip
+               onprem:            mvn -Daem.platform=onprem clean install -> brightcove.all-<v>-prem.zip
+             Each module that needs the platform API declares the same two profiles.
+             Context: ../ONPREM-PARITY-PLAN.md §2 (target end state). -->
+        <!-- ====================================================== -->
+        <profile>
+            <id>cloud</id>
+            <activation>
+                <property>
+                    <name>!aem.platform</name>
+                </property>
+            </activation>
+            <modules>
+                <module>analyse</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <properties>
+                <aem.port>4602</aem.port>
+                <aem.api.artifactId>uber-jar</aem.api.artifactId>
+                <aem.api.version>${aem.uber.version}</aem.api.version>
+                <aem.api.classifier>${aem.uber.classifier}</aem.api.classifier>
+            </properties>
+        </profile>
+
+        <!-- ====================================================== -->
         <!-- A D O B E P U B L I C P R O F I L E -->
         <!-- ====================================================== -->
         <profile>
@@ -567,13 +628,23 @@ Bundle-DocURL:
             <dependency>
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>uber-jar</artifactId>
-                <version>6.5.22</version>
+                <version>${aem.uber.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>com.adobe.aem</groupId>
                 <artifactId>aem-sdk-api</artifactId>
                 <version>${aem.sdk.api}</version>
+                <scope>provided</scope>
+            </dependency>
+            <!-- Compile-time only (@SlingServletResourceTypes is a CLASS-retention DS property
+                 type processed by bnd). None of the platform API jars (aem-sdk-api, uber-jar 6.5.x)
+                 ship it; it used to arrive transitively through the removed Core Components
+                 dependency. -->
+            <dependency>
+                <groupId>org.apache.sling</groupId>
+                <artifactId>org.apache.sling.servlets.annotations</artifactId>
+                <version>1.2.6</version>
                 <scope>provided</scope>
             </dependency>
 
