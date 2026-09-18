@@ -4,7 +4,7 @@
 # tree on every push/PR, so a change that breaks one platform's compile is
 # caught immediately rather than at the next manual on-prem build. This does
 # NOT run against a live AEM instance: no deploy, no bundle/content checks,
-# no e2e execution. Those still require `tests/e2e/pre-qa-gate.sh` against a
+# no e2e execution. It does run the core module's unit tests per platform. Those still require `tests/e2e/pre-qa-gate.sh` against a
 # local AEM author before a ticket goes to Ready for QA.
 #
 # ⚠️ The org requires every action to be pinned to a full-length commit SHA
@@ -39,6 +39,20 @@ jobs:
           distribution: temurin
           java-version: '11'
           cache: maven
+
+      # Unit tests first, per platform: the core module compiles against a
+      # different platform API in each profile, so both runs are meaningful.
+      # Until 2026-09-18 this workflow only compiled (-DskipTests) and listed
+      # the Playwright specs, so no test of any kind ran in CI.
+      - name: Unit tests (cloud, default profile)
+        if: matrix.platform == 'cloud'
+        working-directory: current
+        run: mvn -pl core test
+
+      - name: Unit tests (onprem profile)
+        if: matrix.platform == 'onprem'
+        working-directory: current
+        run: mvn -Daem.platform=onprem -pl core test
 
       - name: Build (cloud, default profile)
         if: matrix.platform == 'cloud'
