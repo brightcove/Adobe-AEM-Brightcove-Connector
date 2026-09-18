@@ -692,14 +692,43 @@ Exit gate: in-place upgrade on :4602 passes matrix + e2e; the fresh-install path
 
 ### Phase 5. Release, branches, governance
 
-1. Cut `7.3.0-cloud` and `7.3.0-prem` from the same commit per `aem-connector-release`
-   (detached worktree, `gh release create --target <full SHA>`, both assets each).
+**Not started. Every step here is outward-facing and needs Laurence's go-ahead in the turn it
+happens; approval of one step is not approval of the next.**
+
+**Step 0, required before step 1 and missing from the original list: get the work onto
+`cloud-master`.** Measured 2026-09-17: `feat/unified-build` is local only, no upstream and not on
+`origin` (`git ls-remote --heads origin feat/unified-build` is empty); count what is pending
+with `git rev-list --count origin/cloud-master..HEAD` rather than trusting a number here. The release convention builds from the
+*merged* commit, so the order is: scope-guard the diff → push → PR → CI → merge (a **merge
+commit**, not squash, per PRs #104/#106) → release from the merge commit. CI
+(`.github/workflows/build.yml`) builds both platforms on PR and already triggers on `main`, so
+the later rename will not break it; ⚠️ it is compile-level only and runs no e2e.
+
+**Pre-push hygiene, before the push:** the test account id is still committed in
+`tests/e2e/README.md`, `tests/e2e/fixtures.js` (the `BRC_ACCOUNT_ID` default) and
+`bcon-176-177-variant-dialog.spec.js` (`tests/e2e/specs/bcon-context-path.spec.js` resolves its
+asset at run time instead, which is the pattern to copy); scan every commit message and diff in
+`git log origin/cloud-master..HEAD` for customer identifiers and internal URLs.
+
+⚠️ **Open decision before anything is cut: what version releases.** This section says `7.3.0`,
+but the pom is at **7.3.8**, because the gate requires a bump per deploy (AEM silently ignores a
+same-version redeploy) and eight dev bumps happened without a release. Release 7.3.8 as-is, or
+reset to 7.4.0 to mark the unified build. Also open: whether the on-prem artifact shares that
+number at all, since `<version>-prem` is a new tag shape (the convention is observed only for
+`-cloud`, and the on-prem line used its own 6.0.x numbering).
+
+1. Cut `<version>-cloud` and `<version>-prem` from the same commit per `aem-connector-release`
+   (detached worktree, `mvn clean package -DskipTests` not `-PautoInstallPackage`,
+   `gh release create --target <full SHA>` — a short SHA returns HTTP 422 — both assets each).
 2. Rename `cloud-master` → `main`; `onprem-master` → `legacy/onprem-6.0.x`;
    `master` → `legacy/master-2021` with a README note that it is broken (§1.1). Update the
    `pre-qa-gate` base and any docs that name `cloud-master`.
 3. Request branch protection on `main` and `release/**` through the central tooling the
-   governance page identifies (the disabled `gandalf-managed-branch-protection` ruleset
-   suggests hand-edited rulesets get overwritten). Nothing there has been changed yet.
+   governance page identifies. ⚠️ Do NOT hand-edit a ruleset: the disabled
+   `gandalf-managed-branch-protection` ruleset says this is meant to be centrally managed, so a
+   local edit is likely to be overwritten. Nothing there has been changed yet. Note today
+   `cloud-master`, `onprem-master` and `release/**` carry no protection at all and the only
+   protected branch is the one nothing releases from.
 4. Support-site docs: Downloads point at both artifacts; publish the compatibility matrix
    (connector × AEM × Java) that BGS-1671 asked for.
 5. Wiki: update `aem-connector-release` (two lines → one line, two tags),
