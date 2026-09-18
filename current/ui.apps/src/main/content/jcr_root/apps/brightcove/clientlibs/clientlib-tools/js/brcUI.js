@@ -1709,7 +1709,7 @@ function sort(object) {
         if (window.brcCurrentView === 'playlists') {
             var asc = sortType === '';
             // Brightcove playlist IDs are integer strings of varying lengths
-            // (e.g. 5822937673001 vs 1860563059155019833). Sorting them via
+            // (e.g. a 13-digit id vs a 16-digit one). Sorting them via
             // localeCompare gives lexicographic order, which puts shorter
             // (smaller) IDs after longer (larger) ones. Compare by length
             // first to get correct numeric order. JS Number can't safely
