@@ -38,8 +38,9 @@ async function token(c) {
   return res.json.access_token;
 }
 
-// Returns { accountId, create(name, fields), get(id), search(q), ingest(id, url), waitActive(id), del(id) }
-// bound to the env credentials.
+// Returns { accountId, create(name, fields), get(id), search(q), ingest(id, url), waitActive(id), del(id), ... }
+// bound to the env credentials. The extra lookups (tryGet, getByRef, sources, count, folders) and the
+// guarded deletes (delIfThrowaway, delFolderIfThrowaway) serve the publish-tier specs.
 async function cmsClient() {
   const c = creds();
   if (!c) throw new Error('BRIGHTCOVE_ACCOUNT_ID / BRIGHTCOVE_CLIENT_ID / BRIGHTCOVE_CLIENT_SECRET are not all set');
@@ -84,6 +85,57 @@ async function cmsClient() {
     async del(id) {
       const res = await call('DELETE', 'cms.api.brightcove.com', `${base}/${id}`, { headers: await auth() });
       if (res.status !== 204 && res.status !== 200 && res.status !== 404) throw new Error(`delete video failed (HTTP ${res.status})`);
+    },
+    // The video, or null on 404 (deleted / never existed). Other statuses throw.
+    // `id` may be `ref:<reference_id>`; ids and uuids need no escaping.
+    async tryGet(id) {
+      const res = await call('GET', 'cms.api.brightcove.com', `${base}/${id}`, { headers: await auth() });
+      if (res.status === 404) return null;
+      if (res.status !== 200) throw new Error(`get video failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+      return res.json;
+    },
+    // Lookup by reference_id (the connector defaults it to the DAM asset's jcr:uuid,
+    // BGS-1705). A direct GET, not a search, so it is not subject to index lag.
+    async getByRef(ref) {
+      return this.tryGet(`ref:${ref}`);
+    },
+    async sources(id) {
+      const res = await call('GET', 'cms.api.brightcove.com', `${base}/${id}/sources`, { headers: await auth() });
+      if (res.status !== 200) throw new Error(`get sources failed (HTTP ${res.status})`);
+      return res.json || [];
+    },
+    // Search-index count. ⚠️ Eventually consistent: a just-created video can be absent.
+    async count(q) {
+      const res = await call('GET', 'cms.api.brightcove.com', `/v1/accounts/${c.account}/counts/videos?q=${encodeURIComponent(q)}`, { headers: await auth() });
+      if (res.status !== 200) throw new Error(`count failed (HTTP ${res.status})`);
+      return res.json.count;
+    },
+    async folders() {
+      const res = await call('GET', 'cms.api.brightcove.com', `/v1/accounts/${c.account}/folders`, { headers: await auth() });
+      if (res.status !== 200) throw new Error(`list folders failed (HTTP ${res.status})`);
+      return res.json || [];
+    },
+    // Deletes only throwaway folders (name prefix), so a cleanup bug cannot remove a
+    // real one. Deleting a folder does not delete the videos in it.
+    async delFolderIfThrowaway(folder) {
+      if (!folder || !folder.id || !String(folder.name || '').startsWith('e2e-throwaway-')) return false;
+      const res = await call('DELETE', 'cms.api.brightcove.com', `/v1/accounts/${c.account}/folders/${folder.id}`, { headers: await auth() });
+      if (res.status !== 204 && res.status !== 200 && res.status !== 404) throw new Error(`delete folder failed (HTTP ${res.status})`);
+      return true;
+    },
+    // Re-reads the video and deletes it only when its CURRENT name carries the
+    // throwaway prefix, so an id that leaked from the wrong asset cannot remove a real
+    // video. Returns true when it deleted something.
+    async delIfThrowaway(id) {
+      if (!id) return false;
+      const v = await this.tryGet(id);
+      if (!v) return false;
+      if (!String(v.name || '').startsWith('e2e-throwaway-')) {
+        console.warn(`[cms] NOT deleting video ${id}: its name does not carry the throwaway prefix`);
+        return false;
+      }
+      await this.del(id);
+      return true;
     },
   };
 }
