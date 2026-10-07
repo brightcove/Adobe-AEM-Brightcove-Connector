@@ -38,7 +38,8 @@ async function token(c) {
   return res.json.access_token;
 }
 
-// Returns { accountId, create(name), get(id), del(id) } bound to the env credentials.
+// Returns { accountId, create(name, fields), get(id), search(q), ingest(id, url), waitActive(id), del(id) }
+// bound to the env credentials.
 async function cmsClient() {
   const c = creds();
   if (!c) throw new Error('BRIGHTCOVE_ACCOUNT_ID / BRIGHTCOVE_CLIENT_ID / BRIGHTCOVE_CLIENT_SECRET are not all set');
@@ -46,8 +47,9 @@ async function cmsClient() {
   const base = `/v1/accounts/${c.account}/videos`;
   return {
     accountId: c.account,
-    async create(name) {
-      const res = await call('POST', 'cms.api.brightcove.com', base, { headers: await auth(), body: JSON.stringify({ name }) });
+    // `fields` merges extra CMS video fields into the create body, e.g. { tags: ['x'] }.
+    async create(name, fields = {}) {
+      const res = await call('POST', 'cms.api.brightcove.com', base, { headers: await auth(), body: JSON.stringify({ ...fields, name }) });
       if (res.status !== 201 || !res.json || !res.json.id) throw new Error(`create video failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
       return String(res.json.id);
     },
@@ -55,6 +57,29 @@ async function cmsClient() {
       const res = await call('GET', 'cms.api.brightcove.com', `${base}/${id}`, { headers: await auth() });
       if (res.status !== 200) throw new Error(`get video failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
       return res.json;
+    },
+    // CMS video search (`q` is the CMS query syntax). Eventually consistent: a video
+    // created or tagged seconds ago may be missing, so poll when absence matters.
+    async search(q) {
+      const res = await call('GET', 'cms.api.brightcove.com', `${base}?q=${encodeURIComponent(q)}&limit=50`, { headers: await auth() });
+      if (res.status !== 200 || !Array.isArray(res.json)) throw new Error(`search videos failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+      return res.json;
+    },
+    // Dynamic Ingest of a public media URL, so the video can become state ACTIVE.
+    async ingest(id, url) {
+      const body = JSON.stringify({ master: { url }, capture_images: true });
+      const res = await call('POST', 'ingest.api.brightcove.com', `/v1/accounts/${c.account}/videos/${id}/ingest-requests`,
+        { headers: await auth(), body });
+      if (res.status !== 200 && res.status !== 201 && res.status !== 202) throw new Error(`ingest failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+    },
+    // Resolves true once the video reports state ACTIVE, false on timeout.
+    async waitActive(id, timeoutMs = 300_000) {
+      const end = Date.now() + timeoutMs;
+      while (Date.now() < end) {
+        if ((await this.get(id)).state === 'ACTIVE') return true;
+        await new Promise((r) => setTimeout(r, 5_000));
+      }
+      return false;
     },
     async del(id) {
       const res = await call('DELETE', 'cms.api.brightcove.com', `${base}/${id}`, { headers: await auth() });
