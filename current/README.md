@@ -36,6 +36,7 @@ The main parts of the template are:
 * ui.apps: contains the /apps (and /etc) parts of the project, ie JS&CSS clientlibs, components, and templates
 * ui.content: contains sample content using the components from the ui.apps
 * ui.config: contains runmode specific OSGi configs for the project
+* ui.content.onprem: on-prem build only (`-Daem.platform=onprem`): the Brightcove replication agent that syncs activated DAM assets to Video Cloud
 * ui.frontend: an optional dedicated front-end build mechanism (Angular, React or general Webpack project)
 * ui.tests: Selenium based UI tests
 * all: a single content package that embeds all of the compiled modules (bundles and content packages) including any vendor dependencies
@@ -60,6 +61,15 @@ Supply the configuration as a repo-deployed `.cfg.json` under `ui.config` (recom
 | `proxyServer` | Proxy Server | |
 | `damIntegrationPath` | DAM Integration Path | `/content/dam/brightcove_assets` |
 | `defaultIngestProfile` | Default Ingest Profile | |
+
+### DAM to Video Cloud sync on activation
+
+Default differs per line, as it always has (details: `docs/dam-sync-on-activation.md`):
+
+* **On-prem (`-prem` package): on by default.** The package installs the *Brightcove Replication Agent* at `/etc/replication/agents.author/brightcove` (enabled, transport `brightcove://`), so activating an asset under the DAM integration path creates or updates its Video Cloud video. An existing agent from an earlier install is left exactly as it is.
+* **AEM as a Cloud Service: opt-in.** Enable the DAM publish listener with an OSGi config for PID `com.coresecure.brightcove.wrapper.listeners.BrightcovePublishListener`, property `isEnabled` set to `true`, for example `ui.config/.../config.author/com.coresecure.brightcove.wrapper.listeners.BrightcovePublishListener.cfg.json` containing `{ "isEnabled": true }`.
+
+Do not enable both on one instance: each activation would then be pushed to Video Cloud twice.
 
 ### Migrating a configuration to AEM as a Cloud Service
 
