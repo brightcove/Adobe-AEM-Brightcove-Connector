@@ -140,6 +140,12 @@ public class Platform {
         return response;
     }
 
+    public HttpServices.PatchResponse patchAPIFull(String targetURL, String payload, Map<String, String> headers) {
+        String URL = getAPI_Url() + targetURL;
+        LOGGER.trace("patchAPI URL: " + URL);
+        return HttpServices.executePatchFull(URL, payload, headers);
+    }
+
     public String postDI_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
         LOGGER.trace("postDI_API: " + URL);

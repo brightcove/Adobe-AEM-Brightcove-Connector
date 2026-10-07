@@ -414,9 +414,29 @@ public class HttpServices {
         return context;
     }
 
+    /** A PATCH outcome: HTTP status (0 when no response was received), body, and any local failure. */
+    public static final class PatchResponse {
+        public final int status;
+        public final String body;
+        public final String failure;
+
+        public PatchResponse(int status, String body, String failure) {
+            this.status = status;
+            this.body = body;
+            this.failure = failure;
+        }
+    }
+
     public static String executePatch(String targetURL, String payload,
                                       Map<String, String> headers) {
+        return executePatchFull(targetURL, payload, headers).body;
+    }
+
+    public static PatchResponse executePatchFull(String targetURL, String payload,
+                                                 Map<String, String> headers) {
         LOGGER.debug("executePatch - START: " + targetURL);
+        int status = 0;
+        String failure = null;
         URL url;
         HttpsURLConnection connection = null;
         String exPatchResponse = null;
@@ -436,7 +456,7 @@ public class HttpServices {
             connection = getSSLConnection(url, targetURL);
             if (!configurePatchMethod(connection)) {
                 LOGGER.info("executePatch: PATCH unsupported with HttpURLConnection; switching to Apache HttpClient patch");
-                return executePatchUsingApacheHttpClient(targetURL, payload, headers);
+                return executePatchUsingApacheHttpClientFull(targetURL, payload, headers);
             }
 
             // PATCH configured using HttpsURLConnection path.
@@ -456,6 +476,7 @@ public class HttpServices {
             //            wr.writeBytes(payload);
 
             int responseCode = connection.getResponseCode();
+            status = responseCode;
             String responseMessage = connection.getResponseMessage();
             String allowHeader = connection.getHeaderField(Constants.ALLOW_HEADER);
             LOGGER.info("executePatch - response code: {} {}; Allow: {}", responseCode, responseMessage, allowHeader);
@@ -492,6 +513,7 @@ public class HttpServices {
 
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+            failure = e.getClass().getSimpleName() + ": " + e.getMessage();
 
         } finally {
 
@@ -518,7 +540,7 @@ public class HttpServices {
         }
 
         LOGGER.debug("executePatch - END");
-        return exPatchResponse;
+        return new PatchResponse(status, exPatchResponse, failure);
     }
 
     /**
@@ -536,6 +558,10 @@ public class HttpServices {
     }
 
     static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
+        return executePatchUsingApacheHttpClientFull(targetURL, payload, headers).body;
+    }
+
+    static PatchResponse executePatchUsingApacheHttpClientFull(String targetURL, String payload, Map<String, String> headers) throws IOException {
         LOGGER.debug("executePatchUsingApacheHttpClient - START: {}", targetURL);
         HttpClientBuilder builder = HttpClients.custom();
         if (PROXY != Proxy.NO_PROXY && PROXY.address() instanceof InetSocketAddress) {
@@ -575,7 +601,7 @@ public class HttpServices {
                 }
 
                 LOGGER.debug("executePatchUsingApacheHttpClient - END");
-                return body;
+                return new PatchResponse(responseCode, body, null);
             }
         }
     }

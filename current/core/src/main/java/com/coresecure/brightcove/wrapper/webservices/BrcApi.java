@@ -465,6 +465,10 @@ public class BrcApi extends SlingAllMethodsServlet {
             String[] labels = request.getParameterValues("labels");
             String videoId = request.getParameter("videoId");
             result = brAPI.cms.updateLabels(videoId, labels);
+        } else {
+            // An empty {} reads as success to the UI, so a malformed request must say so.
+            result.put("error_code", 400);
+            result.put("message", "videoId and labels are required");
         }
         return result;
     }

@@ -6,6 +6,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
 import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
@@ -347,28 +348,8 @@ public class CmsAPI {
                 }
                 request.set("labels", labelArray);
                 LOGGER.info("updateVideoParams: {}", JsonUtil.pretty(request));
-                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(request), headers);
-                if (response != null && !response.isEmpty()) {
-                    // Brightcove returns an object on success ({ ...video fields... })
-                    // and an array on validation failure
-                    // (e.g. [{"error_code":"VALIDATION_ERROR","message":"foo: ILLEGAL_VALUE"}]).
-                    // The old `(ObjectNode) readTree(...)` cast threw on the array form
-                    // and the exception was swallowed below, so the JS client received
-                    // an empty {} and falsely showed "Labels saved" while nothing
-                    // persisted.
-                    com.fasterxml.jackson.databind.JsonNode parsed = JsonReader.readJsonTree(response);
-                    if (parsed.isObject()) {
-                        json = (ObjectNode) parsed;
-                    } else if (parsed.isArray() && parsed.size() > 0) {
-                        com.fasterxml.jackson.databind.JsonNode first = parsed.get(0);
-                        json.put("error_code", 422);
-                        if (first.has("message")) {
-                            json.put("message", first.get("message").asText());
-                        } else if (first.has("error_code")) {
-                            json.put("message", first.get("error_code").asText());
-                        }
-                    }
-                }
+                HttpServices.PatchResponse patch = account.platform.patchAPIFull(targetURL, JsonUtil.pretty(request), headers);
+                json = toUpdateResult(patch);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
                 json.put("error_code", 500);
@@ -377,6 +358,64 @@ public class CmsAPI {
         } else {
             json.put("error_code", 401);
             json.put("message", "No auth token");
+        }
+        return json;
+    }
+
+    /**
+     * Maps a CMS PATCH outcome to the shape the admin UI reads: the updated video object on
+     * success, otherwise {@code {"error_code", "message"}}. The UI treats any response without
+     * {@code error_code} as saved, so every failure must carry one: no response at all (refused,
+     * proxy denied, timeout) is 502, an HTTP error keeps the CMS's own code and message when it
+     * sent them, and the HTTP status otherwise.
+     */
+    static ObjectNode toUpdateResult(HttpServices.PatchResponse patch) throws IOException {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        boolean httpError = patch.status >= 400;
+        String body = patch.body;
+        if (body == null || body.trim().isEmpty()) {
+            if (httpError) {
+                json.put("error_code", patch.status);
+                json.put("message", "Brightcove returned HTTP " + patch.status);
+            } else if (patch.status == 0) {
+                json.put("error_code", 502);
+                json.put("message", "No response from Brightcove"
+                        + (patch.failure != null ? " (" + patch.failure + ")" : ""));
+            }
+            return json;
+        }
+        com.fasterxml.jackson.databind.JsonNode parsed;
+        try {
+            parsed = JsonReader.readJsonTree(body);
+        } catch (Exception notJson) {
+            json.put("error_code", httpError ? patch.status : 502);
+            json.put("message", "Unreadable response from Brightcove");
+            return json;
+        }
+        com.fasterxml.jackson.databind.JsonNode first = parsed.isArray() && parsed.size() > 0 ? parsed.get(0) : parsed;
+        if (first != null && first.isObject()) {
+            boolean cmsError = first.has("error_code") && !first.get("error_code").isNull();
+            if (cmsError || httpError || parsed.isArray()) {
+                // CMS's own code and message when it returns one; HTTP status (422 for a
+                // bare validation array with no status) otherwise.
+                int fallbackStatus = httpError ? patch.status : 422;
+                if (cmsError) {
+                    json.put("error_code", first.get("error_code").asText());
+                } else {
+                    json.put("error_code", fallbackStatus);
+                }
+                json.put("message", first.has("message") ? first.get("message").asText()
+                        : "Brightcove returned HTTP " + fallbackStatus);
+                if (cmsError && httpError) {
+                    json.put("status", patch.status);
+                }
+                return json;
+            }
+            return (ObjectNode) first;
+        }
+        if (httpError) {
+            json.put("error_code", patch.status);
+            json.put("message", "Brightcove returned HTTP " + patch.status);
         }
         return json;
     }
