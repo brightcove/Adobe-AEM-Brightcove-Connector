@@ -167,6 +167,30 @@ class BrcReplicationHandlerFolderSyncTest {
         }
     }
 
+    /**
+     * Matrix row 32 on the agent path, measured live 2026-10-07: an asset in a DAM
+     * subfolder that has NEVER been synced (no brc_folder_id) resolved to the subfolder's
+     * name, and replication skipped it as "Account not existing" before any folder could
+     * be created. Resolution is now by path, like the listener and the workflow step.
+     */
+    @Test
+    void unsyncedAndNestedSubfoldersResolveToTheAccountByPath() throws Exception {
+        try {
+            FolderSyncUtilSeam.configureAccount("12345", "/content/dam/brightcove_assets");
+            context.create().resource(ACCOUNT_FOLDER + "/never-synced", "jcr:primaryType", "sling:OrderedFolder");
+            context.create().resource(ACCOUNT_FOLDER + "/never-synced/deeper", "jcr:primaryType", "sling:OrderedFolder");
+            context.resourceResolver().commit();
+
+            assertEquals("12345", BrcReplicationHandler.accountIdFor(resource(ACCOUNT_FOLDER + "/never-synced")),
+                    "an unsynced subfolder's name is not an account id");
+            assertEquals("12345", BrcReplicationHandler.accountIdFor(resource(ACCOUNT_FOLDER + "/never-synced/deeper")));
+            assertEquals("12345", BrcReplicationHandler.accountIdFor(resource(SUBFOLDER)));
+            assertEquals("12345", BrcReplicationHandler.accountIdFor(resource(ACCOUNT_FOLDER)));
+        } finally {
+            FolderSyncUtilSeam.reset();
+        }
+    }
+
     private Asset asset(String path) {
         return context.resourceResolver().getResource(path).adaptTo(Asset.class);
     }

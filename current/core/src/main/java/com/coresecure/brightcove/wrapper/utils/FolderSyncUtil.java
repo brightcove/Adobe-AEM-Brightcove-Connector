@@ -280,14 +280,20 @@ public final class FolderSyncUtil {
     }
 
     /**
-     * The account folder an asset belongs to, walking up past a synced subfolder.
+     * The account an asset belongs to, from the asset's parent folder.
      *
      * <p>Assets used to live directly under {@code <integrationPath>/<accountId>}, so the
      * account id was just the parent's name. With subfolder sync the parent can be a
-     * Brightcove subfolder instead, and reading its name yields a folder id where an
-     * account id is expected: the account lookup then misses and the publish is skipped
-     * with "Account not existing". A synced subfolder is identified by carrying
-     * {@code brc_folder_id}.</p>
+     * subfolder at any depth, synced or not, and reading its name yields a folder name
+     * where an account id is expected: the account lookup then misses and the publish is
+     * skipped with "Account not existing" (matrix row 32, measured on the agent path).</p>
+     *
+     * <p>So the account is resolved from the PATH, the way the publish listener and the
+     * workflow step do: the configured account whose {@code <integrationPath>/<accountId>}
+     * is the folder or one of its ancestors. That covers unsynced, nested and poisoned
+     * (Trap 4) folders alike. Only when no configuration can be read does it fall back to
+     * walking up past folders that carry {@code brc_folder_id}.
+     * Context: current/docs/core-folder-sync.md "Trap 3"</p>
      *
      * @param parentNode the asset's parent node
      * @return the account folder name, or null when it cannot be determined
@@ -297,17 +303,53 @@ public final class FolderSyncUtil {
             return null;
         }
         try {
-            // ⚠️ A poisoned account root carries brc_folder_id too (see syncFolder);
-            // walking up from it yields the integration folder's name and the agent path
-            // skips the asset as "Account not existing". Unknown keeps the walk.
-            if (parentNode.hasProperty(BRC_FOLDER_ID)
-                    && !Boolean.TRUE.equals(isAccountRoot(parentNode))) {
-                return parentNode.getParent().getName();
+            String byPath = accountIdByPath(parentNode.getPath());
+            if (byPath != null) {
+                return byPath;
             }
-            return parentNode.getName();
+            // No configuration (or a folder outside every account root): walk up past
+            // synced subfolders. ⚠️ Stops at a recognised account root even if it carries
+            // brc_folder_id (Trap 4).
+            Node n = parentNode;
+            while (n.hasProperty(BRC_FOLDER_ID) && n.getDepth() > 1
+                    && !Boolean.TRUE.equals(isAccountRoot(n))) {
+                n = n.getParent();
+            }
+            return n.getName();
         } catch (Exception e) {
             LOG.error("Could not resolve the account folder for the asset's parent", e);
             return null;
         }
+    }
+
+    /**
+     * The configured account whose root folder is {@code folderPath} or an ancestor of
+     * it, or null when none matches or the configuration cannot be read.
+     */
+    static String accountIdByPath(String folderPath) {
+        ConfigurationGrabber cg;
+        try {
+            cg = configurationSource.get();
+        } catch (Exception | LinkageError e) {
+            LOG.debug("Configuration grabber unavailable", e);
+            return null;
+        }
+        if (cg == null || folderPath == null) {
+            return null;
+        }
+        for (String accountId : cg.getAvailableServices()) {
+            ConfigurationService cs = cg.getConfigurationService(accountId);
+            if (cs == null || cs.getAssetIntegrationPath() == null) {
+                continue;
+            }
+            String integrationPath = cs.getAssetIntegrationPath();
+            String root = (integrationPath.endsWith("/")
+                    ? integrationPath.substring(0, integrationPath.length() - 1)
+                    : integrationPath) + "/" + accountId;
+            if (folderPath.equals(root) || folderPath.startsWith(root + "/")) {
+                return accountId;
+            }
+        }
+        return null;
     }
 }

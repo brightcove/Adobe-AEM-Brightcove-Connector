@@ -72,11 +72,18 @@ null id. Keep `keepChanges = true`.
 ## Trap 3: the account id is not always the parent's name
 
 `BrcReplicationHandler.replicateAssets` derives the account from the asset's parent. With
-subfolder sync the parent can be a Brightcove subfolder, so the parent's name is a
-Brightcove folder id, the account lookup misses, and replication bails out with
-"Account not existing". `FolderSyncUtil.resolveAccountId` walks up one level when the
-parent carries `brc_folder_id`. The seam `BrcReplicationHandler.accountIdFor(Resource)`
-exists so the behaviour is testable without standing up a replication agent.
+subfolder sync the parent can be a subfolder at any depth, synced or not, and its name is
+then a folder name where an account id is expected: the account lookup misses and
+replication bails out with "Account not existing" before any folder can be created
+(matrix row 32, measured live on the agent path 2026-10-07 for a never-synced subfolder).
+
+`FolderSyncUtil.resolveAccountId` now resolves by PATH, as the listener and the workflow
+step do: the configured account whose `<integrationPath>/<accountId>` is the folder or an
+ancestor. That covers unsynced, nested and poisoned (Trap 4) folders. Only when no
+configuration can be read does it fall back to walking up while the folder carries
+`brc_folder_id` (stopping at a recognised account root). The seam
+`BrcReplicationHandler.accountIdFor(Resource)` exists so the behaviour is testable without
+standing up a replication agent.
 
 ## Trap 4: a poisoned account root (fixed, self-repairing)
 
@@ -114,7 +121,12 @@ JCR_MOCK for real JCR semantics, mocked `ServiceUtil` as the Brightcove boundary
 1. a new subfoldered video is moved into its Brightcove folder and no folder is created
 2. the same on the modified/update path
 3. `accountIdFor` walks up past a synced subfolder, and returns the folder's own name at
-   the account root
+   the account root (no configuration: the fallback walk); with configuration, unsynced
+   and nested subfolders resolve to the account by path
+   (`unsyncedAndNestedSubfoldersResolveToTheAccountByPath`), and
+   `FolderSyncUtilNestedSubfolderTest` (was a disabled red pin) covers two synced levels on
+   the fallback. Reverting the path resolution turns both red
+   (2026-10-07, matrix row 32).
 4. an unsynced parent creates nothing while the account-root question is unanswerable
 
 Measured 2026-09-17: reverting all three port points turns 1, 2 and 3 red and leaves 4
@@ -132,7 +144,9 @@ real-subfolder and UNKNOWN controls stay green. Live, cloud author, 2026-10-07: 
 root-level activation on the poisoned root left the video in no folder and removed the
 property (`tests/parity/matrix.md` row 31).
 
-**Not measured:** a live subfoldered activation through a real replication agent against
-the Brightcove account. That needs a DAM subfolder synced to a real Brightcove folder and
-an asset activated through `/etc/replication/agents.author/brightcove`, which mutates the
-live account. Status: `not measured`, not "works".
+Live through the real replication agent, 2026-10-07, 6.5 LTS author with the on-prem
+`/home` read grant: an asset in a never-synced DAM subfolder got a Video Cloud folder
+named after the DAM folder, the id written back, and the video moved in; a DAM move plus
+re-activation moved it to the new folder (`tests/e2e/specs/dam-publish-tier.spec.js`
+rows 32 and move, `tests/parity/matrix.md` rows 32 and 44). Still not measured live:
+nested subfolders (two synced levels) through the agent.

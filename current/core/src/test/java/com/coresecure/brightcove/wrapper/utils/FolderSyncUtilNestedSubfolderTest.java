@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import javax.jcr.Node;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -12,19 +11,16 @@ import io.wcm.testing.mock.aem.junit5.AemContext;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;
 
 /**
- * 🔴 Defect pin, row 32 (BGS-1600 folder sync) on the classic replication-agent path.
+ * Row 32 (BGS-1600 folder sync) on the classic replication-agent path: nested synced DAM
+ * folders, with NO account configuration readable (the fallback branch of
+ * {@link FolderSyncUtil#resolveAccountId}).
  *
- * <p>{@link FolderSyncUtil#resolveAccountId} walks up exactly ONE level past a synced
- * subfolder. Video Cloud folders are flat, but DAM folders nest, and every DAM folder
- * an asset is published from becomes a synced folder (it gets brc_folder_id). For an
- * asset at {@code <account>/A/B/x.mp4} with A and B both synced, the walk stops at A
- * and returns "A" as the account id. {@code BrcReplicationHandler.replicateAssets}
- * then finds no configuration for "A", logs "Account not existing" and returns OK, so
- * the asset is silently never pushed. BrightcovePublishListener and the workflow step
- * are not affected: they match the payload path against damIntegrationPath instead.</p>
- *
- * <p>Disabled because it fails on the current code (verified red when written). Enable
- * it with the fix, e.g. walking up until the parent no longer carries brc_folder_id.
+ * <p>For an asset at {@code <account>/A/B/x.mp4} with A and B both synced, the old walk
+ * stopped one level up and returned "A" as the account id, so
+ * {@code BrcReplicationHandler.replicateAssets} logged "Account not existing" and the
+ * asset was silently never pushed. With configuration the account is resolved by path
+ * (BrcReplicationHandlerFolderSyncTest); without it the walk now continues while the
+ * folder carries brc_folder_id. Was a disabled red pin; enabled with the fix.
  * Context: current/docs/core-folder-sync.md "Trap 3".</p>
  */
 @ExtendWith(AemContextExtension.class)
@@ -33,7 +29,6 @@ class FolderSyncUtilNestedSubfolderTest {
     private final AemContext context =
             new AemContext(org.apache.sling.testing.mock.sling.ResourceResolverType.JCR_MOCK);
 
-    @Disabled("defect: resolveAccountId stops one level up; nested synced DAM folders resolve to the outer folder name")
     @Test
     void assetTwoSyncedFoldersDeepResolvesToTheAccountFolder() throws Exception {
         String account = "/content/dam/brightcove_assets/12345";
