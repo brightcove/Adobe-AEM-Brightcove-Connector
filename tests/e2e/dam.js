@@ -203,6 +203,9 @@ async function moveNode(request, from, toParent) {
 // Delete a throwaway node on the author. Never deletes anything without the prefix.
 async function deleteNode(request, nodePath) {
   if (!nodePath || !path.posix.basename(nodePath).startsWith(PREFIX)) return;
+  // Sling answers 403, not 404, to a delete of a path that is already gone (moved or
+  // removed by the step under test), so only delete what is there.
+  if ((await request.get(`${nodePath}.json`)).status() === 404) return;
   const res = await slingPost(request, nodePath, { ':operation': 'delete' });
   if (res.status() >= 300 && res.status() !== 404) console.warn(`[dam] delete ${nodePath}: HTTP ${res.status()}`);
 }
@@ -247,9 +250,13 @@ async function waitOnPublish(pub, nodePath, { timeout = 90_000 } = {}) {
 // fires the connector's deactivate path on the author.
 async function deleteOnPublish(pub, nodePath) {
   if (!pub || !nodePath || !path.posix.basename(nodePath).startsWith(PREFIX)) return;
+  if ((await pub.get(`${nodePath}.json`)).status() === 404) return;
+  // Granite's CSRF filter guards publish too: a Referer alone gets 403 (measured :4703).
+  const tok = await pub.get('/libs/granite/csrf/token.json');
+  const token = tok.ok() ? (await tok.json()).token : '';
   const r = await pub.post(nodePath, {
     form: { ':operation': 'delete' },
-    headers: { Referer: `${AEM_PUBLISH_URL}/` },
+    headers: { Referer: `${AEM_PUBLISH_URL}/`, 'CSRF-Token': token },
   });
   if (r.status() >= 300 && r.status() !== 404) console.warn(`[dam] publish delete ${nodePath}: HTTP ${r.status()}`);
 }
