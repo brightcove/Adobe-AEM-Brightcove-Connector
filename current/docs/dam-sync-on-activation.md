@@ -64,6 +64,12 @@ The agent path authorizes the **replicating user**, not the service user:
 group in the account's `allowedGroups`. `memberOf()` returns declared (and inherited)
 memberships only; it **never** includes the dynamic `everyone` group. So:
 
+⚠️ Contradicted on an upgraded 6.5 LTS bed, 2026-10-07: with `allowed_groups=[everyone]` only
+and `admin` in no declared group, an agent-path activation was authorized and synced
+(`onprem-upgrade-6.0-to-7.md`, "Upgrade measured on AEM 6.5 LTS"). That bed still carries
+the 6.0.x root grant, so the cause may be what `brightcove_admin` can read rather than
+`memberOf()` itself. Unresolved; until a fresh install is measured, keep naming a declared group.
+
 - `allowedGroups=[everyone]` can never authorize anyone on this path, even `admin`.
 - ⚠️ It fails silently: `Not authorized` at DEBUG, and the handler returns
   `ReplicationResult.OK`, so the activation succeeds and the asset never reaches Video
@@ -87,6 +93,8 @@ The `-prem` package therefore ships a second repoinit factory config,
 - It replaces what 6.0.12-prem got from `ui.apps` `jcr_root/_rep_policy.xml` (the policy
   on `/`), which granted `brightcove_admin` read, `rep:write`, replicate, version, lock and
   access-control rights on the whole repository (and so on `/home`). That was far wider than the check needs; this is read on two subtrees only.
+  ⚠️ On a FRESH install only. An in-place upgrade keeps the 6.0.x root entry: nothing in
+  7.x owns `/rep:policy` (`onprem-upgrade-6.0-to-7.md`).
 - On-prem only: the cloud artifact never embeds `ui.config.onprem` (AEMaaCS has no
   `brightcove://` agent, and the listener does no group check).
 - ⚠️ Its own filter root `/apps/brightcove-onprem`, not `/apps/brightcove/osgiconfig`:
