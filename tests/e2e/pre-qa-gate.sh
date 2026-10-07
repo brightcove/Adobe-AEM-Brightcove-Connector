@@ -155,7 +155,7 @@ if [ "$DRY_RUN" = "1" ]; then
     url=$(url_for "$p")
     port=$(port_of "$url")
     mflag=$(maven_platform_flag_for "$p")
-    out="$ROOT/tests/parity/runs/$RUN_DATE/gate-$p-<pomversion>.json"
+    out="$ROOT/tests/parity/runs/$RUN_DATE/gate-$p-$port-<pomversion>.json"
     echo
     echo "  [$p]"
     echo "    url:          $url"
@@ -322,7 +322,7 @@ for c in data:
   [ -x "$PW" ] || fail "playwright not installed (cd tests/e2e && npm install && node_modules/.bin/playwright install chromium)"
   out_dir="$ROOT/tests/parity/runs/$RUN_DATE"
   mkdir -p "$out_dir"
-  out_json="$out_dir/gate-$platform-$ver_local.json"
+  out_json="$out_dir/gate-$platform-$port-$ver_local.json"
   ( cd "$ROOT/tests/e2e" && AEM_BASE="$url" PLAYWRIGHT_JSON_OUTPUT_NAME="$out_json" "$PW" test --project=chromium --reporter=list,json ) \
     || fail "e2e specs ($platform); report: $out_json"
   echo "   e2e report: $out_json"

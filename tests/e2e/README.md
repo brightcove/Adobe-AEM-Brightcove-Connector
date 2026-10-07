@@ -132,6 +132,7 @@ Each spec's header records the trigger it drives, read from the code.
 `pre-qa-gate.sh` runs version-bump, build+install, deployed-bundle, and
 content-package checks, then this suite, before a ticket goes to Ready for QA.
 It gates cloud (`:4502`), on-prem (`:4602`), or both, and defaults to probing
-both instances. See `./pre-qa-gate.sh --help`; details in
+both instances. The JSON report is `tests/parity/runs/<date>/gate-<platform>-<port>-<version>.json`,
+so runs against different instances do not overwrite each other. See `./pre-qa-gate.sh --help`; details in
 `wiki/api/aem-connector-local-dev.md` → "Pre-QA gate" and
 `ONPREM-PARITY-PLAN.md` §3 Phase 1.
