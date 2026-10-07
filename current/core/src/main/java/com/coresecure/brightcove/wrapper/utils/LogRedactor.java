@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
  * {@code password}, in JSON or form encoding. Nothing is hashed or truncated, so a log line can
  * never be used to recover part of a credential.</p>
  */
+// Context: docs/credential-logging.md (rules, what is pinned, what is deliberately not redacted)
 public final class LogRedactor {
 
     private static final Pattern SENSITIVE_HEADER =
