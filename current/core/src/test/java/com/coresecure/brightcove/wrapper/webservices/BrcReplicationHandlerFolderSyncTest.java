@@ -1,6 +1,7 @@
 package com.coresecure.brightcove.wrapper.webservices;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -13,6 +14,8 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
+import javax.jcr.Node;
+
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.Resource;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +26,7 @@ import com.coresecure.brightcove.wrapper.objects.Video;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.FolderSyncUtil;
+import com.coresecure.brightcove.wrapper.utils.FolderSyncUtilSeam;
 import com.day.cq.dam.api.Asset;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -133,6 +137,34 @@ class BrcReplicationHandlerFolderSyncTest {
 
         verify(serviceUtil, never()).createFolder(anyString());
         verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
+    }
+
+    /**
+     * An account root poisoned by the pre-guard bug (brc_folder_id pointing at a Video
+     * Cloud folder named after the account). On this path it did double damage: the
+     * account lookup walked up past the root and skipped the asset, and folder sync
+     * would have filed the video into that folder. Context: core-folder-sync.md "Trap 4".
+     */
+    @Test
+    void poisonedAccountRootResolvesItsAccountAndGivesNoFolder() throws Exception {
+        try {
+            FolderSyncUtilSeam.configureAccount("12345", "/content/dam/brightcove_assets");
+            Node root = resource(ACCOUNT_FOLDER).adaptTo(Node.class);
+            root.setProperty(FolderSyncUtil.BRC_FOLDER_ID, "bc-folder-named-after-account");
+            root.getSession().save();
+
+            assertEquals("12345", BrcReplicationHandler.accountIdFor(resource(ACCOUNT_FOLDER)));
+
+            handler.activateModified(asset(ROOT_LEVEL_ASSET), serviceUtil, new Video("root-level.mp4"),
+                    metadata(ROOT_LEVEL_ASSET));
+
+            verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
+            verify(serviceUtil, never()).createFolder(anyString());
+            assertFalse(resource(ACCOUNT_FOLDER).adaptTo(Node.class).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
+                    "the stale brc_folder_id must be removed from the account root");
+        } finally {
+            FolderSyncUtilSeam.reset();
+        }
     }
 
     private Asset asset(String path) {

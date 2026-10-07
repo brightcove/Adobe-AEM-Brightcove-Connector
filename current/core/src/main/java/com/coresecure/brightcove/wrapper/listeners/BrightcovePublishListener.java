@@ -127,7 +127,9 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
+    // Package-private (not private) so BrightcovePublishListenerFolderSyncTest can drive
+    // the update path with a mocked ServiceUtil; activateAsset builds its own.
+    void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
             ModifiableValueMap brc_lastsync_map) {
 
         LOG.info("Entering activateModified()");

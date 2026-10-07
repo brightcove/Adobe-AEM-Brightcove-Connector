@@ -39,7 +39,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.Node;
+import javax.jcr.RepositoryException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Keeps a DAM asset's Brightcove folder in step with the DAM folder it lives in.
@@ -75,6 +77,15 @@ public final class FolderSyncUtil {
      */
     public static final long NO_RETRY_DELAY = 0L;
 
+    /**
+     * Where the account configuration comes from. Package-private test seam only: in
+     * production it is always {@link ServiceUtil#getConfigurationGrabber()}, which needs
+     * an OSGi container. Tests outside this package set it through
+     * {@code FolderSyncUtilSeam} (test sources) and must reset it afterwards.
+     */
+    static volatile Supplier<ConfigurationGrabber> configurationSource =
+            ServiceUtil::getConfigurationGrabber;
+
     private FolderSyncUtil() {
     }
 
@@ -97,11 +108,18 @@ public final class FolderSyncUtil {
             Node parentNode = assetNode.getParent();
             LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: {}", parentNode.getPath());
 
-            // Already-synced subfolder: just move the video. No account-root check is
-            // needed on this branch, because an account root never carries
-            // brc_folder_id, and moving into a folder that already exists cannot
-            // create a spurious one.
+            // Already-synced subfolder: just move the video. ⚠️ An account root CAN carry
+            // brc_folder_id: the pre-guard bug wrote one pointing at a Video Cloud folder
+            // named after the account, and checking this branch first then filed every
+            // root-level video into that folder forever. The account root means "no
+            // folder", so a stored id there is ignored and removed (self-repair). Only
+            // TRUE does that: unknown keeps the move, which cannot create a folder.
+            // Context: current/docs/core-folder-sync.md "Trap 4"
             if (parentNode.hasProperty(BRC_FOLDER_ID)) {
+                if (Boolean.TRUE.equals(isAccountRoot(parentNode))) {
+                    repairPoisonedAccountRoot(parentNode);
+                    return;
+                }
                 moveToKnownFolder(serviceUtil, parentNode, videoId);
                 return;
             }
@@ -171,7 +189,7 @@ public final class FolderSyncUtil {
     static Boolean isAccountRoot(Node parentNode) throws Exception {
         ConfigurationGrabber cg;
         try {
-            cg = ServiceUtil.getConfigurationGrabber();
+            cg = configurationSource.get();
         } catch (Exception | LinkageError e) {
             LOG.debug("Configuration grabber unavailable", e);
             return null;
@@ -198,6 +216,48 @@ public final class FolderSyncUtil {
             }
         }
         return false;
+    }
+
+    /**
+     * Drop a {@code brc_folder_id} stored on an account root. The Video Cloud folder it
+     * names is deliberately left alone: a customer may have filed videos in it.
+     *
+     * <p>⚠️ If the remove cannot be saved (e.g. the service user may not write the
+     * root), the stored value is put back before returning, because the caller commits
+     * the BGS-1705 sync marker on this same session afterwards and a pending remove it
+     * is not allowed to persist would fail that commit too. Do not "fix" that with
+     * {@code refresh(false)}: it is session-wide (Trap 2). A failed repair still ignores
+     * the id and is retried on the next activation.</p>
+     */
+    private static void repairPoisonedAccountRoot(Node root) {
+        String path = null;
+        String stale = null;
+        try {
+            path = root.getPath();
+            stale = root.getProperty(BRC_FOLDER_ID).getString();
+            LOG.warn("Account root {} carries a stale brc_folder_id={} (written before the "
+                    + "account-root guard existed). Ignoring it, so the video stays out of any "
+                    + "folder, and removing the property. The Video Cloud folder is NOT deleted.",
+                    path, stale);
+            root.getProperty(BRC_FOLDER_ID).remove();
+            root.getSession().save();
+        } catch (RepositoryException | RuntimeException e) {
+            LOG.warn("Could not remove the stale brc_folder_id from {}; it stays ignored", path, e);
+            restore(root, stale);
+        }
+    }
+
+    private static void restore(Node root, String stale) {
+        if (stale == null) {
+            return;
+        }
+        try {
+            if (!root.hasProperty(BRC_FOLDER_ID)) {
+                root.setProperty(BRC_FOLDER_ID, stale);
+            }
+        } catch (RepositoryException e) {
+            LOG.error("Could not restore the pending brc_folder_id after a failed repair", e);
+        }
     }
 
     private static boolean isUsable(String folderId) {
@@ -237,7 +297,11 @@ public final class FolderSyncUtil {
             return null;
         }
         try {
-            if (parentNode.hasProperty(BRC_FOLDER_ID)) {
+            // ⚠️ A poisoned account root carries brc_folder_id too (see syncFolder);
+            // walking up from it yields the integration folder's name and the agent path
+            // skips the asset as "Account not existing". Unknown keeps the walk.
+            if (parentNode.hasProperty(BRC_FOLDER_ID)
+                    && !Boolean.TRUE.equals(isAccountRoot(parentNode))) {
                 return parentNode.getParent().getName();
             }
             return parentNode.getName();

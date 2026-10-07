@@ -55,10 +55,10 @@ that this is not an account root, and acting on that claim when nothing verified
 exactly how the spurious folder gets created. `FolderSyncUtilTest` pins the `null`.
 
 The check order also matters, and it was changed when the helper was extracted: the
-already-synced-subfolder branch (`brc_folder_id` present) now runs **first**, before the
-account-root question is asked. An account root never carries `brc_folder_id`, and moving
-a video into a folder that already exists cannot create a spurious one, so that branch
-does not need the guard and no longer depends on OSGi being reachable.
+already-synced-subfolder branch (`brc_folder_id` present) runs **first**. Moving a video
+into a folder that already exists cannot create a spurious one, so on that branch an
+UNKNOWN answer still moves. But the assumption that "an account root never carries
+`brc_folder_id`" is false on instances the pre-guard bug hit: see Trap 4.
 
 ## Trap 2: `refresh(true)`, not `refresh(false)`
 
@@ -78,6 +78,34 @@ Brightcove folder id, the account lookup misses, and replication bails out with
 parent carries `brc_folder_id`. The seam `BrcReplicationHandler.accountIdFor(Resource)`
 exists so the behaviour is testable without standing up a replication agent.
 
+## Trap 4: a poisoned account root (fixed, self-repairing)
+
+Before the guard existed, the bug in Trap 1 ran to completion on some instances: it
+created the Video Cloud folder named after the account AND wrote its id to the account
+root's `brc_folder_id`. The guard only stops NEW folders. With the brc_folder_id branch
+first, such a root looked like a synced subfolder, and every root-level activation filed
+its video into that folder, indefinitely. On the agent path it did double damage:
+`resolveAccountId` walked up past the root and the asset was skipped as "Account not
+existing".
+
+The rule: **the account root means "no folder"**. When `brc_folder_id` is present and
+`isAccountRoot` says TRUE:
+
+- the stored id is ignored (no move, no create);
+- the property is removed from the root and saved, with a WARN naming the path and the
+  stale id;
+- ⚠️ the Video Cloud folder is **not** deleted or emptied: a customer may have filed
+  videos in it on purpose;
+- `resolveAccountId` returns the root's own name.
+
+⚠️ If the save fails (e.g. the service user cannot write the root), the property is put
+back in the session before returning: the caller commits the BGS-1705 marker on the same
+session, and a pending remove it may not persist would fail that commit. The id stays
+ignored either way. Do not use `refresh(false)` to drop it (Trap 2).
+
+Three states still hold: only TRUE repairs. UNKNOWN (no OSGi) keeps the id and moves,
+which can never create a folder; FALSE is a real subfolder.
+
 ## How it is proved
 
 `core/src/test/java/.../webservices/BrcReplicationHandlerFolderSyncTest.java` (AEM mocks,
@@ -93,6 +121,16 @@ Measured 2026-09-17: reverting all three port points turns 1, 2 and 3 red and le
 green, so the first three discriminate the port and the fourth is the standing guard
 against the three-state collapse. The pre-existing BGS-1705 test still passes, which is
 what covers the `syncFolder` extraction as a refactor rather than a rewrite.
+
+Trap 4 (`utils/FolderSyncUtilPoisonedRootTest` plus one poisoned-root test per caller:
+`BrcReplicationHandlerFolderSyncTest`, `workflow/BrightcoveSyncAssetWorkflowStepFolderSyncTest`,
+`listeners/BrightcovePublishListenerFolderSyncTest`). The account-root answer comes from
+the test seam `FolderSyncUtil.configurationSource`, set through `FolderSyncUtilSeam` in
+test sources; tests must reset it. Reverting the two Trap 4 checks turns the poisoned-root
+test of every caller and of the helper red, plus the `resolveAccountId` one; the
+real-subfolder and UNKNOWN controls stay green. Live, cloud author, 2026-10-07: a
+root-level activation on the poisoned root left the video in no folder and removed the
+property (`tests/parity/matrix.md` row 31).
 
 **Not measured:** a live subfoldered activation through a real replication agent against
 the Brightcove account. That needs a DAM subfolder synced to a real Brightcove folder and
