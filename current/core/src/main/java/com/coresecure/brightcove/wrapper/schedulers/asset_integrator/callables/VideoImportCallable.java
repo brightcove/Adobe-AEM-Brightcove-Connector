@@ -106,7 +106,11 @@ public class VideoImportCallable implements Callable<String> {
 
         BinaryObj binaryRes = null;
 
-        if (HttpServices.isLocalPath(thumbnail_src)) //HAS LOCAL THUMB PATH
+        if (Constants.DEFAULT_THUMBNAIL_LOCATION.equals(thumbnail_src)) {
+            // CmsAPI.addThumbnail sets the /apps placeholder path for videos without images.thumbnail.
+            LOGGER.trace("->>Video {} has no thumbnail, using the bundled placeholder", id);
+            binaryRes = defaultThumbnailBinary();
+        } else if (HttpServices.isLocalPath(thumbnail_src)) //HAS LOCAL THUMB PATH
         {
             //IF THE THUMBNAIL SOURCE IST /CONTENT/DAM/ IT IS LOCAL - IF LOCAL >>
             LOGGER.trace("->>Pulling local image as this video's thumbnail image binary");
@@ -123,12 +127,13 @@ public class VideoImportCallable implements Callable<String> {
             binary = binaryRes.binary;
             mime_type = binaryRes.mime_type;
         } else {
-            binaryRes = com.coresecure.brightcove.wrapper.utils.JcrUtil.getLocalBinary(resourceResolver, "/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/noThumbnail.jpg", mType);
+            binaryRes = defaultThumbnailBinary();
             if (binaryRes.binary != null) {
                 binary = binaryRes.binary;
                 mime_type = binaryRes.mime_type;
             } else {
-                LOGGER.trace("FAIL EXTERNAL");
+                LOGGER.warn("Skipping import of video {}: no thumbnail binary from [{}] and the bundled placeholder {} is missing",
+                        id, thumbnail_src, Constants.DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE);
                 return null;
             }
         }
@@ -136,9 +141,15 @@ public class VideoImportCallable implements Callable<String> {
         //CALL ASSET MANAGER
         AssetManager assetManager = resourceResolver.adaptTo(AssetManager.class);
         if (assetManager == null) {
+            LOGGER.warn("Skipping import of video {}: service resolver did not adapt to AssetManager", id);
             return null;
         }
-        BufferedImage image = ImageIO.read(binary);
+        BufferedImage image;
+        try {
+            image = ImageIO.read(binary);
+        } finally {
+            binary.close();
+        }
         if (image == null) {
             LOGGER.warn("ImageIO.read returned null for thumbnail of video {} — skipping asset creation", id);
             return null;
@@ -201,6 +212,17 @@ public class VideoImportCallable implements Callable<String> {
         //SAVE CHANGES
         resourceResolver.commit();
         return newAsset;
+    }
+
+    /**
+     * The no-thumbnail placeholder, read from the bundle rather than JCR.
+     * ⚠️ Do not switch this back to JcrUtil.getLocalBinary(DEFAULT_THUMBNAIL_LOCATION): the import runs as
+     * brightcove_admin, which repoinit grants on /content only, so the /apps read returns nothing and every
+     * thumbnail-less video is skipped. Pinned by VideoImportCallableThumbnaillessVideoTest.
+     */
+    static BinaryObj defaultThumbnailBinary() {
+        InputStream in = VideoImportCallable.class.getResourceAsStream(Constants.DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE);
+        return in != null ? new BinaryObj(in, "image/jpeg") : new BinaryObj();
     }
 
     private String cleanPath(String confPath, String filename) {

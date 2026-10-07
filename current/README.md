@@ -69,6 +69,8 @@ A configuration carried over from an on-premise setup that still uses the old cl
 
 The connector ships a Repo Init script (`RepositoryInitializer-brightcove`) that creates the `brightcove_admin` service user, grants it read, write, and replicate on `/content`, and creates the default `/content/dam/brightcove_assets` folder. A custom DAM integration path is covered by the `/content` ACL but is not created by Repo Init, so the target folder must exist or be created separately.
 
+The service user has no read access outside `/content`, so code that runs as `brightcove_admin` must not read from `/apps` or `/libs`: the read returns nothing rather than failing. The placeholder image used when importing a video that has no thumbnail is therefore read from the `brightcove.core` bundle (`Constants.DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE`), not from its copy under `/apps/brightcove/clientlibs`. Before 7.4.0 the import read the `/apps` copy and skipped every thumbnail-less video on a fresh install.
+
 ## How to build
 
 To build all the modules run in the project root directory the following command with Maven 3:
