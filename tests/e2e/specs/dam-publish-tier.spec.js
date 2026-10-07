@@ -391,10 +391,11 @@ test('move: moving an asset between DAM folders then re-activating moves the vid
   expect((await dam.metadata(request, moved)).brc_id, 'the sync marker travelled with the move').toBe(v.id);
 });
 
-// 🔴 Expected to fail on the current code: BrightcoveMoveListener has no Brightcove
-// behaviour (template body commented out), so nothing reacts to a DAM move until the
-// asset is activated again. Not yet run red: run once as `test` when the authors are
-// free, then keep as fixme until a move handler exists.
+// 🔴 Documented behaviour, not a pending fix: a DAM move alone does not move the video.
+// BrightcoveMoveListener has no Brightcove behaviour (template body commented out), so
+// the folder only follows on the next activation. Context:
+// current/docs/dam-sync-on-activation.md "A DAM move alone does not move the video".
+// Run red once as `test` 2026-10-07 (matrix row 44); keep as fixme until a move handler exists.
 test.fixme('move alone (no re-activation) moves the video to the destination folder', async ({ request }) => {
   const a = await newFolder('mvaloneA');
   const b = await newFolder('mvaloneB');
@@ -421,10 +422,12 @@ test.fixme('move alone (no re-activation) moves the video to the destination fol
   expect(inB, 'Video Cloud folder unchanged after a DAM move').toBe(true);
 });
 
-// 🔴 Expected to fail on the current code: FolderSyncUtil.syncFolder returns early at
-// the account root (the BGS-1600 guard) without calling removeVideoFromFolder, so a
-// video whose asset is moved from a synced subfolder back to the account root keeps
-// its old Video Cloud folder even after re-activation. Not yet run red.
+// 🔴 Fails on the current code: FolderSyncUtil.syncFolder returns early at the account
+// root (the BGS-1600 guard) without calling removeVideoFromFolder, so a video whose
+// asset is moved from a synced subfolder back to the account root keeps its old Video
+// Cloud folder even after re-activation. Re-run red 2026-10-07 on a CLEAN root (after
+// the poisoned-root repair), log showing the account-root branch taken: the poisoned
+// root was not the cause. Context: current/docs/dam-sync-on-activation.md (matrix row 44).
 test.fixme('moving an asset back to the account root and re-activating takes the video out of its folder', async ({ request }) => {
   const a = await newFolder('mvrootA');
   await dam.createDamFolder(request, a.path);
