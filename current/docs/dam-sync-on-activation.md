@@ -40,6 +40,41 @@ node and nothing removed it (the same masking pattern as the thumbnail ACL in
   Brightcove Replication Agent > Edit > uncheck Enabled). Reinstalling the package will not
   re-enable it (merge filter).
 
+## A DAM move alone does not move the video
+
+The video's Video Cloud folder follows the asset **only when the asset is activated
+again**. Moving an asset between DAM folders changes nothing in Video Cloud by itself.
+
+- `listeners/BrightcoveMoveListener` is a leftover template: it logs `Listened <path>`
+  and has no Brightcove behaviour (`BrightcoveMoveListenerNoOpTest` pins that).
+- The re-activation that does move it goes through `activateModified` ->
+  `FolderSyncUtil.syncFolder` on whichever publish path is live
+  (`core-folder-sync.md`).
+- ⚠️ Moving an asset back to the **account root** and re-activating it leaves the video
+  in its previous Video Cloud folder: the account-root branch returns without calling
+  `removeVideoFromFolder`, because nothing records which folder the video was in.
+  Measured on a clean root 2026-10-07 (`tests/parity/matrix.md` row 44).
+- Pinned as `test.fixme` in `tests/e2e/specs/dam-publish-tier.spec.js` ("move alone",
+  "moving an asset back to the account root"). Not a fix: documented behaviour.
+
+## On-prem: `allowedGroups` must name a declared group, not `everyone`
+
+The agent path authorizes the **replicating user**, not the service user:
+`BrcReplicationHandler.isAuthorized` walks `Authorizable.memberOf()` and looks for a
+group in the account's `allowedGroups`. `memberOf()` returns declared (and inherited)
+memberships only; it **never** includes the dynamic `everyone` group. So:
+
+- `allowedGroups=[everyone]` can never authorize anyone on this path, even `admin`.
+- ⚠️ It fails silently: `Not authorized` at DEBUG, and the handler returns
+  `ReplicationResult.OK`, so the activation succeeds and the asset never reaches Video
+  Cloud.
+- Name a group the publishing users are declared members of (e.g. `administrators`
+  or a customer group).
+
+Unchanged since 6.0.12. Not a code change: recorded so a quiet "nothing synced" on-prem
+is checked against the group config first. Observed 2026-10-07 on a 6.5 LTS author
+(`tests/parity/matrix.md` row 31).
+
 ## How it is proved
 
 - `scripts/check-dam-sync-packaging.py <cloud zip> <prem zip>`: the `-prem` zip carries the

@@ -71,6 +71,8 @@ Default differs per line, as it always has (details: `docs/dam-sync-on-activatio
 
 Do not enable both on one instance: each activation would then be pushed to Video Cloud twice.
 
+Folders follow activation, not moves. An asset in a subfolder of the account folder is filed in the Video Cloud folder of the same name (created on its first activation); an asset directly in the account folder is not filed in any folder. Moving an asset in the DAM changes nothing in Video Cloud until the asset is activated again. Moving an asset back to the account folder and re-activating it leaves the video in its previous Video Cloud folder; remove it from that folder in Video Cloud if needed.
+
 ### Migrating a configuration to AEM as a Cloud Service
 
 Earlier on-premise versions of the connector used the config class `BrcServiceImpl` with snake_case property keys (for example `asset_integration_path`). The cloud connector uses `ConfigurationServiceImpl` with camelCase keys (`damIntegrationPath`).
