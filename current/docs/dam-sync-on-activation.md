@@ -71,6 +71,15 @@ memberships only; it **never** includes the dynamic `everyone` group. So:
 - Name a group the publishing users are declared members of (e.g. `administrators`
   or a customer group).
 
+⚠️ A declared group is necessary but, on a fresh 7.4.0 `-prem` install, not sufficient.
+Observed 2026-10-07 on 6.5 LTS: with `admin` a declared member of `administrators` and
+`allowedGroups=[administrators]`, every activation still logged `Not authorized`. The
+lookup runs on the `brightcoveWrite` service resolver (`brightcove_admin`), and Repo Init
+grants that user read on `/content` only; `/home` denies `everyone` read. So
+`UserManager.getAuthorizable(<replicating user>)` most likely returns null and the
+check fails before groups are compared. That cause is from ACL reading, not measured:
+proving it needs an ACL change on the bed. Not fixed here.
+
 Unchanged since 6.0.12. Not a code change: recorded so a quiet "nothing synced" on-prem
 is checked against the group config first. Observed 2026-10-07 on a 6.5 LTS author
 (`tests/parity/matrix.md` row 31).
