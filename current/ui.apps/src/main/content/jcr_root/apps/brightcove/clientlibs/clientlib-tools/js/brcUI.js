@@ -2395,8 +2395,12 @@ function saveLabels() {
         jsonp: 'callback',
         async: true,
         success: function(resp) {
-            if (resp && resp.error_code) {
-                brcToast('Labels not saved: ' + (resp.message || 'Brightcove rejected one or more labels'));
+            // error_code: the servlet's failure shape (CMS refused, unreachable, proxy denied).
+            // error: the dispatcher's own, e.g. 403 when the account is not authorized.
+            if (!resp || typeof resp !== 'object' || resp.error_code || resp.error) {
+                var code = resp && (resp.error_code || resp.error);
+                brcToast('Labels not saved: ' + ((resp && resp.message) ||
+                    (code ? 'error ' + code : 'Brightcove rejected one or more labels')));
                 return;
             }
             var idx = parseInt($('tr.select').attr('id'), 10);
