@@ -57,25 +57,37 @@ again**. Moving an asset between DAM folders changes nothing in Video Cloud by i
 - Pinned as `test.fixme` in `tests/e2e/specs/dam-publish-tier.spec.js` ("move alone",
   "moving an asset back to the account root"). Not a fix: documented behaviour.
 
-## On-prem: `allowedGroups` must name a declared group, not `everyone`
+## On-prem: `allowedGroups` and the replicating user's groups
 
 The agent path authorizes the **replicating user**, not the service user:
 `BrcReplicationHandler.isAuthorized` walks `Authorizable.memberOf()` and looks for a
-group in the account's `allowedGroups`. `memberOf()` returns declared (and inherited)
-memberships only; it **never** includes the dynamic `everyone` group. So:
+group in the account's `allowedGroups`.
 
-⚠️ Contradicted on an upgraded 6.5 LTS bed, 2026-10-07: with `allowed_groups=[everyone]` only
-and `admin` in no declared group, an agent-path activation was authorized and synced
-(`onprem-upgrade-6.0-to-7.md`, "Upgrade measured on AEM 6.5 LTS"). That bed still carries
-the 6.0.x root grant, so the cause may be what `brightcove_admin` can read rather than
-`memberOf()` itself. Unresolved; until a fresh install is measured, keep naming a declared group.
+`allowedGroups=[everyone]` **does** authorize on a fresh 7.4.0-prem install. Measured
+2026-10-07 on a fresh 6.5 LTS author (Oak 1.68.1, Java 21, `/home` read grant, `admin` also a
+declared member of `administrators`): with only `allowedGroups` changed to `[everyone]`, row 31
+passed twice, `brightcove.log` showed the handler's `Path:` line and no `Not authorized`
+(`tests/parity/runs/2026-10-07/everyone-fresh/`). An earlier version of this section said
+`memberOf()` never returns `everyone` and that `everyone` could never authorize. That was
+wrong. The mechanism: in Oak 1.68 `AuthorizableImpl.memberOf()` merges stored membership with
+the `DynamicMembershipProvider`, and Oak's default `EveryoneMembershipProvider` returns the
+`everyone` group for every authorizable except `everyone` itself (read from the bytecode of the
+bed's `oak-core` bundle; older Oak lines were not inspected, though the accounts servlet,
+which also uses `memberOf()`, matched `everyone` on 6.5.0 GA). The mocked unit test
+`noMatchingGroupIsNotAuthorized` only pins "no listed group matches", not anything about
+`everyone`.
 
-- `allowedGroups=[everyone]` can never authorize anyone on this path, even `admin`.
-- ⚠️ It fails silently: `Not authorized` at DEBUG, and the handler returns
+Why the earlier :4702 run failed: not `everyone`. The `brightcove_admin` service resolver
+could not read `/home/users` and `/home/groups` (the `/home` read grant was missing), so
+`getAuthorizable()` returned null and every user was `Not authorized` whichever group was
+configured.
+
+- ⚠️ A failed check is silent: `Not authorized` at DEBUG, and the handler returns
   `ReplicationResult.OK`, so the activation succeeds and the asset never reaches Video
   Cloud.
-- Name a group the publishing users are declared members of (e.g. `administrators`
-  or a customer group).
+- `everyone` means every user, so it turns the group check off. Prefer a group the
+  publishing users are declared members of (e.g. `administrators` or a customer group)
+  if activation should be restricted.
 
 ⚠️ A declared group is necessary but not sufficient: the lookup runs on the
 `brightcoveWrite` service resolver (`brightcove_admin`), so that user must be able to read

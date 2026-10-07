@@ -139,8 +139,8 @@ public class BrcReplicationHandler implements TransportHandler {
     }
     // Package-private for BrcReplicationHandlerAuthorizationTest. ⚠️ rr is the
     // brightcoveWrite SERVICE resolver: without read on /home (granted on-prem by
-    // ui.config.onprem) getAuthorizable() returns null and nobody is authorized. memberOf()
-    // never yields `everyone`. Context: current/docs/dam-sync-on-activation.md
+    // ui.config.onprem) getAuthorizable() returns null and nobody is authorized. On Oak 1.68
+    // memberOf() includes `everyone`, so allowedGroups=[everyone] authorizes. Context: current/docs/dam-sync-on-activation.md
     boolean isAuthorized(ResourceResolver rr, ReplicationAction replicationAction, List<String> allowedGroups) throws RepositoryException {
         boolean is_authorized = false;
         UserManager userManager = rr.adaptTo(UserManager.class);

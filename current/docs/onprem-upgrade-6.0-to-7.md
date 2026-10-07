@@ -118,10 +118,9 @@ Also measured on this bed:
   scaffold (`current/scripts/setup-local-dev.sh` not yet run): environment, not upgrade.
 - Activation sync after the upgrade, through the upgraded `brightcove://` agent to a 6.5 LTS
   publish: `dam-publish-tier.spec.js` 5 passed / 2 skipped (the two `test.fixme` pins).
-- ⚠️ The upgraded instance authorizes `allowed_groups=[everyone]` on the agent path:
-  with `everyone` as the only allowed group and `admin` a member of no declared group, row 31
-  passed and `brightcove.log` had no `Not authorized`. That contradicts the
-  `dam-sync-on-activation.md` claim that `everyone` can never authorize. The bed still has the
-  6.0.x root grant, so this does not show whether a FRESH 7.4 install (read on `/home/groups`
-  only) behaves the same; not measured.
+- The upgraded instance authorizes `allowed_groups=[everyone]` on the agent path: with
+  `everyone` as the only allowed group and `admin` a member of no declared group, row 31
+  passed and `brightcove.log` had no `Not authorized`. A FRESH 7.4.0-prem install (read on
+  `/home/groups` and `/home/users` only) behaves the same, so the old `dam-sync-on-activation.md`
+  claim that `everyone` can never authorize was wrong; see that doc for the mechanism.
 

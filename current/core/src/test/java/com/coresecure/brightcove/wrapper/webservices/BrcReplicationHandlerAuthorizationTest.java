@@ -57,8 +57,8 @@ class BrcReplicationHandlerAuthorizationTest {
 
     @Test
     void noMatchingGroupIsNotAuthorized() throws Exception {
-        // memberOf() never yields the dynamic `everyone` group, so allowedGroups=[everyone]
-        // cannot match a real user's declared groups.
+        // Mock-only: a user whose memberOf() lacks the listed group is not authorized. (Real
+        // Oak 1.68 includes `everyone` in memberOf(), so there everyone authorizes.)
         user(group("contributors"));
         assertFalse(handler.isAuthorized(rr, action, Collections.singletonList("everyone")));
     }
