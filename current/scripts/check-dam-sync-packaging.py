@@ -8,7 +8,11 @@ Asserts, per docs/dam-sync-on-activation.md:
   on-prem  the embedded brightcove.ui.content.onprem package carries
            /etc/replication/agents.author/brightcove, enabled, transport brightcove://,
            under a filter in mode="merge" (an upgraded instance's agent is left alone)
-  cloud    no embedded package carries any /etc/replication content
+           and the embedded brightcove.ui.config.onprem package carries exactly one repoinit
+           config granting brightcove_admin jcr:read on /home/groups and /home/users,
+           nothing broader and nothing on / (the agent's group check needs it)
+  cloud    no embedded package carries any /etc/replication content, and no repoinit
+           script anywhere in it mentions /home
   both     BrightcovePublishListener stays OFF: its metatype default for isEnabled is
            false and no embedded package ships an OSGi config for its PID (so on-prem
            does not handle each activation twice, agent + listener)
@@ -22,6 +26,8 @@ import xml.etree.ElementTree as ET
 LISTENER_PID = "com.coresecure.brightcove.wrapper.listeners.BrightcovePublishListener"
 AGENT = "jcr_root/etc/replication/agents.author/brightcove/.content.xml"
 JCR = "{http://www.jcp.org/jcr/1.0}"
+REPOINIT = "org.apache.sling.jcr.repoinit.RepositoryInitializer"
+HOME_GRANT = "RepositoryInitializer-brightcove-onprem.config"
 
 failures = []
 
@@ -78,9 +84,53 @@ def onprem(packages):
           f"the on-prem package owns nothing else ({sorted(modes)})")
 
 
+def repoinits(packages):
+    return [(p, n, z.read(n).decode("utf-8", "replace")) for p, z in packages
+            for n in z.namelist() if REPOINIT in n and "/config" in n and not n.endswith("/")]
+
+
+def acl_blocks(script):
+    """[(path, [privilege lines])] for each `set ACL on <path> ... end` block."""
+    blocks, cur = [], None
+    for line in (l.strip().strip('"').strip() for l in script.splitlines()):
+        if line.startswith("set ACL on "):
+            cur = (line[len("set ACL on "):].strip(), [])
+        elif line == "end" and cur:
+            blocks.append(cur)
+            cur = None
+        elif cur and line:
+            cur[1].append(line)
+    return blocks
+
+
+def home_grant(packages):
+    hits = [(p, n, s) for p, n, s in repoinits(packages) if n.endswith(HOME_GRANT)]
+    check(len(hits) == 1, f"exactly one {HOME_GRANT} is shipped ({[p + n for p, n, _ in hits]})")
+    if not hits:
+        return
+    p, n, script = hits[0]
+    check("brightcove.ui.config.onprem" in p, f"the /home grant comes from brightcove.ui.config.onprem ({p})")
+    blocks = acl_blocks(script)
+    paths = sorted(b[0] for b in blocks)
+    check(paths == ["/home/groups", "/home/users"], f"the grant covers /home/groups and /home/users only (got {paths})")
+    grants = sorted({l for _, ls in blocks for l in ls})
+    check(grants == ["allow jcr:read for brightcove_admin"],
+          f"the only privilege granted is jcr:read for brightcove_admin (got {grants})")
+    # The 6.5.0 GA parser (repoinit.parser 1.2.2) aborts the whole script on newer grammar.
+    allowed = ("create service user ", "set ACL on ", "allow ", "end", "scripts=[", "]", "")
+    odd = [l for l in (x.strip().strip('"').strip() for x in script.splitlines()) if not l.startswith(allowed)]
+    check(not odd, f"the grant uses only 6.5.0-GA-safe repoinit grammar {odd or ''}")
+    wide = [(pp, n) for pp, n, s in repoinits(packages) for path, _ in acl_blocks(s) if path == "/"]
+    check(not wide, f"no repoinit script sets an ACL on / {wide or ''}")
+
+
 def cloud(packages):
     hits = [(p, n) for p, z in packages for n in z.namelist() if n.startswith("jcr_root/etc/replication")]
     check(not hits, f"cloud artifact carries no /etc/replication content {hits[:3] or ''}")
+    home = [(p, n) for p, n, s in repoinits(packages) if any(b[0].startswith("/home") for b in acl_blocks(s))]
+    check(not home, f"cloud artifact grants nothing on /home {home or ''}")
+    extra = [p for p, _ in packages if "brightcove.ui.config.onprem" in p]
+    check(not extra, f"cloud artifact does not embed brightcove.ui.config.onprem {extra or ''}")
 
 
 def main(paths):
@@ -91,7 +141,11 @@ def main(paths):
         print(f"== {path}")
         packages = list(walk(zipfile.ZipFile(path)))
         listener_off(packages)
-        (onprem if path.endswith("-prem.zip") else cloud)(packages)
+        if path.endswith("-prem.zip"):
+            onprem(packages)
+            home_grant(packages)
+        else:
+            cloud(packages)
     return 1 if failures else 0
 
 

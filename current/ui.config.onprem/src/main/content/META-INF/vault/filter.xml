@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+    <!-- Its own root, NOT /apps/brightcove/osgiconfig: ui.config owns that root in replace
+         mode and would delete this config whenever it installs after this package.
+         Context: ../../../../docs/dam-sync-on-activation.md -->
+    <filter root="/apps/brightcove-onprem"/>
+</workspaceFilter>

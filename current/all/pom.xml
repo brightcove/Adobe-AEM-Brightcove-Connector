@@ -219,6 +219,12 @@
                     <version>${project.version}</version>
                     <type>zip</type>
                 </dependency>
+                <dependency>
+                    <groupId>com.coresecure</groupId>
+                    <artifactId>brightcove.ui.config.onprem</artifactId>
+                    <version>${project.version}</version>
+                    <type>zip</type>
+                </dependency>
             </dependencies>
             <build>
                 <finalName>${project.artifactId}-${project.version}-prem</finalName>
@@ -260,6 +266,15 @@
                                     <artifactId>brightcove.ui.content.onprem</artifactId>
                                     <type>zip</type>
                                     <target>/apps/brightcove-packages/content/install</target>
+                                </embedded>
+                                <!-- The repoinit grant the brightcove:// agent's group check
+                                     needs (read on /home/groups and /home/users).
+                                     Context: ../docs/dam-sync-on-activation.md -->
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.config.onprem</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
                                 </embedded>
                             </embeddeds>
                         </configuration>
