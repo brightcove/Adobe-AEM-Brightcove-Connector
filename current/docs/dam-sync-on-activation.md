@@ -71,23 +71,47 @@ memberships only; it **never** includes the dynamic `everyone` group. So:
 - Name a group the publishing users are declared members of (e.g. `administrators`
   or a customer group).
 
-⚠️ A declared group is necessary but, on a fresh 7.4.0 `-prem` install, not sufficient.
-Observed 2026-10-07 on 6.5 LTS: with `admin` a declared member of `administrators` and
-`allowedGroups=[administrators]`, every activation still logged `Not authorized`. The
-lookup runs on the `brightcoveWrite` service resolver (`brightcove_admin`), and Repo Init
-grants that user read on `/content` only; `/home` denies `everyone` read. So
-`UserManager.getAuthorizable(<replicating user>)` most likely returns null and the
-check fails before groups are compared. That cause is from ACL reading, not measured:
-proving it needs an ACL change on the bed. Not fixed here.
+⚠️ A declared group is necessary but not sufficient: the lookup runs on the
+`brightcoveWrite` service resolver (`brightcove_admin`), so that user must be able to read
+the replicating user and its groups. If it cannot, `getAuthorizable()` returns null and the
+check fails before any group is compared (same silent `Not authorized`). Measured
+2026-10-07 on 6.5 LTS: with only the shared repoinit (read on `/content`), every
+activation by a declared `administrators` member was `Not authorized`.
 
-Unchanged since 6.0.12. Not a code change: recorded so a quiet "nothing synced" on-prem
-is checked against the group config first. Observed 2026-10-07 on a 6.5 LTS author
-(`tests/parity/matrix.md` row 31).
+### The on-prem `/home` read grant (`ui.config.onprem`)
+
+The `-prem` package therefore ships a second repoinit factory config,
+`/apps/brightcove-onprem/osgiconfig/config/org.apache.sling.jcr.repoinit.RepositoryInitializer-brightcove-onprem.config`:
+`jcr:read` for `brightcove_admin` on `/home/groups` and `/home/users`, nothing else.
+
+- It replaces what 6.0.12-prem got from `ui.apps` `jcr_root/_rep_policy.xml` (the policy
+  on `/`), which granted `brightcove_admin` read, `rep:write`, replicate, version, lock and
+  access-control rights on the whole repository (and so on `/home`). That was far wider than the check needs; this is read on two subtrees only.
+- On-prem only: the cloud artifact never embeds `ui.config.onprem` (AEMaaCS has no
+  `brightcove://` agent, and the listener does no group check).
+- ⚠️ Its own filter root `/apps/brightcove-onprem`, not `/apps/brightcove/osgiconfig`:
+  `ui.config` owns that root in replace mode and would delete this file whenever it
+  installed after it.
+- ⚠️ Plain grammar only (`create service user`, `set ACL on … allow … end`): the 6.5.0 GA
+  repoinit parser aborts the whole script on newer syntax (`ui.config/.../README-repoinit.md`).
+  It repeats `create service user brightcove_admin` because the two scripts run in no
+  guaranteed order and a grant to a missing principal fails.
+- Measured 2026-10-07 on 6.5 LTS: after install, `/home/groups` and `/home/users` each carry
+  a `rep:GrantACE` for `brightcove_admin` with `jcr:read`, and every agent-path activation
+  in `dam-publish-tier.spec.js` was authorized and handled (`tests/parity/matrix.md` rows 31-33, 43, 44).
+
+The `memberOf()` behaviour is unchanged since 6.0.12 and not a code change: check the group
+config first when on-prem quietly syncs nothing. `BrcReplicationHandlerAuthorizationTest`
+pins the check (null authorizable, declared match, no match, no UserManager).
 
 ## How it is proved
 
 - `scripts/check-dam-sync-packaging.py <cloud zip> <prem zip>`: the `-prem` zip carries the
   agent, enabled, `brightcove://`, under a merge filter, and nothing else in that package;
+  it carries exactly one `/home` grant, from `ui.config.onprem`, read-only for
+  `brightcove_admin` on `/home/groups` and `/home/users`, in 6.5.0-GA-safe grammar, and no
+  repoinit sets an ACL on `/`; the cloud zip grants nothing on `/home` and does not embed
+  `ui.config.onprem` (negative control for the grant: a `-prem` zip built before it fails);
   the cloud zip carries no `/etc/replication`; neither ships a listener config, and the
   listener's metatype default is `isEnabled=false`. Negative control: run against a
   `-prem` zip built before `ui.content.onprem` existed, it fails on the agent check.
