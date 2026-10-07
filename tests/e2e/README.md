@@ -75,6 +75,11 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
   Videos" source. It needs the site scaffold from `setup-local-dev.sh` (template
   plus a responsivegrid policy allowing `group:Brightcove`) and fails with a
   named error when that is missing, rather than skipping.
+- `cms.js` is a minimal Video Cloud CMS client (create / get / delete a video) for
+  specs that need a throwaway video of their own. It reads `BRIGHTCOVE_ACCOUNT_ID`,
+  `BRIGHTCOVE_CLIENT_ID` and `BRIGHTCOVE_CLIENT_SECRET` from the environment (source
+  your account env file; never commit them). `specs/bgs-1600-metadata-persistence.spec.js`
+  uses it and skips, saying why, when they are unset.
 - Each `specs/*.spec.js` drives a real user flow and asserts on the rendered UI
   and/or the outgoing `/bin/brightcove/api.js` request.
 
