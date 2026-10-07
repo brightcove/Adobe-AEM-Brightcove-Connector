@@ -7,6 +7,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -609,7 +610,7 @@ public class CmsAPI {
         ArrayNode json = JsonNodeFactory.instance.arrayNode();
         LOGGER.debug("account: {}" , account.getAccount_ID());
         TokenObj authToken = account.getLoginToken();
-        LOGGER.debug("authToken: {}" , authToken.getToken());
+        LOGGER.debug("authToken: {}", LogRedactor.headerValue(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken()));
         String tagParam = getTagParam(dam_only);
         try {
             Map<String, String> headers = new HashMap<String, String>();
