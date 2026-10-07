@@ -38,7 +38,6 @@ const dam = require('../../../e2e/dam');
 const { slingPost } = require('../../../e2e/fixtures');
 const { LoggingProxy, deadPort } = require('../../../e2e/proxy-harness');
 
-const FACTORY = 'com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl';
 const PREFIX = 'e2e-throwaway-';
 const VIDEO_URL = process.env.BRC_E2E_VIDEO_URL || 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 const IMAGE_URL = process.env.BRC_E2E_IMAGE_URL || 'https://httpbin.org/image/jpeg';
@@ -69,35 +68,8 @@ async function api(account, params) {
 }
 const failed = (b) => !b || b.error_code !== undefined || b.error !== undefined;
 
-// ---- Config (the real mechanism) -------------------------------------------------------
-async function readConfig() {
-  const r = await aemText('GET', `/system/console/configMgr/${FACTORY}.*.json`);
-  if (r.status !== 200) throw new Error(`configMgr read HTTP ${r.status}`);
-  const all = JSON.parse(r.text);
-  if (all.length !== 1) throw new Error(`expected exactly one ${FACTORY} config, found ${all.length}; refusing to guess`);
-  const props = {};
-  for (const [k, v] of Object.entries(all[0].properties)) props[k] = v.values !== undefined ? v.values : v.value;
-  return { pid: all[0].pid, props };
-}
-async function writeConfig(pid, props) {
-  const names = Object.keys(props);
-  const body = new URLSearchParams({ apply: 'true', action: 'ajaxConfigManager', propertylist: names.join(',') });
-  for (const k of names) (Array.isArray(props[k]) ? props[k] : [props[k]]).forEach((x) => body.append(k, x));
-  const res = await fetch(`${AEM_BASE}/system/console/configMgr/${pid}`, { method: 'POST', headers: { Authorization: BASIC, Referer: `${AEM_BASE}/` }, body });
-  if (res.status !== 200) throw new Error(`configMgr write HTTP ${res.status}`);
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-// Every property is posted on every save (a partial propertylist blanks the rest), and the
-// result is verified by value, not by "is_set".
-async function setProxy(orig, value) {
-  await writeConfig(orig.pid, { ...orig.props, proxyServer: value });
-  for (let i = 0; i < 20; i++) {
-    const now = await readConfig();
-    if (now.props.proxyServer === value && same({ ...now.props, proxyServer: 0 }, { ...orig.props, proxyServer: 0 })) { await sleep(1500); return; }
-    await sleep(500);
-  }
-  throw new Error(`proxyServer did not read back as ${JSON.stringify(value)} with every other property unchanged`);
-}
+// ---- Config (the real mechanism): tests/e2e/connector-config.js ----------------------------
+const { readConfig, setProxy, restoreConfig, same } = require('../../../e2e/connector-config');
 
 // ---- PNG/JPEG dimensions (to tell a real fetched thumbnail from the bundled placeholder) ----
 function dims(buf) {
@@ -183,7 +155,8 @@ async function main() {
         const before = (await cms.get(vid)).labels || [];
         const r = await api(acct, { a: 'update_labels', labels: [label2], videoId: vid });
         const after = (await cms.get(vid)).labels || [];
-        return { ok: after.includes(label2), detail: `api=${failed(r.body) ? 'error ' + r.body.error_code : 'ok'} cms.labels before=${JSON.stringify(before)} after=${JSON.stringify(after)}` };
+        // `reported`: the API said so (error_code present), not an empty {} that the UI reads as saved.
+        return { ok: after.includes(label2), reported: failed(r.body) && r.body.error_code !== undefined, detail: `api=${failed(r.body) ? 'error ' + r.body.error_code + ' ' + String(r.body.message || '').slice(0, 60) : 'ok'} cms.labels before=${JSON.stringify(before)} after=${JSON.stringify(after)}` };
       },
       async dataload() {
         await delAsset();
@@ -208,7 +181,7 @@ async function main() {
         evidence.posterRendition = hasR;
         return { ok: !failed(r.body) && !!src, detail: `api=${failed(r.body) ? 'error ' + r.body.error_code : 'queued'} cms.poster=${src ? 'persisted' : 'absent'} dam brc_poster.png=${hasR}`, hasR };
       },
-      // BrcImageApi: CMS lookup of the poster URL (HttpServices) then ImageIO.read(url).
+      // BrcImageApi: CMS lookup of the poster URL, then the poster fetch (both via HttpServices).
       async imagecache() {
         const res = await fetch(`${AEM_BASE}/bin/brightcove/image?id=${vid}&key=${acct}`, { headers: { Authorization: BASIC } });
         const b = Buffer.from(await res.arrayBuffer());
@@ -307,22 +280,26 @@ async function main() {
     else if (!ld) notMeasured('CMS PATCH honours proxy (deny control)', 'phase missing');
     else verdict('CMS PATCH honours proxy (deny control)', !ld.ok && ld.denied.includes('cms.api.brightcove.com') && ld.hosts.includes('oauth.brightcove.com') ? 'PASS' : 'FAIL',
       `CMS host denied at the proxy, OAuth allowed -> label ${ld.ok ? 'STILL PERSISTED (bypass)' : 'not persisted'}; denied=${JSON.stringify(ld.denied)} via=${JSON.stringify(ld.hosts)}; ${ld.detail}`);
-    // BrcImageApi.doGet fetches the poster with ImageIO.read(URL), outside HttpServices.PROXY.
+    // Save Labels must REPORT the failure (error_code), never an empty {} the UI toasts as "Labels saved".
+    if (ld && label && label2) verdict('Save Labels under a denied CMS reports an error_code (no false success)', ld.reported ? 'PASS' : 'FAIL',
+      ld.reported ? `update_labels answered with an error: ${ld.detail}` : `update_labels did NOT report an error while the CMS was unreachable: ${ld.detail}`);
+    else notMeasured('Save Labels under a denied CMS reports an error_code (no false success)', 'account has fewer than two labels or the phase did not run');
+    // BrcImageApi.doGet fetches the poster through HttpServices.getRemoteBinary (it used ImageIO.read(URL), which ignored the proxy).
     const ic = PATHS.imagecache || {};
-    if (!ic.routed || !ic.dead || !ic.deny || !posterHost) notMeasured('image cache servlet BrcImageApi (ImageIO.read)', 'phase or poster host missing');
+    if (!ic.routed || !ic.dead || !ic.deny || !posterHost) notMeasured('image cache servlet BrcImageApi', 'phase or poster host missing');
     else {
       const viaProxy = ic.routed.hosts.includes(posterHost);
       const probs = [];
       if (!ic.routed.ok) probs.push(`routed run failed (${ic.routed.detail})`);
       if (!viaProxy) probs.push(`BYPASS: image host ${posterHost} never reached the proxy`);
+      if (ic.dead.ok) probs.push(`BYPASS: still served the image with a dead proxy`);
       if (ic.deny.ok) probs.push(`BYPASS: still served the image with the image host denied at the proxy`);
-      verdict('image cache servlet BrcImageApi (ImageIO.read) honours proxy', probs.length ? 'FAIL' : 'PASS', probs.length ? probs.join('; ') : `image host via proxy; denied -> ${ic.deny.detail}`);
+      verdict('image cache servlet BrcImageApi honours proxy', probs.length ? 'FAIL' : 'PASS', probs.length ? probs.join('; ') : `image host via proxy; denied -> ${ic.deny.detail}`);
     }
   } finally {
     // Always: restore the original config exactly, verify it, then clean up.
     try {
-      await writeConfig(orig.pid, orig.props);
-      let ok = false; for (let i = 0; i < 20 && !ok; i++) { const now = await readConfig(); ok = same(now.props, orig.props); if (!ok) await sleep(500); }
+      const ok = await restoreConfig(orig);
       console.log(`config restore: ${ok ? 'VERIFIED all ' + Object.keys(orig.props).length + ' properties equal to the original' : 'FAILED, recover from ' + backup}; proxyServer=${JSON.stringify((await readConfig()).props.proxyServer)}`);
       if (ok) fs.unlinkSync(backup); else process.exitCode = 3;
     } catch (e) { console.log(`config restore ERROR ${e.message}; recover from ${backup}`); process.exitCode = 3; }

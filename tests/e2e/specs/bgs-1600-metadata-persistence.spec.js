@@ -22,6 +22,12 @@
 const { test, expect, openAdmin, resolveAccountId } = require('../fixtures');
 const { AEM_USER, AEM_PASS } = require('../target');
 const { creds, cmsClient } = require('../cms');
+const { readConfig, setProxy, restoreConfig } = require('../connector-config');
+const { LoggingProxy } = require('../proxy-harness');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { AEM_BASE } = require('../target');
 
 const IMAGE_URL = process.env.BRC_E2E_IMAGE_URL || 'https://httpbin.org/image/jpeg';
 
@@ -79,6 +85,50 @@ test('the instance JVM is recorded (row 36 is a Java 21 claim)', async ({ reques
   expect(m, 'java.version not found in the system properties').not.toBeNull();
   console.log(`[bgs-1600] instance java.version = ${m[1]}`);
   test.info().annotations.push({ type: 'java.version', description: m[1] });
+});
+
+// Save Labels under a CMS that cannot be reached: the PATCH happens SERVER-SIDE, so a browser
+// route-intercept cannot cause it. The connector's own `proxyServer` is pointed at a logging
+// proxy that refuses cms.api.brightcove.com (OAuth stays allowed), so the real PATCH fails.
+// The UI must say so; before the fix the servlet answered {} and the UI toasted "Labels saved".
+// Runs BEFORE the persistence test so the throwaway still has no labels. The original config
+// is restored by value in a finally and verified; a 0600 backup is kept for crash recovery.
+// Context: ../../parity/probes/proxy/README.md
+test('row 10/36: Save Labels shows an error, not "Labels saved", when the CMS PATCH fails', async ({ page }) => {
+  expect((await cms.get(videoId)).labels || []).toEqual([]); // nothing to pass vacuously
+
+  await openThrowawayPanel(page);
+  await page.waitForFunction(
+    () => document.querySelectorAll('#label_list option[value^="/"]').length > 0, null, { timeout: 20_000 });
+  const label = await page.locator('#label_list option[value^="/"]').first().getAttribute('value');
+  await page.locator('#labelInput').fill(label.replace(/^\/+|\/+$/g, ''));
+  await page.locator('#labelInput').press('Enter');
+  await expect(page.locator('#divMeta\\.labels .brc-label-pill')).toContainText(label);
+
+  const orig = await readConfig();
+  const backup = path.join(os.tmpdir(), `bcon-proxy-orig-${new URL(AEM_BASE).port}.json`);
+  fs.writeFileSync(backup, JSON.stringify(orig), { mode: 0o600 });
+  const proxy = await new LoggingProxy({ deny: [/^cms\.api\.brightcove\.com$/] }).start();
+  let restored = false;
+  try {
+    await setProxy(orig, proxy.address);
+    proxy.closeTunnels();
+    const mark = proxy.mark();
+    await page.locator('#saveLabelsBtn').click();
+
+    await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/not saved/i);
+    await expect(page.locator('#brcToast .brc-toast-msg')).not.toHaveText(/^Labels saved$/);
+    // The failure came from the deny (OAuth allowed, CMS refused), not from something else.
+    expect(proxy.hostsSince(mark, 'deny')).toContain('cms.api.brightcove.com');
+    expect(proxy.hostsSince(mark, 'allow')).toContain('oauth.brightcove.com');
+    // Independent re-read: nothing persisted.
+    expect((await cms.get(videoId)).labels || []).toEqual([]);
+  } finally {
+    restored = await restoreConfig(orig);
+    await proxy.stop();
+    if (restored) fs.unlinkSync(backup);
+  }
+  expect(restored, `connector config was NOT restored; recover from ${backup}`).toBe(true);
 });
 
 test('row 10/36: Save Labels in the admin UI persists to CMS through the PATCH path', async ({ page }) => {

@@ -16,10 +16,11 @@ It prints `PASS`, `FAIL` or `NOT MEASURED` per path and exits non-zero on anythi
   image/thumbnail GETs in `executeFullGet`/`getRemoteBinary`/`ServiceUtil.getRenditionInputStream`/
   `BrcApi.uploadImage`), the Apache `HttpPatch` fallback (`builder.setProxy`), and the S3 PUT
   (`S3UploadUtil.uploadToUrl(URL, InputStream, Proxy)` fed `HttpServices.getProxy()`).
-- Bypass: `BrcImageApi.doGet` (`/bin/brightcove/image`, `/bin/services/brightcove/image`,
-  `.../cache/image`) reads the poster with `ImageIO.read(URL)`, which never consults
-  `HttpServices.PROXY`. Also unused-but-present: `S3UploadUtil.uploadToUrl(URL, InputStream)`
-  opens a direct connection (no caller).
+- `BrcImageApi.doGet` (`/bin/brightcove/image`, `/bin/services/brightcove/image`,
+  `.../cache/image`) used to read the poster with `ImageIO.read(URL)`, which never consulted
+  `HttpServices.PROXY` (a bypass, measured). It now fetches through `HttpServices.getRemoteBinary`
+  and answers a failed fetch with an explicit 502 (see below). Still unused-but-present:
+  `S3UploadUtil.uploadToUrl(URL, InputStream)` opens a direct connection (no caller).
 
 ## Method
 
@@ -34,6 +35,16 @@ The original config is restored by value in a `finally` and re-verified.
 tunnelled to produces no new CONNECT. The harness drops all tunnels before each action
 (`LoggingProxy.closeTunnels`). Without that, hosts go missing from the log and a denied host
 stays reachable.
+
+## Save Labels failure reporting
+
+The same deny control gives a measurable failure for Save Labels: with `cms.api.brightcove.com`
+refused and OAuth allowed, `update_labels` must answer with an `error_code` (502, "No response
+from Brightcove"), never an empty `{}` that the UI toasts as "Labels saved". The probe checks the
+API answer; the e2e spec `bgs-1600-metadata-persistence.spec.js` ("Save Labels shows an error")
+drives the real UI under the same deny and asserts the toast. A browser route-intercept cannot
+test this because the PATCH is server-side. Config helpers: `tests/e2e/connector-config.js`
+(the spec writes a 0600 backup of the original config and restores and verifies it in a `finally`).
 
 ## Run
 
