@@ -434,15 +434,7 @@ public class HttpServices {
             LOGGER.debug("payload :" + payload);
 
             connection = getSSLConnection(url, targetURL);
-            boolean patchConfigured = false;
-            try {
-                setRequestMethod(connection, "PATCH");
-                patchConfigured = "PATCH".equalsIgnoreCase(connection.getRequestMethod());
-            } catch (Exception e) {
-                LOGGER.warn("executePatch: setRequestMethod(PATCH) failed, fallback strategy engaged: {}", e.getMessage());
-            }
-
-            if (!patchConfigured) {
+            if (!configurePatchMethod(connection)) {
                 LOGGER.info("executePatch: PATCH unsupported with HttpURLConnection; switching to Apache HttpClient patch");
                 return executePatchUsingApacheHttpClient(targetURL, payload, headers);
             }
@@ -529,7 +521,21 @@ public class HttpServices {
         return exPatchResponse;
     }
 
-    private static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
+    /**
+     * Tries to put the connection into PATCH. Returns false when the JVM refuses it
+     * (Java 17+ blocks the reflection fallback), so the caller must use the Apache client.
+     */
+    static boolean configurePatchMethod(HttpURLConnection connection) {
+        try {
+            setRequestMethod(connection, "PATCH");
+            return "PATCH".equalsIgnoreCase(connection.getRequestMethod());
+        } catch (Exception e) {
+            LOGGER.warn("executePatch: setRequestMethod(PATCH) failed, fallback strategy engaged: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
         LOGGER.debug("executePatchUsingApacheHttpClient - START: {}", targetURL);
         HttpClientBuilder builder = HttpClients.custom();
         if (PROXY != Proxy.NO_PROXY && PROXY.address() instanceof InetSocketAddress) {
