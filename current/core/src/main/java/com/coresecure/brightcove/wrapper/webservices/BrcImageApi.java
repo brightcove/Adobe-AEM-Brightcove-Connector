@@ -33,7 +33,9 @@
 package com.coresecure.brightcove.wrapper.webservices;
 
 import com.coresecure.brightcove.wrapper.BrightcoveAPI;
+import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.propertytypes.ServiceDescription;
 import javax.servlet.Servlet;
@@ -47,6 +49,8 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
@@ -73,7 +77,8 @@ public class BrcImageApi extends SlingAllMethodsServlet {
 
     }
 
-    private String getPoster(String accountKeyStr, String VideoIDStr) throws IOException {
+    /** Package-private so a test can supply the poster URL without an OSGi registry. */
+    String getPoster(String accountKeyStr, String VideoIDStr) throws IOException {
         String urlStr = null;
         BrightcoveAPI brAPI = new BrightcoveAPI(accountKeyStr);
 
@@ -125,16 +130,62 @@ public class BrcImageApi extends SlingAllMethodsServlet {
                 }
             }
             String urlStr = getPoster(accountKeyStr, VideoIDStr);
-            URL url = new URL(urlStr);
-            BufferedImage img = ImageIO.read(url);
+            if (urlStr == null || urlStr.isEmpty()) {
+                sendError(response, 404, "No poster found for the video");
+                return;
+            }
+            byte[] bytes = fetchPoster(urlStr);
+            if (bytes == null) {
+                sendError(response, 502, "Could not fetch the poster image");
+                return;
+            }
+            BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
             if (img == null) {
-                response.setStatus(404);
+                logger.warn("poster for video {} is not a readable image", VideoIDStr);
+                sendError(response, 404, "The poster is not a readable image");
                 return;
             }
             response.setContentType("image/jpeg");
             ImageIO.write(img, "jpeg", response.getOutputStream());
         } catch (Exception e) {
-            response.setStatus(500);
+            logger.error("image servlet failed", e);
+            if (!response.isCommitted()) {
+                sendError(response, 500, "Image could not be served");
+            }
         }
+    }
+
+    /**
+     * Fetches the poster through HttpServices so the configured proxy is honoured
+     * (ImageIO.read(URL) opens its own direct connection and ignores it). Returns null when
+     * the URL is not http(s) or the fetch fails. The query is split off because
+     * executeFullGet appends "?" + parameters itself.
+     */
+    private static byte[] fetchPoster(String urlStr) throws IOException {
+        URL url = new URL(urlStr);
+        String protocol = url.getProtocol();
+        if (!"https".equalsIgnoreCase(protocol) && !"http".equalsIgnoreCase(protocol)) {
+            return null;
+        }
+        int q = urlStr.indexOf('?');
+        String base = q >= 0 ? urlStr.substring(0, q) : urlStr;
+        String params = q >= 0 ? urlStr.substring(q + 1) : "";
+        BinaryObj binary = HttpServices.getRemoteBinary(base, params, null);
+        if (binary == null || binary.binary == null) {
+            return null;
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        int n;
+        while ((n = binary.binary.read(buf)) != -1) {
+            out.write(buf, 0, n);
+        }
+        return out.toByteArray();
+    }
+
+    private static void sendError(SlingHttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error_code\":" + status + ",\"message\":\"" + message + "\"}");
     }
 }

@@ -4,23 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,8 +18,6 @@ import org.junit.jupiter.api.Test;
 import com.coresecure.brightcove.wrapper.api.CmsAPI;
 import com.coresecure.brightcove.wrapper.objects.Account;
 import com.coresecure.brightcove.wrapper.objects.Platform;
-import com.sun.net.httpserver.HttpsConfigurator;
-import com.sun.net.httpserver.HttpsServer;
 
 import uk.org.lidalia.slf4jtest.LoggingEvent;
 import uk.org.lidalia.slf4jtest.TestLoggerFactory;
@@ -53,73 +40,44 @@ class CredentialLogRedactionTest {
     private static final String BASIC_VALUE = Base64.getEncoder()
             .encodeToString((CLIENT_ID + ":" + CLIENT_SECRET).getBytes(StandardCharsets.UTF_8));
 
-    private HttpsServer server;
+    private LoopbackHttps server;
     private final AtomicInteger oauthCalls = new AtomicInteger();
     private final AtomicInteger cmsCallsWithToken = new AtomicInteger();
-    private SSLSocketFactory previousFactory;
-    private HostnameVerifier previousVerifier;
 
     @BeforeEach
     void startLoopbackServer() throws Exception {
         TestLoggerFactory.clear();
-        previousFactory = HttpsURLConnection.getDefaultSSLSocketFactory();
-        previousVerifier = HttpsURLConnection.getDefaultHostnameVerifier();
-
-        KeyStore ks = KeyStore.getInstance("PKCS12");
-        try (InputStream in = getClass().getResourceAsStream("/loopback-test.p12")) {
-            ks.load(in, "changeit".toCharArray());
-        }
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        kmf.init(ks, "changeit".toCharArray());
-        SSLContext serverCtx = SSLContext.getInstance("TLS");
-        serverCtx.init(kmf.getKeyManagers(), null, null);
-
-        server = HttpsServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.setHttpsConfigurator(new HttpsConfigurator(serverCtx));
-        server.createContext("/oauth/access_token", ex -> {
-            String auth = ex.getRequestHeaders().getFirst("Authorization");
-            if (("Basic " + BASIC_VALUE).equals(auth)) {
-                oauthCalls.incrementAndGet();
-                reply(ex, 200, "{\"access_token\":\"" + ACCESS_TOKEN
-                        + "\",\"token_type\":\"Bearer\",\"expires_in\":300}");
-            } else {
-                reply(ex, 401, "{\"error\":\"invalid_client\"}");
-            }
-        });
-        server.createContext("/cms", ex -> {
-            if (("Bearer " + ACCESS_TOKEN).equals(ex.getRequestHeaders().getFirst("Authorization"))) {
-                cmsCallsWithToken.incrementAndGet();
-                reply(ex, 200, ex.getRequestURI().getPath().endsWith("/videos") ? "[]" : "{\"id\":\"v1\"}");
-            } else {
-                reply(ex, 401, "[{\"error_code\":\"UNAUTHORIZED\"}]");
-            }
-        });
-        server.start();
-
-        // The loopback certificate is self-signed; trust it for the JVM-wide default used by
-        // HttpServices, and restore the originals in tearDown.
-        SSLContext clientCtx = SSLContext.getInstance("TLS");
-        clientCtx.init(null, new TrustManager[] {new X509TrustManager() {
-            public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) { }
-            public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) { }
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                return new java.security.cert.X509Certificate[0];
-            }
-        }}, null);
-        HttpsURLConnection.setDefaultSSLSocketFactory(clientCtx.getSocketFactory());
-        HttpsURLConnection.setDefaultHostnameVerifier((host, session) -> true);
+        server = new LoopbackHttps()
+                .on("/oauth/access_token", ex -> {
+                    String auth = ex.getRequestHeaders().getFirst("Authorization");
+                    if (("Basic " + BASIC_VALUE).equals(auth)) {
+                        oauthCalls.incrementAndGet();
+                        LoopbackHttps.reply(ex, 200, "{\"access_token\":\"" + ACCESS_TOKEN
+                                + "\",\"token_type\":\"Bearer\",\"expires_in\":300}");
+                    } else {
+                        LoopbackHttps.reply(ex, 401, "{\"error\":\"invalid_client\"}");
+                    }
+                })
+                .on("/cms", ex -> {
+                    if (("Bearer " + ACCESS_TOKEN).equals(ex.getRequestHeaders().getFirst("Authorization"))) {
+                        cmsCallsWithToken.incrementAndGet();
+                        LoopbackHttps.reply(ex, 200,
+                                ex.getRequestURI().getPath().endsWith("/videos") ? "[]" : "{\"id\":\"v1\"}");
+                    } else {
+                        LoopbackHttps.reply(ex, 401, "[{\"error_code\":\"UNAUTHORIZED\"}]");
+                    }
+                })
+                .start();
     }
 
     @AfterEach
     void stopLoopbackServer() {
-        server.stop(0);
-        HttpsURLConnection.setDefaultSSLSocketFactory(previousFactory);
-        HttpsURLConnection.setDefaultHostnameVerifier(previousVerifier);
+        server.close();
     }
 
     @Test
     void oauthLoginAndCmsRequestsNeverLogTheSecretTheBasicValueOrTheToken() {
-        String base = "https://127.0.0.1:" + server.getAddress().getPort();
+        String base = server.base();
         Platform platform = new Platform(base + "/oauth", base + "/cms", base + "/di", base + "/players");
         Account account = new Account(platform, CLIENT_ID, CLIENT_SECRET, "123456");
         CmsAPI cms = new CmsAPI(account);
@@ -173,14 +131,5 @@ class CredentialLogRedactionTest {
     private static String scrub(String s) {
         // Never echo the fake values back into a failure message; show only the shape.
         return s.replace(CLIENT_SECRET, "<SECRET>").replace(BASIC_VALUE, "<BASIC>").replace(ACCESS_TOKEN, "<TOKEN>");
-    }
-
-    private static void reply(com.sun.net.httpserver.HttpExchange ex, int status, String body) throws java.io.IOException {
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        ex.getResponseHeaders().add("Content-Type", "application/json");
-        ex.sendResponseHeaders(status, bytes.length);
-        try (OutputStream out = ex.getResponseBody()) {
-            out.write(bytes);
-        }
     }
 }
