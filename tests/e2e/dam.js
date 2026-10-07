@@ -176,6 +176,18 @@ async function setMetadata(request, assetPath, props) {
   await mustPost(request, `${assetPath}/jcr:content/metadata`, form, `set metadata on ${assetPath}`);
 }
 
+// Mark the asset as edited now, the way the Assets metadata editor does
+// (jcr:content/jcr:lastModified). ⚠️ BrcReplicationHandler (the brightcove:// agent path)
+// only pushes an already-synced asset when Asset.getLastModified() > brc_lastsync, so an
+// edit made through a raw metadata POST alone would be skipped there. The original
+// rendition keeps its own older timestamp, so this does not trigger a master re-ingest.
+async function touch(request, assetPath) {
+  await sleep(1_100);
+  await mustPost(request, `${assetPath}/jcr:content`, {
+    'jcr:lastModified': new Date().toISOString(), 'jcr:lastModified@TypeHint': 'Date',
+  }, `touch ${assetPath}`);
+}
+
 async function setProps(request, nodePath, form) {
   await mustPost(request, nodePath, form, `set props on ${nodePath}`);
 }
@@ -311,7 +323,7 @@ module.exports = {
   tracker,
   PREFIX, FIXTURE_MP4, AEM_PUBLISH_URL, stamp, sleep, pollUntil,
   component, runModes, logLines,
-  json, createDamFolder, uploadAsset, assetNode, metadata, setMetadata, setProps, moveNode, deleteNode,
+  json, createDamFolder, uploadAsset, assetNode, metadata, setMetadata, touch, setProps, moveNode, deleteNode,
   activate, enabledAgents,
   publishContext, waitOnPublish, deleteOnPublish,
   runWorkflow,

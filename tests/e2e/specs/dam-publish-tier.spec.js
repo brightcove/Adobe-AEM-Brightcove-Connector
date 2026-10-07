@@ -26,8 +26,11 @@
 //
 //   The other publish path, webservices/BrcReplicationHandler, is a TransportHandler
 //   for a replication agent whose transport URI starts with `brightcove://`. The
-//   package ships no such agent. If one is enabled on the author it ALSO processes
-//   every activation; the preflight records which paths are live.
+//   -prem package ships one, enabled (ui.content.onprem, the 6.0.x default); the cloud
+//   package ships none. The preflight requires exactly one of the two paths to be live.
+//   ⚠️ Unlike the listener, the handler only updates an already-synced asset when
+//   Asset.getLastModified() > brc_lastsync, so every re-activation below is preceded by
+//   dam.touch() (an edit), and it derives the account from the asset's parent folder.
 //
 //   "Move": listeners/BrightcoveMoveListener is a leftover "Lab2020" template whose
 //   body is commented out. It has no Brightcove behaviour at all. A DAM move is only
@@ -49,7 +52,9 @@
 //                     replication agent pointing at it
 //   BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET  the Video Cloud account the
 //                     author is configured with (a personal test account)
-//   BrightcovePublishListener isEnabled=true on the author
+//   exactly ONE live Brightcove publish path on the author: the brightcove:// agent
+//                     (on-prem default) or BrightcovePublishListener isEnabled=true (cloud
+//                     opt-in); see current/docs/dam-sync-on-activation.md
 // Writes only throwaway objects named e2e-throwaway-*: DAM assets/folders under the
 // account folder, Video Cloud videos and folders. afterAll removes them on failure
 // too. Every Video Cloud assertion is a fresh CMS GET (tests/e2e/cms.js), never a
@@ -71,7 +76,8 @@ let cms;
 let pub;
 let acct;
 let root; // <damIntegrationPath>/<accountId>
-let foldersBefore; // Video Cloud folder ids that existed before this file ran
+let foldersBefore;
+let mode; // 'listener' | 'agent', decided by the preflight // Video Cloud folder ids that existed before this file ran
 const t = dam.tracker();
 const RUN = dam.stamp();
 
@@ -91,9 +97,6 @@ test.beforeAll(async ({ request }) => {
 
   const l = await dam.component(request, LISTENER);
   if (!l) throw new Error(`${LISTENER} is not registered: is the connector installed?`);
-  test.skip(String(l.props.isEnabled) !== 'true',
-    `NOT MEASURED: ${LISTENER} isEnabled=${l.props.isEnabled} on the author (metatype default false, no config shipped). Enable it in configMgr to measure the publish path.`);
-
   pub = await dam.publishContext();
   const probe = await pub.get('/system/console/bundles.json');
   if (!probe.ok()) throw new Error(`publish ${dam.AEM_PUBLISH_URL} not reachable with the publish credentials (HTTP ${probe.status()})`);
@@ -103,8 +106,19 @@ test.beforeAll(async ({ request }) => {
   const toPublish = agents.filter((a) => a.transportUri.includes(pubHost));
   if (!toPublish.length) throw new Error(`no enabled author replication agent targets ${pubHost}: activation would never reach publish`);
   const brightcoveAgents = agents.filter((a) => a.transportUri.toLowerCase().startsWith('brightcove://'));
+
+  // Exactly one Brightcove publish path must be live, so every result is attributable:
+  // the on-prem default (brightcove:// agent) or the cloud opt-in (listener).
+  // Context: current/docs/dam-sync-on-activation.md
+  const listenerOn = String(l.props.isEnabled) === 'true';
+  test.skip(!listenerOn && !brightcoveAgents.length,
+    `NOT MEASURED: no Brightcove publish path is live on the author (${LISTENER} isEnabled=${l.props.isEnabled}, no enabled brightcove:// agent)`);
+  if (listenerOn && brightcoveAgents.length) {
+    throw new Error(`both the listener and a brightcove:// agent (${brightcoveAgents.map((a) => a.name)}) are enabled: every activation would be pushed twice`);
+  }
+  mode = listenerOn ? 'listener' : 'agent';
   test.info().annotations.push(
-    { type: 'publish-paths', description: `listener=enabled; brightcove:// agents=${brightcoveAgents.map((a) => a.name).join(',') || 'none'}; agents to publish=${toPublish.map((a) => a.name).join(',')}` },
+    { type: 'publish-path', description: `${mode}; brightcove:// agents=${brightcoveAgents.map((a) => a.name).join(',') || 'none'}; agents to publish=${toPublish.map((a) => a.name).join(',')}` },
     { type: 'listener.event.topics', description: l.props['event.topics'] || '(none)' });
 
   foldersBefore = new Set((await cms.folders()).map((f) => f.id));
@@ -129,6 +143,8 @@ async function syncedAsset(request, folder, name, videoId) {
   const m = await dam.metadata(request, assetPath);
   expect(m.brc_id).toBe(videoId);
   expect(Number.isNaN(Date.parse(m.brc_lastsync)), `brc_lastsync was not stored as a date: ${m.brc_lastsync}`).toBe(false);
+  // Edited after the sync, so both publish paths push it (see dam.touch).
+  await dam.touch(request, assetPath);
   test.info().annotations.push({ type: 'upload', description: `${assetPath} dam:assetState=${assetState}` });
   return assetPath;
 }
@@ -186,6 +202,7 @@ test('row 31: activating a synced DAM asset pushes its metadata to the existing 
   const title = `${v.name}-renamed`;
   const description = `row 31 description ${RUN}`;
   await dam.setMetadata(request, assetPath, { 'dc:title': title, brc_description: description });
+  await dam.touch(request, assetPath);
 
   const before = await cms.get(v.id);
   expect(before.name).toBe(v.name); // nothing to pass vacuously
@@ -248,6 +265,7 @@ test('row 32 (BGS-1600): activating in a DAM subfolder creates and uses the matc
   expect(await spuriousAccountFolders(), 'a folder named after the account root was created').toEqual([]);
 
   // Second activation reuses the folder rather than creating another one.
+  await dam.touch(request, assetPath);
   await dam.activate(request, assetPath);
   await dam.sleep(15_000);
   expect((await cms.folders()).filter((x) => x.name === f.name).map((x) => x.id)).toEqual([folderId]);
@@ -324,10 +342,15 @@ test('row 33 (BGS-1705): a redelivered publish of a new asset does not create a 
   // The asset path is unique to this run, so every matching line is from this test.
   const fresh = await dam.logLines(request, BRC_LOG, assetPath, 20_000);
   if (fresh) {
+    // listener: one INFO line per event naming its branch. agent: BrcReplicationHandler
+    // logs "Path: <path>" at DEBUG once per delivered replication (ui.config sets
+    // com.coresecure to Debug).
     const creates = fresh.filter((l) => l.includes('Activating New Brightcove Asset')).length;
     const updates = fresh.filter((l) => l.includes('Activating Modified Brightcove Asset')).length;
-    test.info().annotations.push({ type: 'listener branches', description: `new=${creates} modified=${updates}` });
-    expect(creates + updates, 'the listener saw fewer than three events').toBeGreaterThanOrEqual(3);
+    const delivered = fresh.filter((l) => l.includes(`Path: ${assetPath}`)).length;
+    test.info().annotations.push({ type: 'events seen', description: `${mode}: new=${creates} modified=${updates} delivered=${delivered}` });
+    const seen = mode === 'listener' ? creates + updates : delivered;
+    expect(seen, `the ${mode} path saw fewer than three events, so redelivery was not exercised`).toBeGreaterThanOrEqual(3);
   } else {
     test.info().annotations.push({ type: 'listener branches', description: 'NOT MEASURED: brightcove.log not readable through the log tailer' });
   }
@@ -357,6 +380,7 @@ test('move: moving an asset between DAM folders then re-activating moves the vid
   await dam.sleep(20_000);
   test.info().annotations.push({ type: 'folder after move alone', description: String((await cms.get(v.id)).folder_id) });
 
+  await dam.touch(request, moved);
   await activateAndReachPublish(request, moved);
   const folderB = await dam.pollUntil(async () => ((await dam.json(request, b.path)) || {}).brc_folder_id, { timeout: 90_000, interval: 3_000 });
   expect(folderB, 'the destination DAM folder never got a brc_folder_id').toBeTruthy();
@@ -415,6 +439,7 @@ test.fixme('moving an asset back to the account root and re-activating takes the
 
   const moved = await dam.moveNode(request, assetPath, root);
   t.assets.add(moved);
+  await dam.touch(request, moved);
   await activateAndReachPublish(request, moved);
   const out = await dam.pollUntil(async () => ((await cms.get(v.id)).folder_id ? null : true), { timeout: 60_000 });
   expect(out, `video ${v.id} still in folder ${folderA} after moving to the account root`).toBe(true);
