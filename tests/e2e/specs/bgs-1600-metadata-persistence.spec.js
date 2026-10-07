@@ -15,9 +15,8 @@
 // deletes it in afterAll; it never touches any other video.
 //
 // What the admin tool can and cannot save today (measured on AEM 6.5 LTS, Java 21):
-//   - Name / description / tags have NO edit control in the panel. The only
-//     caller of a=update_video is the dead ExtJS metaEdit() dialog. The
-//     endpoint itself is reachable and is pinned below as test.fixme.
+//   - Name / description / tags have NO edit control in the panel. The legacy
+//     a=update_video endpoint and its dead ExtJS metaEdit() dialog were deleted.
 //   - Labels (Save Labels) and the poster/thumbnail URL are the UI saves that
 //     exist. Save Labels is the live UI path through executePatch.
 const { test, expect, openAdmin, resolveAccountId } = require('../fixtures');
@@ -132,31 +131,4 @@ test('row 11: thumbnail URL saved in the admin UI is ingested and persisted to C
 
   await expect.poll(async () => { const i = (await cms.get(videoId)).images || {}; return i.thumbnail && i.thumbnail.src; },
     { timeout: 120_000, intervals: [3_000] }).toMatch(/^https:\/\//);
-});
-
-// Row 10 proper. Measured defect: a=update_video builds the PATCH body with
-// `"state": ""`, CMS answers 422 "state: ILLEGAL_VALUE", CmsAPI.updateVideo
-// swallows the array-shaped error body (ClassCastException) and the servlet
-// answers `true`, so nothing persists and nothing reports it. The transport is
-// fine on Java 21 (the PATCH reaches CMS via the Apache HttpClient fallback);
-// the body is what is wrong. No UI control reaches it today, so this drives the
-// endpoint from the admin page's own session. Flip to `test` when fixed.
-test.fixme('row 10: update_video (name/description/tags) persists to CMS', async ({ page }) => {
-  await openAdmin(page);
-  const acct = await resolveAccountId(page.request);
-  const newName = `${videoName}-renamed`;
-  const q = new URLSearchParams({
-    a: 'update_video', account_id: acct, id: videoId, name: newName,
-    description: 'e2e description', tags: '+e2e-tag', callback: 'cb',
-  });
-  const res = await page.request.get(`/bin/brightcove/api.js?${q}`);
-  expect(res.ok()).toBeTruthy();
-  // A bare `true` body is the silent-success shape: no error, nothing saved.
-  expect((await res.text()).trim(), 'update_video answered with a bare true').not.toBe('true');
-
-  const persisted = await cms.get(videoId);
-  expect(persisted.name).toBe(newName);
-  expect(persisted.description).toBe('e2e description');
-  expect(persisted.tags).toContain('e2e-tag');
-  videoName = newName; // keep teardown's prefix guard happy
 });

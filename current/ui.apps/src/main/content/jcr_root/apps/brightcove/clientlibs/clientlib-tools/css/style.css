@@ -946,21 +946,6 @@ div.overlay {
   width: 110px
 }
 
-#metaEditPop {
-  background-color: #fff;
-  width: 500px;
-  height: 600px;
-  border-color: #333333;
-  border-style: solid;
-  overflow: auto;
-  padding: 0 30px;
-  border: 0;
-  -webkit-box-shadow: 0px 2px 10px rgba(0, 0, 0, .5);
-  -moz-box-shadow: 0px 0px 10px rgba(0, 0, 0, .5);
-  -ms-box-shadow: 0px 2px 10px rgba(0, 0, 0, .5);
-  box-shadow: 0px 2px 10px rgba(0, 0, 0, .5);
-}
-
 #playerDiv {
   background-color: #e5e5e5;
   height: 336px;

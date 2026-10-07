@@ -445,36 +445,6 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private ObjectNode updateVideo(SlingHttpServletRequest request) throws IOException {
-        Collection<String> tagsToAdd = new ArrayList<String>();
-        if (request.getParameter("tags") != null) {
-
-            List<String> tags = Arrays.asList(request.getParameterValues("tags"));
-            for (String tag : tags) {
-                if (tag.startsWith("+")) tagsToAdd.add(tag.substring(1));
-            }
-
-        }
-        com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-        com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
-                request.getParameter(Constants.ID),
-                request.getParameter(Constants.NAME),
-                request.getParameter("referenceId"),
-                request.getParameter(Constants.DESCRIPTION),
-                request.getParameter(Constants.LONG_DESCRIPTION),
-                "",
-                tagsToAdd,
-                null,
-                null,
-                false,
-                link
-        );
-        ObjectNode videoItem = brAPI.cms.updateVideo(video);
-        //LOGGER.debug("videoItem", videoItem);
-
-        return null;
-    }
-
     private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String playlistId = request.getParameter("playlistId");
@@ -791,8 +761,6 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = createPlaylist(request);
         } else if ("create_video".equals(requestedAPI)) {
             result = createVideo(request);
-        } else if ("update_video".equals(requestedAPI)) {
-            result = updateVideo(request);
         } else if ("remove_text_track".equals(requestedAPI)) {
             result = removeTextTrack(request);
         } else if ("upload_text_track".equals(requestedAPI)) {
