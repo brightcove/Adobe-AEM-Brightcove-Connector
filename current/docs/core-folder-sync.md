@@ -81,7 +81,14 @@ replication bails out with "Account not existing" before any folder can be creat
 step do: the configured account whose `<integrationPath>/<accountId>` is the folder or an
 ancestor. That covers unsynced, nested and poisoned (Trap 4) folders. Only when no
 configuration can be read does it fall back to walking up while the folder carries
-`brc_folder_id` (stopping at a recognised account root). The seam
+`brc_folder_id`.
+
+The walk also tests `isAccountRoot` as a stop condition, but that stop can never fire: the walk
+only runs when `accountIdByPath` returned null, which means either the configuration could not
+be read (then `isAccountRoot` is null too, not TRUE) or the folder is outside every
+`<integrationPath>/<accountId>` (then none of its ancestors is an account root either, or the
+path lookup would have matched). A poisoned root (Trap 4) is handled by the path lookup, not by
+this stop. The condition is left in place as harmless; nothing pins it. The seam
 `BrcReplicationHandler.accountIdFor(Resource)` exists so the behaviour is testable without
 standing up a replication agent.
 

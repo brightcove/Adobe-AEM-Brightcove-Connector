@@ -308,8 +308,7 @@ public final class FolderSyncUtil {
                 return byPath;
             }
             // No configuration (or a folder outside every account root): walk up past
-            // synced subfolders. ⚠️ Stops at a recognised account root even if it carries
-            // brc_folder_id (Trap 4).
+            // synced subfolders. ⚠️ The isAccountRoot stop cannot fire here; see "Trap 3".
             Node n = parentNode;
             while (n.hasProperty(BRC_FOLDER_ID) && n.getDepth() > 1
                     && !Boolean.TRUE.equals(isAccountRoot(n))) {
