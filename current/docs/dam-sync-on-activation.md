@@ -29,7 +29,31 @@ node and nothing removed it (the same masking pattern as the thumbnail ACL in
   `cq:lastReplicated*`, mixins). The handler matches only the `brightcove://` prefix; the
   host in the URI is unused.
 - ⚠️ `BrightcovePublishListener` stays disabled on BOTH lines. On-prem with the agent AND
-  the listener enabled would process every activation twice.
+  the listener enabled would process every activation twice. The listener now guards that
+  itself (next section).
+
+## The agent and the listener together
+
+The merge filter creates the agent whenever it is absent, enabled. Two upgrade cases follow:
+
+- **(a) A 7.x-prem install that ran on the listener.** 7.0-7.3 `-prem` shipped no agent, so
+  an admin who wanted sync enabled the listener. Installing this package then adds the agent,
+  enabled, next to the listener: both would handle every activation, and two handlers racing
+  on a new asset is the duplicate-video pattern of BGS-1705.
+- **(b) A 6.0.x install whose admin deleted the agent** (to turn sync off, or because they
+  moved to the listener). Installing this package brings the agent back, enabled.
+
+The guard: when the listener is enabled on author and `AgentManager` reports an **enabled**
+agent whose transport URI starts with `brightcove://`, the listener logs a WARN naming the
+agent and skips the event; the agent handles it. A disabled agent, no such agent, or no
+`AgentManager` (AEMaaCS) leaves the listener in charge. `BrightcovePublishListenerGateTest`
+pins both branches (enabled agent: no service resolver is even requested; disabled or absent:
+the event is processed).
+
+What the guard does not do: in case (b) the restored agent is live, so sync turns back on
+after the upgrade. An admin who wants sync off must disable the agent again (below); the merge
+filter will not re-enable it after that. In case (a) the agent wins; to keep the listener
+instead, disable the agent.
 
 ## Turning sync on (cloud) or off (on-prem)
 
@@ -136,6 +160,6 @@ pins the check (null authorizable, declared match, no match, no UserManager).
   listener's metatype default is `isEnabled=false`. Negative control: run against a
   `-prem` zip built before `ui.content.onprem` existed, it fails on the agent check.
 - `core/.../listeners/BrightcovePublishListenerGateTest`: the listener does nothing unless
-  enabled and on author.
+  enabled and on author, and skips when an enabled `brightcove://` agent exists.
 - Live: `tests/e2e/specs/dam-publish-tier.spec.js`, run through the agent path on an
   on-prem author and through the listener path on a cloud author.
