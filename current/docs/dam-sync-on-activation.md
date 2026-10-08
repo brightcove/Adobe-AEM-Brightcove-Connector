@@ -138,7 +138,10 @@ The `-prem` package therefore ships a second repoinit factory config,
   build's unrestricted grant, or the 6.0.x root entry).
 - ⚠️ Repoinit only appends ACEs. An instance that installed the earlier unrestricted 7.4.0 build
   keeps that `allow jcr:read` entry next to these; there the denies still apply, but the rest of
-  `/home` stays readable until that entry is removed.
+  `/home` stays readable until that entry is removed. That unrestricted grant was never released
+  (it existed only on the unmerged BGS-1600 branch), so the leftover entry is a test-bed artifact,
+  not customer state; the script deliberately does not delete it, because an unrestricted deny
+  would also narrow `/home` read on 6.0.x-upgraded instances, which is pre-existing behaviour.
 
 - It replaces what 6.0.12-prem got from `ui.apps` `jcr_root/_rep_policy.xml` (the policy
   on `/`), which granted `brightcove_admin` read, `rep:write`, replicate, version, lock and
@@ -170,7 +173,9 @@ The `-prem` package therefore ships a second repoinit factory config,
     compared, transitive groups included. Before the install every one of those reads was 404.
   - the 6.5 LTS author (which still carried the earlier unrestricted entry): `rep:password`, a
     `.tokens` child, and `profile` went from readable to not readable; the `dam-publish-tier`
-    agent-path tests passed (rows 31, 32, 33, 43, move), no `Not authorized` in the log.
+    agent-path tests passed (rows 31, 32, 33, 43, move), no `Not authorized` in the log. Not
+    measured: the agent path authorizing under the restricted allow ALONE on an author (the
+    leftover unrestricted entry is still there).
 
 The `memberOf()` behaviour is unchanged since 6.0.12 and not a code change: check the group
 config first when on-prem quietly syncs nothing. `BrcReplicationHandlerAuthorizationTest`
