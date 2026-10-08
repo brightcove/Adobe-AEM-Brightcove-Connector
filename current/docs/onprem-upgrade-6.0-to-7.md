@@ -37,8 +37,10 @@ and are corrected: the workflow-model names and the legacy clientlib paths.
   restriction, i.e. the whole repository. Oak stores it under a generated name (measured:
   `/rep:policy/allow23`), and no 7.x filter owns `/rep:policy`, so it survives the upgrade
   unchanged. The 7.x grants (`/content`; read on `/home/groups` and `/home/users`) are added
-  next to it. So the narrowed permission model only holds on a FRESH install; an upgraded
-  instance keeps the 6.0.x scope until an administrator removes that entry by hand. It also
+  next to it. So the narrowed permission model (least privilege) holds on FRESH installs only;
+  an upgraded instance keeps the 6.0.x root grant until an administrator removes that entry by
+  hand. `tests/parity/probes/upgrade/onprem-upgrade-probe.js` reports it as a named WARN, not a
+  PASS, and records the thumbnail-less import check as NOT MEASURED on such a bed. It also
   masks any 7.x code that would need a wider grant (the thumbnail-placeholder defect fixed in
   `f670f4e` was invisible on upgraded instances for this reason).
 
