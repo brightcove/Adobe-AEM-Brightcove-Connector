@@ -64,6 +64,19 @@ async function firstBrightcoveAsset(request) {
   return `${root}/${name}`;
 }
 
+// True when `url` answers (any status below 500) within `timeoutMs`. Specs that ingest a
+// public media URL call this first and skip with NOT MEASURED when the host is unreachable,
+// so a dead third-party host is not reported as a connector defect.
+async function mediaHostReachable(url, timeoutMs = 8_000) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (res.body) await res.body.cancel();
+    return res.status < 500;
+  } catch (e) {
+    return false;
+  }
+}
+
 // ---- Live-account lookups (read-only) -------------------------------------
 
 // Parse the connector's JSONP envelope: cb({...});
@@ -186,5 +199,5 @@ async function editorScrollTop(page) {
 module.exports = {
   test, expect, ADMIN_PATH, openAdmin, waitForVideoRows,
   resolveAccountId, brightcoveAssetsRoot, firstBrightcoveAsset,
-  parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
+  mediaHostReachable, parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
 };

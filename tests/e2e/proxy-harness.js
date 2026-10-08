@@ -44,8 +44,10 @@ class LoggingProxy {
   denied(host) { return this.deny.some((re) => re.test(host)); }
 
   onConnect(req, clientSock, head) {
-    const [host, portStr] = req.url.split(':');
-    const port = Number(portStr) || 443;
+    // authority-form target: host:port, or [v6addr]:port (a plain split(':') mangles the latter)
+    const m = /^(?:\[([^\]]+)\]|([^:]+))(?::(\d+))?$/.exec(req.url) || [];
+    const host = m[1] || m[2] || req.url;
+    const port = Number(m[3]) || 443;
     if (this.denied(host)) {
       this.record('CONNECT', host, port, 'deny');
       clientSock.end('HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n');
@@ -69,12 +71,13 @@ class LoggingProxy {
       res.writeHead(400); res.end('absolute URI required'); return;
     }
     const port = Number(u.port) || 80;
-    if (this.denied(u.hostname)) {
-      this.record(req.method, u.hostname, port, 'deny');
+    const hostname = u.hostname.replace(/^\[|\]$/g, ''); // URL keeps the brackets on an IPv6 literal
+    if (this.denied(hostname)) {
+      this.record(req.method, hostname, port, 'deny');
       res.writeHead(403); res.end(); return;
     }
-    this.record(req.method, u.hostname, port, 'allow');
-    const up = http.request({ host: u.hostname, port, path: u.pathname + u.search, method: req.method, headers: req.headers },
+    this.record(req.method, hostname, port, 'allow');
+    const up = http.request({ host: hostname, port, path: u.pathname + u.search, method: req.method, headers: req.headers },
       (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
     up.on('error', () => { res.writeHead(502); res.end(); });
     req.pipe(up);
