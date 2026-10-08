@@ -124,7 +124,21 @@ activation by a declared `administrators` member was `Not authorized`.
 
 The `-prem` package therefore ships a second repoinit factory config,
 `/apps/brightcove-onprem/osgiconfig/config/org.apache.sling.jcr.repoinit.RepositoryInitializer-brightcove-onprem.config`:
-`jcr:read` for `brightcove_admin` on `/home/groups` and `/home/users`, nothing else.
+`jcr:read` for `brightcove_admin` on `/home/groups` and `/home/users`, restricted to what
+`UserManager.getAuthorizable` and `memberOf()` read, nothing else:
+
+- `/home/users`: allow `jcr:read` with `rep:ntNames` = `rep:User`, `rep:SystemUser`,
+  `rep:AuthorizableFolder` (the user node and its own properties); then deny `jcr:read` on
+  `rep:itemNames` = `rep:password`, and on `rep:glob` `*/.tokens*`, `*/keystore*`, `*/profile*`.
+- `/home/groups`: allow `jcr:read` with `rep:ntNames` = `rep:Group`, `rep:AuthorizableFolder`,
+  `rep:MemberRefsList`, `rep:MemberRefs` (the group node, `rep:members` and the overflow member
+  lists); then deny `rep:glob` `*/profile*`.
+- ⚠️ The denies come AFTER the allow on purpose: for one principal Oak lets the later entry win.
+  They are what closes those items on an instance that also carries a broader allow (an earlier
+  build's unrestricted grant, or the 6.0.x root entry).
+- ⚠️ Repoinit only appends ACEs. An instance that installed the earlier unrestricted 7.4.0 build
+  keeps that `allow jcr:read` entry next to these; there the denies still apply, but the rest of
+  `/home` stays readable until that entry is removed.
 
 - It replaces what 6.0.12-prem got from `ui.apps` `jcr_root/_rep_policy.xml` (the policy
   on `/`), which granted `brightcove_admin` read, `rep:write`, replicate, version, lock and
@@ -136,13 +150,27 @@ The `-prem` package therefore ships a second repoinit factory config,
 - ⚠️ Its own filter root `/apps/brightcove-onprem`, not `/apps/brightcove/osgiconfig`:
   `ui.config` owns that root in replace mode and would delete this file whenever it
   installed after it.
-- ⚠️ Plain grammar only (`create service user`, `set ACL on … allow … end`): the 6.5.0 GA
-  repoinit parser aborts the whole script on newer syntax (`ui.config/.../README-repoinit.md`).
+- ⚠️ Grammar limited to what the 6.5.0 GA parser accepts (`create service user`,
+  `set ACL on … allow|deny … [restriction(…)] … end`): it aborts the whole script on newer syntax
+  (`ui.config/.../README-repoinit.md`). Checked statically 2026-10-08: this exact script parses
+  with `org.apache.sling.repoinit.parser` 1.2.2 taken from a 6.5.0 GA instance (restrictions,
+  including multi-value `rep:ntNames`, come out intact; the same harness rejects
+  `set properties`), and that instance's `org.apache.sling.jcr.repoinit` 1.1.8 applies
+  multi-value restrictions. Not run on a live 6.5.0 GA instance.
   It repeats `create service user brightcove_admin` because the two scripts run in no
   guaranteed order and a grant to a missing principal fails.
-- Measured 2026-10-07 on 6.5 LTS: after install, `/home/groups` and `/home/users` each carry
-  a `rep:GrantACE` for `brightcove_admin` with `jcr:read`, and every agent-path activation
-  in `dam-publish-tier.spec.js` was authorized and handled (`tests/parity/matrix.md` rows 31-33, 43, 44).
+- Measured 2026-10-07 on 6.5 LTS (unrestricted grant): every agent-path activation in
+  `dam-publish-tier.spec.js` was authorized and handled (`tests/parity/matrix.md` rows 31-33, 43, 44).
+- Measured 2026-10-08 with the restricted grant, reading as `brightcove_admin` (admin
+  impersonation via `sling.sudo`):
+  - a 6.5 LTS publish that had never had a `/home` grant (so only these entries apply): user
+    and group nodes readable, `rep:authorizableId` and `rep:members` readable; `rep:password` and
+    `profile` not readable (no `keystore` or `.tokens` node existed there to test); Granite's authorizable JSON (`UserManager` on that
+    session) returned the same `memberOf` and group `members` as admin for every authorizable
+    compared, transitive groups included. Before the install every one of those reads was 404.
+  - the 6.5 LTS author (which still carried the earlier unrestricted entry): `rep:password`, a
+    `.tokens` child, and `profile` went from readable to not readable; the `dam-publish-tier`
+    agent-path tests passed (rows 31, 32, 33, 43, move), no `Not authorized` in the log.
 
 The `memberOf()` behaviour is unchanged since 6.0.12 and not a code change: check the group
 config first when on-prem quietly syncs nothing. `BrcReplicationHandlerAuthorizationTest`
@@ -153,7 +181,8 @@ pins the check (null authorizable, declared match, no match, no UserManager).
 - `scripts/check-dam-sync-packaging.py <cloud zip> <prem zip>`: the `-prem` zip carries the
   agent, enabled, `brightcove://`, under a merge filter, and nothing else in that package;
   it carries exactly one `/home` grant, from `ui.config.onprem`, read-only for
-  `brightcove_admin` on `/home/groups` and `/home/users`, in 6.5.0-GA-safe grammar, and no
+  `brightcove_admin` on `/home/groups` and `/home/users`, every allow restricted by
+  `rep:ntNames`, `rep:password` denied, in 6.5.0-GA-safe grammar, and no
   repoinit sets an ACL on `/`; the cloud zip grants nothing on `/home` and does not embed
   `ui.config.onprem` (negative control for the grant: a `-prem` zip built before it fails);
   the cloud zip carries no `/etc/replication`; neither ships a listener config, and the
