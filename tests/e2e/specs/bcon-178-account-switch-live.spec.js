@@ -11,6 +11,10 @@
 // not configured on the instance under test; nothing identifying lives in git):
 //   BRC_E2E_SECOND_ACCOUNT_ID  the second account's id, as AEM lists it
 //   BC_BIN                     path to the Brightcove `bc` CLI (not /usr/bin/bc)
+//   BC_FIRST_ACCOUNT_LABEL / BC_SECOND_ACCOUNT_LABEL
+//                              the `bc` account LABELS (`bc --account <label>`, registered
+//                              with bc-account-bootstrap) of the first and second account.
+//                              `bc` resolves a label, not a numeric id.
 // The default (first) account must be the one the other specs use; the spec
 // asserts it stays first and that the switch round-trips back to it.
 const { execFileSync } = require('child_process');
@@ -18,11 +22,13 @@ const { test, expect, openAdmin, resolveAccountId } = require('../fixtures');
 
 const SECOND = process.env.BRC_E2E_SECOND_ACCOUNT_ID;
 const BC_BIN = process.env.BC_BIN;
+const LABEL_FIRST = process.env.BC_FIRST_ACCOUNT_LABEL;
+const LABEL_SECOND = process.env.BC_SECOND_ACCOUNT_LABEL;
 
-function bc(account, args) {
+function bc(label, args) {
   let out;
   try {
-    out = execFileSync(BC_BIN, ['--account', account, ...args], { encoding: 'utf8', timeout: 60_000 });
+    out = execFileSync(BC_BIN, ['--account', label, ...args], { encoding: 'utf8', timeout: 60_000 });
   } catch (e) {
     out = `${e.stdout || ''}${e.stderr || ''}`; // bc prints error JSON on a non-zero exit
     if (!out.includes('{')) throw new Error(`bc ${args.join(' ')} failed: ${e.message}`);
@@ -30,11 +36,11 @@ function bc(account, args) {
   return JSON.parse(out.slice(out.indexOf('{')));
 }
 // true / false for a CMS 200 / NOT_FOUND; anything else is an error, not a "no".
-function bcHasVideo(account, id) {
-  const r = bc(account, ['videos', 'get', id]);
+function bcHasVideo(label, id) {
+  const r = bc(label, ['videos', 'get', id]);
   if (r.error) {
     if (r.code === 'NOT_FOUND') return false;
-    throw new Error(`bc videos get ${id} on ${account}: ${r.code}`);
+    throw new Error(`bc videos get ${id} on ${label}: ${r.code}`);
   }
   return String(r.data.video.id) === id;
 }
@@ -62,7 +68,7 @@ async function switchTo(page, accountId) {
 }
 
 test('row 20: switch to a second account, confirm, list comes from it, switch back', async ({ page, request }) => {
-  test.skip(!SECOND || !BC_BIN, 'NOT MEASURED: BRC_E2E_SECOND_ACCOUNT_ID and BC_BIN are not both set');
+  test.skip(!SECOND || !BC_BIN || !LABEL_FIRST || !LABEL_SECOND, 'NOT MEASURED: BRC_E2E_SECOND_ACCOUNT_ID, BC_BIN, BC_FIRST_ACCOUNT_LABEL and BC_SECOND_ACCOUNT_LABEL are not all set');
   const accounts = (await (await request.get('/bin/brightcove/accounts')).json()).accounts || [];
   test.skip(!accounts.some((a) => String(a.value) === SECOND), 'NOT MEASURED: the second account is not configured on this AEM instance');
 
@@ -84,9 +90,9 @@ test('row 20: switch to a second account, confirm, list comes from it, switch ba
   expect(secondIds.filter((id) => firstIds.includes(id)), 'the list did not change after switching').toEqual([]);
   // Independent read-only check against CMS: every listed video belongs to the second account.
   for (const id of secondIds.slice(0, 5)) {
-    expect(bcHasVideo(SECOND, id), `video ${id} shown after the switch is not in the second account`).toBe(true);
+    expect(bcHasVideo(LABEL_SECOND, id), `video ${id} shown after the switch is not in the second account`).toBe(true);
   }
-  expect(bcHasVideo(first, secondIds[0]), 'the second account\'s video must not exist in the first').toBe(false);
+  expect(bcHasVideo(LABEL_FIRST, secondIds[0]), 'the second account\'s video must not exist in the first').toBe(false);
 
   // Switch back: the list is the first account's again.
   await switchTo(page, first);
