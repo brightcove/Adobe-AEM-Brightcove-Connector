@@ -284,7 +284,7 @@ public class HttpServices {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
             LOGGER.debug("URL :" + targetURL);
-            LOGGER.debug("payload :" + LogRedactor.body(payload));
+            if (LOGGER.isDebugEnabled()) LOGGER.debug("payload :" + LogRedactor.body(payload));
 
             LOGGER.debug("is proxy valid? :" + PROXY.toString());
             connection = getSSLConnection(url, targetURL);
@@ -331,7 +331,7 @@ public class HttpServices {
                 }
 
                 exPostResponse = response.toString();
-                LOGGER.debug("exPostResponse >>>" + LogRedactor.body(exPostResponse));
+                if (LOGGER.isDebugEnabled()) LOGGER.debug("exPostResponse >>>" + LogRedactor.body(exPostResponse));
 
                 if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
                     //CORRECT ADDITION OF THE REQUEST BODY
@@ -359,13 +359,13 @@ public class HttpServices {
                     }
                 }
 
-                LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
+                if (LOGGER.isDebugEnabled()) LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
             } else {
                 throw new Exception("**** Input Stream Coming Back is Null");
 
             }
 
-            LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
+            if (LOGGER.isDebugEnabled()) LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
 
 
         } catch (Exception e) {
@@ -392,7 +392,7 @@ public class HttpServices {
                 }
             }
         }
-        LOGGER.debug("finally - > exPostResponse[1]: {}", LogRedactor.body(responseJSON.toString()));
+        if (LOGGER.isDebugEnabled()) LOGGER.debug("finally - > exPostResponse[1]: {}", LogRedactor.body(responseJSON.toString()));
         return responseJSON.toString();
     }
 
@@ -680,7 +680,7 @@ public class HttpServices {
         try {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20") + "?" + urlParameters);
-            LOGGER.trace("url: " + targetURL + "?" + LogRedactor.body(urlParameters) + " Protocol:" + url.getProtocol());
+            if (LOGGER.isTraceEnabled()) LOGGER.trace("url: " + targetURL + "?" + LogRedactor.body(urlParameters) + " Protocol:" + url.getProtocol());
             if ("http".equals(url.getProtocol())) {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
             } else {
