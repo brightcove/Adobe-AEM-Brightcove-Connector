@@ -462,14 +462,24 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     private ObjectNode updateLabels(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        if ( (request.getParameter("labels") != null) && (request.getParameter("videoId") != null) ) {
-            String[] labels = request.getParameterValues("labels");
-            String videoId = request.getParameter("videoId");
-            result = brAPI.cms.updateLabels(videoId, labels);
+        String videoId = request.getParameter("videoId");
+        if (videoId != null && !videoId.trim().isEmpty()) {
+            // ⚠️ No labels parameter means "clear them all": jQuery's $.param drops an empty array,
+            // so that is how the admin UI sends a last-label removal. Context: docs/admin-labels.md
+            String[] sent = request.getParameterValues("labels");
+            List<String> labels = new ArrayList<>();
+            if (sent != null) {
+                for (String label : sent) {
+                    if (label != null && !label.trim().isEmpty()) {
+                        labels.add(label);
+                    }
+                }
+            }
+            result = brAPI.cms.updateLabels(videoId, labels.toArray(new String[0]));
         } else {
             // An empty {} reads as success to the UI, so a malformed request must say so.
             result.put("error_code", 400);
-            result.put("message", "videoId and labels are required");
+            result.put("message", "videoId is required");
         }
         return result;
     }
@@ -804,6 +814,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = deleteVariant(request);
         } else {
             result.put(Constants.ERROR, 404);
+            result.put("message", "Unknown or unsupported action");
         }
         return result;
     }
