@@ -103,7 +103,7 @@ git rev-list --left-right --count origin/master...origin/onprem-master         #
 | `ui.content` | `/conf/brightcove`, `/content/brightcovetools`, workflow models `bc-sync-new-asset`, `brightcove-delete-asset` | (inside ui.apps) models named `brightcove-sync-asset-workflow`, `brightcove-delete-asset-workflow` | **Yes**, plus legacy model names in the overlay. |
 | `ui.config` | `.cfg.json` under `/apps/brightcove/osgiconfig/config{,.prod,.stage}`; repoinit creates `brightcove_admin` service user | `.config` under `/apps/brightcove/runmodes/config{,.author,.publish,.author.dev,.publish.dev}` incl. `LoginAdminWhitelist` fragment | **Yes**. 6.5 supports `.cfg.json` and repoinit (`org.apache.sling.jcr.repoinit 1.1.8` active on the local 6.5.0). `loginAdministrative` is used by **neither** branch, so the whitelist fragment is dead weight: drop it. |
 | `ui.apps.structure`, `it.tests`, `ui.tests` | archetype scaffolds | absent | Yes (harmless on 6.5). |
-| `all` | embeds core, ui.apps, ui.content, ui.config **and WCM Core Components** into `/apps/brightcove-packages/*/install` | absent (two separate packages) | Yes. Verify the embedded Core Components version installs on 6.5 LTS, or make that embed cloud-only. |
+| `all` | embeds core, ui.apps, ui.content, ui.config **and WCM Core Components** into `/apps/brightcove-packages/*/install` | absent (two separate packages) | Yes. Verify the embedded Core Components version installs on 6.5 LTS, or make that embed cloud-only. **Since BGS-1746 (7.4.0): embedded on neither platform** (`current/docs/core-components-not-embedded.md`). |
 | `analyse` | `aemanalyser-maven-plugin` | absent | **Cloud profile only.** |
 
 ### 1.3 The OSGi configuration key break (silent, customer-facing)

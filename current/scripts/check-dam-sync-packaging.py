@@ -19,6 +19,9 @@ Asserts, per docs/dam-sync-on-activation.md:
   both     BrightcovePublishListener stays OFF: its metatype default for isEnabled is
            false and no embedded package ships an OSGi config for its PID (so on-prem
            does not handle each activation twice, agent + listener)
+  both     no WCM Core Components inside: no embedded core.wcm.components.* artifact, no
+           Core Components pom.xml (scanners read those), nothing under /apps/core
+           (docs/core-components-not-embedded.md)
 Repoinit is found BY CONTENT (any embedded file with a `set ACL` / `set principal ACL`
 statement), not by file name, and every `set ACL` form is parsed: `on <path>[, <path>]` with
 `allow|deny <privs> for <principals> [restriction(..)]` lines, and `for <principal>` with
@@ -222,6 +225,15 @@ def cloud(packages, scripts):
     check(not extra, f"cloud artifact does not embed brightcove.ui.config.onprem {extra or ''}")
 
 
+def no_core_components(packages):
+    """BGS-1746: the platform provides Core Components; embedding them is never right here."""
+    hits = sorted({p + n for p, z in packages for n in z.namelist()
+                   if "core.wcm.components" in n.rsplit("/", 1)[-1]
+                   or n.startswith("META-INF/maven/com.adobe.cq/core.wcm.components")
+                   or n.startswith("jcr_root/apps/core/")})
+    check(not hits, f"no WCM Core Components embedded {hits[:5] or ''}")
+
+
 def main(paths):
     if not paths:
         print(__doc__)
@@ -230,6 +242,7 @@ def main(paths):
         print(f"== {path}")
         packages = list(walk(zipfile.ZipFile(path)))
         listener_off(packages)
+        no_core_components(packages)
         scripts, bad = all_aces(packages)
         check(len(scripts) > 0, "at least one embedded repoinit script was found (NOT MEASURED otherwise)")
         common(scripts, bad)

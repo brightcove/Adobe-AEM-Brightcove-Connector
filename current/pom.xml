@@ -76,8 +76,6 @@
         <aem.uber.classifier></aem.uber.classifier>
         <aemanalyser.version>1.6.12</aemanalyser.version>
         <componentGroupName>Brightcove Connector</componentGroupName>
-        <!-- AEM Core Components Version -->
-        <core.wcm.components.version>2.27.0</core.wcm.components.version>
     </properties>
 
     <build>
@@ -754,23 +752,6 @@ Bundle-DocURL:
                 <scope>test</scope>
             </dependency>
 
-            <dependency>
-                <groupId>com.adobe.cq</groupId>
-                <artifactId>core.wcm.components.core</artifactId>
-                <version>${core.wcm.components.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.adobe.cq</groupId>
-                <artifactId>core.wcm.components.content</artifactId>
-                <type>zip</type>
-                <version>${core.wcm.components.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.adobe.cq</groupId>
-                <artifactId>core.wcm.components.config</artifactId>
-                <type>zip</type>
-                <version>${core.wcm.components.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-imaging</artifactId>
