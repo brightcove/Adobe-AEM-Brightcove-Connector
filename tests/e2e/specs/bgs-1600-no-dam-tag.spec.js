@@ -18,7 +18,7 @@
 // /bin/brightcove/dataload servlet, the same one the admin Sync button posts to.
 // Both videos and any DAM asset they produced are removed in afterAll, even on
 // failure. Media source: BRC_E2E_VIDEO_URL (default: a 1 MB CC0 clip).
-const { test, expect, resolveAccountId, brightcoveAssetsRoot, slingPost } = require('../fixtures');
+const { test, expect, resolveAccountId, brightcoveAssetsRoot, slingPost, mediaHostReachable } = require('../fixtures');
 const { creds, cmsClient } = require('../cms');
 
 const VIDEO_URL = process.env.BRC_E2E_VIDEO_URL || 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
@@ -42,6 +42,7 @@ async function makeActive(name, fields) {
 
 test.beforeAll(async ({ request }) => {
   test.skip(!creds(), 'NOT MEASURED: BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set, so no throwaway videos can be created');
+  test.skip(!(await mediaHostReachable(VIDEO_URL)), `NOT MEASURED: ${new URL(VIDEO_URL).host} is unreachable from here (set BRC_E2E_VIDEO_URL to a reachable clip), so the throwaways could never become ACTIVE`);
   cms = await cmsClient();
   const aemAccount = await resolveAccountId(request);
   if (cms.accountId !== aemAccount) {
@@ -54,16 +55,22 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.afterAll(async ({ request }) => {
-  // Runs on failure too. Only touches what this file created, by id.
-  for (const { id, name } of created) {
-    if (!name.startsWith(PREFIX)) continue;
+  // Runs on failure too. Only touches what this file created. The DAM asset is named by the
+  // video id (no throwaway prefix of its own), so it is removed only after the SERVER-SIDE name
+  // of that video is re-read and carries the prefix; the same guard then deletes the video.
+  for (const { id } of created) {
     try {
+      const cur = await cms.tryGet(id);
+      if (!cur || !String(cur.name || '').startsWith(PREFIX)) {
+        console.warn(`cleanup of ${id}: ${cur ? 'NOT deleting, name has no throwaway prefix' : 'video already gone, its DAM asset (if any) is left'}`);
+        continue;
+      }
       if (await assetStatus(request, id) === 200) { // POSTing a delete to a missing path is a 403
         const res = await slingPost(request, `${root}/${id}.mp4`, { ':operation': 'delete' });
         if (!res.ok()) console.warn(`DAM cleanup of ${id}.mp4 returned HTTP ${res.status()}`);
       }
-    } catch (e) { console.warn(`DAM cleanup of ${id}.mp4 failed: ${e.message}`); }
-    try { await cms.del(id); } catch (e) { console.warn(`CMS cleanup of ${id} failed: ${e.message}`); }
+      await cms.delIfThrowaway(id);
+    } catch (e) { console.warn(`cleanup of ${id} failed: ${e.message}`); }
   }
 });
 
@@ -96,6 +103,21 @@ test('row 35: AEM_NO_DAM video is not imported, untagged control is', async ({ r
     { timeout: 180_000, intervals: [3_000], message: 'the untagged control never became a DAM asset: the sync did not import it, so the tagged result is not interpretable' }).toBe(200);
   const asset = await (await request.get(`${root}/${control}.mp4.json`)).json();
   expect(asset['jcr:primaryType']).toBe('dam:Asset');
+
+  // The import runs on executor threads: the control landing does not mean the sync is done.
+  // Wait until the number of assets under the account folder is stable before asserting an
+  // absence, or the negative can pass while the tagged video is still queued.
+  const count = async () => {
+    const r = await request.get(`${root}.1.json`);
+    return r.ok() ? Object.values(await r.json()).filter((n) => n && n['jcr:primaryType'] === 'dam:Asset').length : -1;
+  };
+  let last = -2; let stable = 0;
+  for (let i = 0; i < 40 && stable < 4; i++) {
+    const n = await count();
+    stable = n === last ? stable + 1 : 0; last = n;
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+  expect(stable, 'the DAM asset count never settled after the sync, so an absence is not attributable to the filter').toBeGreaterThanOrEqual(4);
 
   expect(await assetStatus(request, tagged), 'the AEM_NO_DAM-tagged video was imported into the DAM').toBe(404);
 });
