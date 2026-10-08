@@ -36,8 +36,8 @@ node and nothing removed it (the same masking pattern as the thumbnail ACL in
 
 The merge filter creates the agent whenever it is absent, enabled. Two upgrade cases follow:
 
-- **(a) A 7.x-prem install that ran on the listener.** 7.0-7.3 `-prem` shipped no agent, so
-  an admin who wanted sync enabled the listener. Installing this package then adds the agent,
+- **(a) A 7.x-prem install with no agent node that syncs through the listener** (an admin
+  enabled the listener because no agent was there). Installing this package adds the agent,
   enabled, next to the listener: both would handle every activation, and two handlers racing
   on a new asset is the duplicate-video pattern of BGS-1705.
 - **(b) A 6.0.x install whose admin deleted the agent** (to turn sync off, or because they
