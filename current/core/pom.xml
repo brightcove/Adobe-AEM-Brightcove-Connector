@@ -72,6 +72,11 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- ⚠️ Without this export, ImageIO.read of a JPEG fails on a Java 17+ test JVM whenever
+                         day-commons-gfx's CMYK reader is ordered first. Context: docs/imageio-java21.md -->
+                    <argLine>--add-exports java.desktop/com.sun.imageio.plugins.jpeg=ALL-UNNAMED</argLine>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
