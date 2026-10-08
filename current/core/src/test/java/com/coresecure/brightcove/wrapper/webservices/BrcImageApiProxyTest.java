@@ -66,7 +66,7 @@ class BrcImageApiProxyTest {
         Result r = get(server.base() + "/poster.png?sig=abc");
         assertEquals(200, r.status);
         assertEquals("image/jpeg", r.contentType);
-        assertTrue(r.body.length > 0 && ImageIO.read(new java.io.ByteArrayInputStream(r.body)) != null,
+        assertTrue(r.body.length > 0 && com.coresecure.brightcove.wrapper.utils.ImageDecoder.read(new java.io.ByteArrayInputStream(r.body)) != null,
                 "body must decode as an image");
     }
 
@@ -102,6 +102,23 @@ class BrcImageApiProxyTest {
 
         assertEquals(404, r.status);
         assertTrue(r.text().contains("not a readable image"), r.text());
+    }
+
+    /** A reader that throws, ordered first: the poster is still served (docs/imageio-java21.md). */
+    @Test
+    void aFailingFirstImageReaderStillServesThePoster() throws Exception {
+        HttpServices.setProxy(Proxy.NO_PROXY);
+        com.coresecure.brightcove.wrapper.utils.FailingImageReader.install();
+        Result r;
+        try {
+            r = get(server.base() + "/poster.png?sig=abc");
+        } finally {
+            com.coresecure.brightcove.wrapper.utils.FailingImageReader.uninstall();
+        }
+        assertEquals(200, r.status, r.text());
+        assertEquals("image/jpeg", r.contentType);
+        assertTrue(r.body.length > 0 && com.coresecure.brightcove.wrapper.utils.ImageDecoder.read(new java.io.ByteArrayInputStream(r.body)) != null,
+                "body must decode as an image");
     }
 
     @Test

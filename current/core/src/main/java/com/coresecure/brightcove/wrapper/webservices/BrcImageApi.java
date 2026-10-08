@@ -47,6 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
+import com.coresecure.brightcove.wrapper.utils.ImageDecoder;
 import javax.servlet.ServletException;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -139,7 +140,7 @@ public class BrcImageApi extends SlingAllMethodsServlet {
                 sendError(response, 502, "Could not fetch the poster image");
                 return;
             }
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+            BufferedImage img = ImageDecoder.read(new ByteArrayInputStream(bytes));
             if (img == null) {
                 logger.warn("poster for video {} is not a readable image", VideoIDStr);
                 sendError(response, 404, "The poster is not a readable image");

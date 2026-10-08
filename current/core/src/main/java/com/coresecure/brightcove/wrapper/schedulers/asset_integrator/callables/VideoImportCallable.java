@@ -32,6 +32,8 @@
  */
 package com.coresecure.brightcove.wrapper.schedulers.asset_integrator.callables;
 
+import com.coresecure.brightcove.wrapper.utils.ImageDecoder;
+
 import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.objects.BinaryObj;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
@@ -49,7 +51,6 @@ import org.jcodec.api.awt.AWTSequenceEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
@@ -146,12 +147,12 @@ public class VideoImportCallable implements Callable<String> {
         }
         BufferedImage image;
         try {
-            image = ImageIO.read(binary);
+            image = ImageDecoder.read(binary);
         } finally {
             binary.close();
         }
         if (image == null) {
-            LOGGER.warn("ImageIO.read returned null for thumbnail of video {} — skipping asset creation", id);
+            LOGGER.warn("No image reader could decode the thumbnail of video {} — skipping asset creation", id);
             return null;
         }
 

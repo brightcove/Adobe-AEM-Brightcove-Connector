@@ -69,6 +69,20 @@ class VideoImportCallableThumbnaillessVideoTest {
         assertIsMp4(mp4);
     }
 
+    /**
+     * A reader that throws, ordered first (the CMYK reader on Java 17+ without the java.desktop
+     * export): the import must fall through to the next reader instead of failing the video.
+     */
+    @Test
+    void aFailingFirstImageReaderDoesNotStopTheImport() throws Exception {
+        com.coresecure.brightcove.wrapper.utils.FailingImageReader.install();
+        try {
+            assertIsMp4(importVideoWithThumbnail(Constants.DEFAULT_THUMBNAIL_LOCATION));
+        } finally {
+            com.coresecure.brightcove.wrapper.utils.FailingImageReader.uninstall();
+        }
+    }
+
     @Test
     void bundledPlaceholderIsADecodableImageIdenticalToTheUiAppsCopy() throws Exception {
         BinaryObj placeholder = VideoImportCallable.defaultThumbnailBinary();
@@ -77,7 +91,7 @@ class VideoImportCallableThumbnaillessVideoTest {
         byte[] bundled = readAll(placeholder.binary);
         assertEquals("image/jpeg", placeholder.mime_type);
 
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(bundled));
+        BufferedImage image = com.coresecure.brightcove.wrapper.utils.ImageDecoder.read(new ByteArrayInputStream(bundled));
         assertNotNull(image, "bundled placeholder does not decode as an image");
         assertTrue(image.getWidth() > 0 && image.getHeight() > 0);
 
