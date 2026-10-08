@@ -1,6 +1,9 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
 import com.coresecure.brightcove.wrapper.utils.JsonUtil;
+import com.day.cq.replication.Agent;
+import com.day.cq.replication.AgentConfig;
+import com.day.cq.replication.AgentManager;
 import com.day.cq.replication.ReplicationAction;
 import com.day.cq.replication.ReplicationActionType;
 
@@ -8,6 +11,9 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
@@ -64,6 +70,14 @@ public class BrightcovePublishListener implements EventHandler {
 
     @Reference
     SlingSettingsService slingSettings;
+
+    // Optional: AEMaaCS has no classic replication agents to find.
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC,
+            policyOption = ReferencePolicyOption.GREEDY)
+    volatile AgentManager agentManager;
+
+    /** The transport prefix BrcReplicationHandler handles (its brightcoveProtocol default). */
+    static final String BRIGHTCOVE_TRANSPORT_PREFIX = "brightcove://";
 
     private static final Logger LOG = LoggerFactory.getLogger(BrightcovePublishListener.class);
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
@@ -127,7 +141,9 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
+    // Package-private (not private) so BrightcovePublishListenerFolderSyncTest can drive
+    // the update path with a mocked ServiceUtil; activateAsset builds its own.
+    void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
             ModifiableValueMap brc_lastsync_map) {
 
         LOG.info("Entering activateModified()");
@@ -290,11 +306,41 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
+    /** The id of an enabled agent whose transport is brightcove://, or null when there is none. */
+    String enabledBrightcoveAgent() {
+        AgentManager manager = agentManager;
+        if (manager == null) {
+            return null;
+        }
+        try {
+            for (Map.Entry<String, Agent> entry : manager.getAgents().entrySet()) {
+                Agent agent = entry.getValue();
+                AgentConfig config = agent == null ? null : agent.getConfiguration();
+                String uri = config == null ? null : config.getTransportURI();
+                if (agent.isEnabled() && uri != null && uri.toLowerCase(java.util.Locale.ROOT).startsWith(BRIGHTCOVE_TRANSPORT_PREFIX)) {
+                    return entry.getKey();
+                }
+            }
+        } catch (RuntimeException e) {
+            LOG.warn("Could not list replication agents; assuming no brightcove:// agent", e);
+        }
+        return null;
+    }
+
     @Override
     public void handleEvent(Event event) {
         LOG.debug("handleEvent: topic={}", event.getTopic());
         // check that the service is enabled and that we are running on Author
         if (enabled && slingSettings.getRunModes().contains("author")) {
+            // ⚠️ With an enabled brightcove:// agent every activation would be handled twice,
+            // once there and once here (duplicate videos). Context: docs/dam-sync-on-activation.md
+            String agent = enabledBrightcoveAgent();
+            if (agent != null) {
+                LOG.warn("Brightcove publish listener is enabled but replication agent '{}' already syncs "
+                        + "activations to Brightcove ({}); skipping {} to avoid processing it twice. "
+                        + "Disable one of the two.", agent, BRIGHTCOVE_TRANSPORT_PREFIX, event.getTopic());
+                return;
+            }
 
             try {
 

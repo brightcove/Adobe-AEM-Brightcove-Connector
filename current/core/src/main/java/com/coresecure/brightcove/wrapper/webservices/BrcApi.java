@@ -44,6 +44,7 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.Page;
@@ -445,36 +446,6 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private ObjectNode updateVideo(SlingHttpServletRequest request) throws IOException {
-        Collection<String> tagsToAdd = new ArrayList<String>();
-        if (request.getParameter("tags") != null) {
-
-            List<String> tags = Arrays.asList(request.getParameterValues("tags"));
-            for (String tag : tags) {
-                if (tag.startsWith("+")) tagsToAdd.add(tag.substring(1));
-            }
-
-        }
-        com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-        com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
-                request.getParameter(Constants.ID),
-                request.getParameter(Constants.NAME),
-                request.getParameter("referenceId"),
-                request.getParameter(Constants.DESCRIPTION),
-                request.getParameter(Constants.LONG_DESCRIPTION),
-                "",
-                tagsToAdd,
-                null,
-                null,
-                false,
-                link
-        );
-        ObjectNode videoItem = brAPI.cms.updateVideo(video);
-        //LOGGER.debug("videoItem", videoItem);
-
-        return null;
-    }
-
     private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String playlistId = request.getParameter("playlistId");
@@ -491,10 +462,24 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     private ObjectNode updateLabels(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        if ( (request.getParameter("labels") != null) && (request.getParameter("videoId") != null) ) {
-            String[] labels = request.getParameterValues("labels");
-            String videoId = request.getParameter("videoId");
-            result = brAPI.cms.updateLabels(videoId, labels);
+        String videoId = request.getParameter("videoId");
+        if (videoId != null && !videoId.trim().isEmpty()) {
+            // ⚠️ No labels parameter means "clear them all": jQuery's $.param drops an empty array,
+            // so that is how the admin UI sends a last-label removal. Context: docs/admin-labels.md
+            String[] sent = request.getParameterValues("labels");
+            List<String> labels = new ArrayList<>();
+            if (sent != null) {
+                for (String label : sent) {
+                    if (label != null && !label.trim().isEmpty()) {
+                        labels.add(label);
+                    }
+                }
+            }
+            result = brAPI.cms.updateLabels(videoId, labels.toArray(new String[0]));
+        } else {
+            // An empty {} reads as success to the UI, so a malformed request must say so.
+            result.put("error_code", 400);
+            result.put("message", "videoId is required");
         }
         return result;
     }
@@ -592,7 +577,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.get(Constants.SENT).asBoolean()) {
                 //text_track.put("url", s3_url_resp.get("signed_url").asText());
                 text_track.put(Constants.URL, s3_url_resp.get(Constants.API_REQUEST_URL).asText());
-                LOGGER.trace("S3URLRESP: {}", s3_url_resp);
+                LOGGER.trace("S3URLRESP: {}", LogRedactor.body(String.valueOf(s3_url_resp)));
             } else {
                 LOGGER.error("FAILED TO INITIALIZE BUCKET");
             }
@@ -791,8 +776,6 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = createPlaylist(request);
         } else if ("create_video".equals(requestedAPI)) {
             result = createVideo(request);
-        } else if ("update_video".equals(requestedAPI)) {
-            result = updateVideo(request);
         } else if ("remove_text_track".equals(requestedAPI)) {
             result = removeTextTrack(request);
         } else if ("upload_text_track".equals(requestedAPI)) {
@@ -831,6 +814,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = deleteVariant(request);
         } else {
             result.put(Constants.ERROR, 404);
+            result.put("message", "Unknown or unsupported action");
         }
         return result;
     }

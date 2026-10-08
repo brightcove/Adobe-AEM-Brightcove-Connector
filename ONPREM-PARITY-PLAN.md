@@ -815,6 +815,25 @@ the parity phases; they are listed so they are not silently folded into "parity"
     consistent but does not fix the parameter being ignored. Fix: pass `dam_only` and
     `clips_only` through on the first page and to the count call.
 
+11. **The video search misses some words of a video's name.** Found 2026-10-08 (row 23 flake,
+    BGS-1690 spec). `CmsAPI#getVideos` and `#getVideosCount` send every user term as a required
+    term, `q= -tags:AEM_NO_DAM +<term>` (`Constants.WHITESPACE_FIX`). The CMS returns nothing
+    for some required unfielded terms although the bare term, `name:<term>` and `+name:<term>`
+    all match: measured on a digit-led word (`+42min` 0 hits, `42min` 1) while `+1080p`, `+708`
+    and `+sync` match. So the admin search and the component autocomplete offer nothing for that
+    word. The upstream parser's rule is not known; the query shape is unchanged since release
+    5.5.0 (2018) on both lines. Pinned (`test.fixme`, red on 7.4.0) in
+    `bcon-admin-regressions.spec.js`; the row 23 spec now picks a term the search finds.
+12. **An unusable account is answered HTTP 200 with an EMPTY body.** `BrcApi#executeRequest`
+    puts `error: 403` into the result when `getServices` refuses the account (unknown id, or a
+    user outside the account's allowed groups) and then breaks out without writing anything,
+    for `.js` and `.jsx` alike. The `.jsx` autocomplete therefore cannot tell "no access" from
+    "no matches", and `.js` callers get an unparsable reply. Same "200 with empty body" class as
+    items 2 and 5. Identical on `cloud-master` and `onprem-master` since release 5.5.0. Related:
+    exceptions inside `ServiceUtil#getList` and `CmsAPI#getVideos` are logged and become an
+    empty list, so a failed CMS call also reads as "no matches". Pinned (`test.fixme`, red on
+    7.4.0) in `bcon-admin-regressions.spec.js`.
+
 Also learned: `get_videos_with_label` / `get_videos_in_folder` are index-backed and lag; to
 verify a label/folder write, re-fetch the video record (`a=search_videos&isID=true&query=<id>`).
 

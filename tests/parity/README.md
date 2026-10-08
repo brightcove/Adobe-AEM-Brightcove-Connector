@@ -17,3 +17,9 @@ Evidence files may contain the test account ID; that is why `runs/` is not commi
 from `/bin/brightcove/accounts`. Mutation probes take their target objects from the
 environment (`PARITY_VIDEO_ID_LABELS`, `PARITY_VIDEO_ID_FOLDER`) so no live-account ids
 are committed.
+
+`probes/upgrade/onprem-upgrade-probe.js` is the exception: a re-runnable PASS / FAIL /
+NOT MEASURED check of the on-prem 6.0.x -> 7.x in-place upgrade (plain Node 18+, no
+Playwright). `snapshot` on the 6.0.x install, `check` after installing the -prem package;
+exits non-zero unless every check passes. Header has the usage; results in
+`current/docs/onprem-upgrade-6.0-to-7.md`.

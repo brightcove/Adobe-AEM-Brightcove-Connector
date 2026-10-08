@@ -448,6 +448,13 @@ Bundle-DocURL:
                     <value>onprem</value>
                 </property>
             </activation>
+            <!-- On-prem-only content (the Brightcove replication agent, and the repoinit read
+                 grant on /home its group check needs).
+                 Context: docs/dam-sync-on-activation.md -->
+            <modules>
+                <module>ui.content.onprem</module>
+                <module>ui.config.onprem</module>
+            </modules>
             <properties>
                 <aem.port>4602</aem.port>
                 <aem.api.artifactId>uber-jar</aem.api.artifactId>

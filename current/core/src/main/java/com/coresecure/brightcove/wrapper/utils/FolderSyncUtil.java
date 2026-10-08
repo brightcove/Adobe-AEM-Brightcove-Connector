@@ -39,7 +39,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.Node;
+import javax.jcr.Property;
+import javax.jcr.RepositoryException;
+import javax.jcr.Value;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Keeps a DAM asset's Brightcove folder in step with the DAM folder it lives in.
@@ -75,6 +79,15 @@ public final class FolderSyncUtil {
      */
     public static final long NO_RETRY_DELAY = 0L;
 
+    /**
+     * Where the account configuration comes from. Package-private test seam only: in
+     * production it is always {@link ServiceUtil#getConfigurationGrabber()}, which needs
+     * an OSGi container. Tests outside this package set it through
+     * {@code FolderSyncUtilSeam} (test sources) and must reset it afterwards.
+     */
+    static volatile Supplier<ConfigurationGrabber> configurationSource =
+            ServiceUtil::getConfigurationGrabber;
+
     private FolderSyncUtil() {
     }
 
@@ -97,11 +110,18 @@ public final class FolderSyncUtil {
             Node parentNode = assetNode.getParent();
             LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: {}", parentNode.getPath());
 
-            // Already-synced subfolder: just move the video. No account-root check is
-            // needed on this branch, because an account root never carries
-            // brc_folder_id, and moving into a folder that already exists cannot
-            // create a spurious one.
+            // Already-synced subfolder: just move the video. ⚠️ An account root CAN carry
+            // brc_folder_id: the pre-guard bug wrote one pointing at a Video Cloud folder
+            // named after the account, and checking this branch first then filed every
+            // root-level video into that folder forever. The account root means "no
+            // folder", so a stored id there is ignored and removed (self-repair). Only
+            // TRUE does that: unknown keeps the move, which cannot create a folder.
+            // Context: current/docs/core-folder-sync.md "Trap 4"
             if (parentNode.hasProperty(BRC_FOLDER_ID)) {
+                if (Boolean.TRUE.equals(isAccountRoot(parentNode))) {
+                    repairPoisonedAccountRoot(parentNode);
+                    return;
+                }
                 moveToKnownFolder(serviceUtil, parentNode, videoId);
                 return;
             }
@@ -171,7 +191,7 @@ public final class FolderSyncUtil {
     static Boolean isAccountRoot(Node parentNode) throws Exception {
         ConfigurationGrabber cg;
         try {
-            cg = ServiceUtil.getConfigurationGrabber();
+            cg = configurationSource.get();
         } catch (Exception | LinkageError e) {
             LOG.debug("Configuration grabber unavailable", e);
             return null;
@@ -200,6 +220,60 @@ public final class FolderSyncUtil {
         return false;
     }
 
+    /**
+     * Drop a {@code brc_folder_id} stored on an account root. The Video Cloud folder it
+     * names is deliberately left alone: a customer may have filed videos in it.
+     *
+     * <p>⚠️ If the remove cannot be saved (e.g. the service user may not write the
+     * root), the stored value is put back before returning, because the caller commits
+     * the BGS-1705 sync marker on this same session afterwards and a pending remove it
+     * is not allowed to persist would fail that commit too. Do not "fix" that with
+     * {@code refresh(false)}: it is session-wide (Trap 2). A failed repair still ignores
+     * the id and is retried on the next activation.</p>
+     */
+    private static void repairPoisonedAccountRoot(Node root) {
+        String path = null;
+        Property stale = null;
+        Value staleValue = null;
+        Value[] staleValues = null;
+        try {
+            path = root.getPath();
+            stale = root.getProperty(BRC_FOLDER_ID);
+            // Snapshot the Value(s), not getString(): restore() must put back the same type.
+            if (stale.isMultiple()) {
+                staleValues = stale.getValues();
+            } else {
+                staleValue = stale.getValue();
+            }
+            LOG.warn("Account root {} carries a stale brc_folder_id={} (written before the "
+                    + "account-root guard existed). Ignoring it, so the video stays out of any "
+                    + "folder, and removing the property. The Video Cloud folder is NOT deleted.",
+                    path, staleValue != null ? staleValue.getString() : java.util.Arrays.toString(staleValues));
+            stale.remove();
+            root.getSession().save();
+        } catch (RepositoryException | RuntimeException e) {
+            LOG.warn("Could not remove the stale brc_folder_id from {}; it stays ignored", path, e);
+            restore(root, staleValue, staleValues);
+        }
+    }
+
+    private static void restore(Node root, Value staleValue, Value[] staleValues) {
+        if (staleValue == null && staleValues == null) {
+            return;
+        }
+        try {
+            if (!root.hasProperty(BRC_FOLDER_ID)) {
+                if (staleValues != null) {
+                    root.setProperty(BRC_FOLDER_ID, staleValues);
+                } else {
+                    root.setProperty(BRC_FOLDER_ID, staleValue);
+                }
+            }
+        } catch (RepositoryException e) {
+            LOG.error("Could not restore the pending brc_folder_id after a failed repair", e);
+        }
+    }
+
     private static boolean isUsable(String folderId) {
         return folderId != null && !folderId.isEmpty();
     }
@@ -220,14 +294,20 @@ public final class FolderSyncUtil {
     }
 
     /**
-     * The account folder an asset belongs to, walking up past a synced subfolder.
+     * The account an asset belongs to, from the asset's parent folder.
      *
      * <p>Assets used to live directly under {@code <integrationPath>/<accountId>}, so the
      * account id was just the parent's name. With subfolder sync the parent can be a
-     * Brightcove subfolder instead, and reading its name yields a folder id where an
-     * account id is expected: the account lookup then misses and the publish is skipped
-     * with "Account not existing". A synced subfolder is identified by carrying
-     * {@code brc_folder_id}.</p>
+     * subfolder at any depth, synced or not, and reading its name yields a folder name
+     * where an account id is expected: the account lookup then misses and the publish is
+     * skipped with "Account not existing" (matrix row 32, measured on the agent path).</p>
+     *
+     * <p>So the account is resolved from the PATH, the way the publish listener and the
+     * workflow step do: the configured account whose {@code <integrationPath>/<accountId>}
+     * is the folder or one of its ancestors. That covers unsynced, nested and poisoned
+     * (Trap 4) folders alike. Only when no configuration can be read does it fall back to
+     * walking up past folders that carry {@code brc_folder_id}.
+     * Context: current/docs/core-folder-sync.md "Trap 3"</p>
      *
      * @param parentNode the asset's parent node
      * @return the account folder name, or null when it cannot be determined
@@ -237,13 +317,52 @@ public final class FolderSyncUtil {
             return null;
         }
         try {
-            if (parentNode.hasProperty(BRC_FOLDER_ID)) {
-                return parentNode.getParent().getName();
+            String byPath = accountIdByPath(parentNode.getPath());
+            if (byPath != null) {
+                return byPath;
             }
-            return parentNode.getName();
+            // No configuration (or a folder outside every account root): walk up past
+            // synced subfolders. ⚠️ The isAccountRoot stop cannot fire here; see "Trap 3".
+            Node n = parentNode;
+            while (n.hasProperty(BRC_FOLDER_ID) && n.getDepth() > 1
+                    && !Boolean.TRUE.equals(isAccountRoot(n))) {
+                n = n.getParent();
+            }
+            return n.getName();
         } catch (Exception e) {
             LOG.error("Could not resolve the account folder for the asset's parent", e);
             return null;
         }
+    }
+
+    /**
+     * The configured account whose root folder is {@code folderPath} or an ancestor of
+     * it, or null when none matches or the configuration cannot be read.
+     */
+    static String accountIdByPath(String folderPath) {
+        ConfigurationGrabber cg;
+        try {
+            cg = configurationSource.get();
+        } catch (Exception | LinkageError e) {
+            LOG.debug("Configuration grabber unavailable", e);
+            return null;
+        }
+        if (cg == null || folderPath == null) {
+            return null;
+        }
+        for (String accountId : cg.getAvailableServices()) {
+            ConfigurationService cs = cg.getConfigurationService(accountId);
+            if (cs == null || cs.getAssetIntegrationPath() == null) {
+                continue;
+            }
+            String integrationPath = cs.getAssetIntegrationPath();
+            String root = (integrationPath.endsWith("/")
+                    ? integrationPath.substring(0, integrationPath.length() - 1)
+                    : integrationPath) + "/" + accountId;
+            if (folderPath.equals(root) || folderPath.startsWith(root + "/")) {
+                return accountId;
+            }
+        }
+        return null;
     }
 }

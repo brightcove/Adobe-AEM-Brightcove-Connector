@@ -22,7 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  test, expect, resolveAccountId, firstVideos, createSitesTestPage, deletePage, editorScrollTop,
+  test, expect, resolveAccountId, firstVideos, parseJsonp, createSitesTestPage, deletePage, editorScrollTop,
 } = require('../fixtures');
 
 test.describe.configure({ mode: 'serial' });
@@ -87,6 +87,23 @@ function armErrorCollectors(page) {
   return errors;
 }
 
+// A word from a real video's name that the connector's own search actually finds, checked
+// through the JSON form of the same search_videos call the autocomplete makes. ⚠️ Not every
+// name word is findable: the connector sends each term as a required `+term`, and the CMS
+// matches no video for some of those (e.g. a digit-led word such as `+42min`) although the
+// bare term matches. Recorded in ONPREM-PARITY-PLAN.md §3b item 11; the listing order also
+// varies between runs, so the first video's first word was a coin toss. Null when no
+// candidate is findable.
+async function searchableTerm(request) {
+  for (const video of await firstVideos(request, 10)) {
+    for (const term of video.name.match(/[A-Za-z0-9]{3,}/g) || []) {
+      const res = await request.get(`/bin/brightcove/api.js?account_id=${ACCOUNT_ID}&a=search_videos&query=${encodeURIComponent(term)}&start=0&limit=1&callback=cb`);
+      if (res.ok() && (parseJsonp(await res.text()).items || []).length) return term;
+    }
+  }
+  return null;
+}
+
 const connectorErrors = (errors) => errors.filter((e) => /brightcove|brc\.|videojs|video\.js|reading 'options'|null#trigger|Load is not defined/i.test(e));
 
 test('rows 23-25: all three components place and render their authoring placeholders', async ({ page }) => {
@@ -106,7 +123,8 @@ test('rows 23-25: all three components place and render their authoring placehol
 });
 
 test('row 23 + BGS-1690: Video Player dialog picks a live video and the component refreshes in place', async ({ page, request }) => {
-  const [video] = await firstVideos(request, 1);
+  const term = await searchableTerm(request);
+  test.skip(!term, 'NOT MEASURED: no word from the first 10 video names is found by the connector search, so the autocomplete has nothing to offer');
   const errors = armErrorCollectors(page);
   const frame = await openEditor(page);
 
@@ -130,7 +148,6 @@ test('row 23 + BGS-1690: Video Player dialog picks a live video and the componen
   // match the term, so the picked video is whatever it returned, and its id is
   // read back from the suggestion rather than assumed.
   const input = dialog.locator('input[name="./videoPlayer"]');
-  const term = (video.name.match(/[A-Za-z0-9]{3,}/) || ['video'])[0];
   const suggestions = page.waitForResponse((r) => r.url().includes('/bin/brightcove/api.jsx') && r.url().includes('a=search_videos'), { timeout: 20_000 });
   await input.click();
   await input.fill('');

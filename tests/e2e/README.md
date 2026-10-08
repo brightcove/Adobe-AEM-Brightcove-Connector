@@ -75,6 +75,11 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
   Videos" source. It needs the site scaffold from `setup-local-dev.sh` (template
   plus a responsivegrid policy allowing `group:Brightcove`) and fails with a
   named error when that is missing, rather than skipping.
+- `cms.js` is a minimal Video Cloud CMS client (create / get / delete a video) for
+  specs that need a throwaway video of their own. It reads `BRIGHTCOVE_ACCOUNT_ID`,
+  `BRIGHTCOVE_CLIENT_ID` and `BRIGHTCOVE_CLIENT_SECRET` from the environment (source
+  your account env file; never commit them). `specs/bgs-1600-metadata-persistence.spec.js`
+  uses it and skips, saying why, when they are unset.
 - Each `specs/*.spec.js` drives a real user flow and asserts on the rendered UI
   and/or the outgoing `/bin/brightcove/api.js` request.
 
@@ -91,11 +96,47 @@ AEM_BASE=http://localhost:4502 npm test          # cloud
   the Phase 0 pins; `bcon-186-text-track-upload-feedback.spec.js` the BCON-186
   double-submit one.
 
+## Publish tier and DAM specs (opt-in)
+
+`specs/dam-publish-tier.spec.js` (matrix rows 31-33, DAM ingest, DAM move) and
+`specs/dam-workflows.spec.js` (rows 29-30) write DAM assets, activate them and run
+the connector's workflows, so they only run when `AEM_PUBLISH_URL` is set, plus the
+Video Cloud creds above. Otherwise every test skips as NOT MEASURED, which keeps a
+routine gate run from writing to the DAM.
+
+```bash
+set -a; . <your test-account env file>; set +a
+AEM_BASE=<author> AEM_PUBLISH_URL=<its publish> node_modules/.bin/playwright test specs/dam-*.spec.js
+```
+
+Preconditions the publish-tier spec checks and names when missing: an author whose
+run modes include `author`, an enabled author replication agent whose transport URI
+targets the publish host, and exactly one live Brightcove publish path: the
+`brightcove://` replication agent (the on-prem package ships one, enabled) or
+`BrightcovePublishListener` with `isEnabled=true` (the cloud opt-in). The listener is
+**off by default** (metatype default false and no config ships), so a fresh cloud
+instance has no live path until it is enabled; the specs that need one say so and
+skip as NOT MEASURED when neither exists.
+Each spec's header records the trigger it drives, read from the code.
+
+- `dam.js` is the kit: DAM folder/asset create (`<folder>.createasset.html`),
+  metadata writes, JCR move, activation (`/bin/replicate.json`), publish reads,
+  workflow start + wait (`/var/workflow/instances`), OSGi component props and the
+  Sling log tailer (read-only), and `tracker()`, which records every throwaway and
+  removes it in `afterAll` even after a failure.
+- `cms.js` gained `tryGet`, `getByRef` (reference_id, which the connector sets to
+  the asset's `jcr:uuid`), `sources`, `count`, `folders`, and guarded deletes
+  (`delIfThrowaway`, `delFolderIfThrowaway`) that re-read the object and refuse
+  anything not named `e2e-throwaway-*`.
+- `fixtures/tiny-2s.mp4` is the 17 KB source video for the ingest cases (ffmpeg
+  testsrc + sine, metadata stripped).
+
 ## Pre-QA gate
 
 `pre-qa-gate.sh` runs version-bump, build+install, deployed-bundle, and
 content-package checks, then this suite, before a ticket goes to Ready for QA.
 It gates cloud (`:4502`), on-prem (`:4602`), or both, and defaults to probing
-both instances. See `./pre-qa-gate.sh --help`; details in
+both instances. The JSON report is `tests/parity/runs/<date>/gate-<platform>-<port>-<version>.json`,
+so runs against different instances do not overwrite each other. See `./pre-qa-gate.sh --help`; details in
 `wiki/api/aem-connector-local-dev.md` → "Pre-QA gate" and
 `ONPREM-PARITY-PLAN.md` §3 Phase 1.

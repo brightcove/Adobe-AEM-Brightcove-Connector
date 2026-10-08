@@ -144,6 +144,9 @@ public class Constants {
     public static final String ORIGINAL_FILENAME = "original_filename";
     public static final String THUMBNAIL_URL = "thumbnailURL";
     public static final String DEFAULT_THUMBNAIL_LOCATION = "/apps/brightcove/clientlibs/clientlib-tools/img/shared/img/noThumbnail.jpg";
+    // Same bytes as DEFAULT_THUMBNAIL_LOCATION, packaged in brightcove.core. The import reads this copy
+    // because the brightcove_admin service user can only read /content (README, Repo Init paragraph).
+    public static final String DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE = "/com/coresecure/brightcove/wrapper/utils/noThumbnail.jpg";
     public static final String THUMBNAIL_SOURCE = "thumbnail_source";
     public static final String POSTER_SOURCE = "poster_source";
 

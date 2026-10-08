@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+    <!-- mode="merge": create the agent when it is absent (fresh install), never touch it
+         when it exists. An instance upgraded from 6.0.x already has this node, possibly
+         edited (transport URI, user, enabled flag), and 6.0.x owned it in replace mode;
+         merge neither duplicates nor overwrites nor deletes it.
+         Context: ../../../../../../docs/dam-sync-on-activation.md -->
+    <filter root="/etc/replication/agents.author/brightcove" mode="merge"/>
+</workspaceFilter>

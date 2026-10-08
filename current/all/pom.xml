@@ -212,8 +212,74 @@
                     <value>onprem</value>
                 </property>
             </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.coresecure</groupId>
+                    <artifactId>brightcove.ui.content.onprem</artifactId>
+                    <version>${project.version}</version>
+                    <type>zip</type>
+                </dependency>
+                <dependency>
+                    <groupId>com.coresecure</groupId>
+                    <artifactId>brightcove.ui.config.onprem</artifactId>
+                    <version>${project.version}</version>
+                    <type>zip</type>
+                </dependency>
+            </dependencies>
             <build>
                 <finalName>${project.artifactId}-${project.version}-prem</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.jackrabbit</groupId>
+                        <artifactId>filevault-package-maven-plugin</artifactId>
+                        <configuration>
+                            <!-- Overridden, not appended (see the cloud profile): repeats the
+                                 four base entries and adds the on-prem-only content package
+                                 with the Brightcove replication agent.
+                                 Context: ../docs/dam-sync-on-activation.md -->
+                            <embeddeds combine.self="override">
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.apps</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.core</artifactId>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.content</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/content/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.config</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.content.onprem</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/content/install</target>
+                                </embedded>
+                                <!-- The repoinit grant the brightcove:// agent's group check
+                                     needs (read on /home/groups and /home/users).
+                                     Context: ../docs/dam-sync-on-activation.md -->
+                                <embedded>
+                                    <groupId>com.coresecure</groupId>
+                                    <artifactId>brightcove.ui.config.onprem</artifactId>
+                                    <type>zip</type>
+                                    <target>/apps/brightcove-packages/application/install</target>
+                                </embedded>
+                            </embeddeds>
+                        </configuration>
+                    </plugin>
+                </plugins>
             </build>
         </profile>
         <profile>

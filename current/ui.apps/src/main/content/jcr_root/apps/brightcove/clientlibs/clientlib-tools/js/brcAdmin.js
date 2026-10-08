@@ -263,18 +263,6 @@ function findByTagCallBack(o) {
     loadEnd();
 }
 
-//Function calls update_video to change metadata
-//Also see metaEdit in vm_ui.js
-function metaSubmit() {
-    var form = document.getElementById("metaEditForm");
-    form.action = apiLocation;
-    form.submit();
-    loadStart();
-    //noWrite();
-    closeBox('metaEditPop');
-    Load(getAllVideosURL());
-}
-
 function delConfYes() {
     var checkedVideos = $("#tblMainList input:checked");
     var IDs = "";

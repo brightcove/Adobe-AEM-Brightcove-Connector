@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The 6.0.12-prem agent definition (git 2661f22), minus the instance-specific state the
+     original export carried (jcr:uuid, cq:lastReplicated*, cq:lastModified*,
+     mix:versionable / cq:ReplicationStatus). BrcReplicationHandler claims any enabled agent
+     whose transportUri starts with "brightcove://"; the host part is not used. -->
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        cq:template="/libs/cq/replication/templates/agent"
+        jcr:primaryType="nt:unstructured"
+        jcr:title="Brightcove Replication Agent"
+        sling:resourceType="cq/replication/components/agent"
+        enabled="true"
+        transportUri="brightcove://localhost:4503/bin/receive"/>
+</jcr:root>
