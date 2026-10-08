@@ -218,3 +218,35 @@ test.fixme('§3b-5: get_videos_with_label without start is not a 500', async ({ 
   const res = await request.get(`/bin/brightcove/api.js?account_id=${acct}&a=get_videos_with_label&labels=/e2e/&limit=1&callback=cb`);
   expect(res.status()).toBeLessThan(500);
 });
+
+// §3b item 11: the connector sends every search term as a required `+term`, and the CMS finds
+// nothing for some of those (a digit-led word such as `+42min`) although the bare term matches,
+// so typing a word of a video's name offers no suggestion. Read-only: compares the connector's
+// search_videos with a bare-term CMS search for the words of the first 20 video names.
+test.fixme('§3b-11: every name word the CMS finds is also found by search_videos', async ({ request }) => {
+  const { creds, cmsClient } = require('../cms');
+  test.skip(!creds(), 'NOT MEASURED: BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set, so there is no independent CMS search to compare with');
+  const cms = await cmsClient();
+  const acct = await resolveAccountId(request);
+  const list = parseJsonp(await (await request.get(`/bin/brightcove/api.js?account_id=${acct}&a=search_videos&query=&limit=20&start=0&sort=&callback=cb`)).text());
+  const terms = [...new Set((list.items || []).flatMap((v) => v.name.match(/[A-Za-z0-9]{3,}/g) || []))];
+  const missed = [];
+  for (const term of terms) {
+    if (!(await cms.search(term)).length) continue; // nothing to find
+    const res = await request.get(`/bin/brightcove/api.js?account_id=${acct}&a=search_videos&query=${encodeURIComponent(term)}&start=0&limit=1&callback=cb`);
+    if (!(parseJsonp(await res.text()).items || []).length) missed.push(term);
+  }
+  expect(terms.length, 'no name words to check; the comparison would pass vacuously').toBeGreaterThan(0);
+  expect(missed, 'name words the CMS finds but the connector search does not').toEqual([]);
+});
+
+// §3b item 12: an account the user may not use (or that does not exist) is answered HTTP 200
+// with an EMPTY body, in .js and .jsx alike: executeRequest records the 403 in a result it never
+// writes. The video autocomplete then reads "no suggestions", the admin list an unparsable reply.
+test.fixme('§3b-12: search_videos for an unusable account is an error, not an empty 200', async ({ request }) => {
+  for (const ext of ['js', 'jsx']) {
+    const res = await request.get(`/bin/brightcove/api.${ext}?account_id=0&a=search_videos&query=a&start=0&limit=1&callback=cb`);
+    const body = await res.text();
+    expect(res.status() >= 400 || /error/.test(body), `.${ext}: HTTP ${res.status()} with a ${body.length}-byte body`).toBe(true);
+  }
+});
