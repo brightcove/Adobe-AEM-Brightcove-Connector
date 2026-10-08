@@ -47,11 +47,6 @@ function createPlayers() {
     for (var i = 0, max = all.length; i < max; i++) {
         var selected_element = all[i];
         var playerID= selected_element.getAttribute("data-playerid");
-        try {
-            videojs(playerID).dispose();
-        } catch (e) {
-
-        }
         var dataAccount= selected_element.getAttribute("data-account");
         var dataPlayer= selected_element.getAttribute("data-player");
         var dataEmbed= selected_element.getAttribute("data-embed");
@@ -59,6 +54,29 @@ function createPlayers() {
         var dataWidth= selected_element.getAttribute("data-width");
         var dataHeight= selected_element.getAttribute("data-height");
         var dataUsage = selected_element.getAttribute("data-usage");
+        // Idempotency guard: if this container already holds a live player for the same
+        // account/player/embed/video-id, leave it alone instead of disposing + rebuilding.
+        // A second createPlayers() run (SPA/AJAX re-render, slider re-init) would otherwise
+        // tear down a healthy player's MediaSource mid-use, which can surface as
+        // blob:...ERR_FILE_NOT_FOUND / MEDIA_ERR_SRC_NOT_SUPPORTED. Any mismatch or
+        // uncertainty falls through to the existing dispose+rebuild path, so first-load
+        // behaviour is unchanged. getPlayers() is a non-creating lookup (unlike videojs(id)),
+        // and videojs may be undefined on the first call, hence the guarded access.
+        var existingEl = document.getElementById(playerID);
+        var existingPlayer = null;
+        try { if (typeof videojs !== "undefined" && videojs.getPlayers) { existingPlayer = videojs.getPlayers()[playerID]; } } catch (e) {}
+        if (existingPlayer && !existingPlayer.isDisposed() && existingEl &&
+            existingEl.getAttribute("data-video-id") === dataVideoId &&
+            existingEl.getAttribute("data-account") === dataAccount &&
+            existingEl.getAttribute("data-player") === dataPlayer &&
+            existingEl.getAttribute("data-embed") === dataEmbed) {
+            continue;
+        }
+        try {
+            videojs(playerID).dispose();
+        } catch (e) {
+
+        }
         var src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_" + dataEmbed + "/index.min.js";
         var buildPlayer = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
             return function() {
