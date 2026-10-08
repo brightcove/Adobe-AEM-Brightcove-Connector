@@ -147,7 +147,11 @@ Trap 4 (`utils/FolderSyncUtilPoisonedRootTest` plus one poisoned-root test per c
 the test seam `FolderSyncUtil.configurationSource`, set through `FolderSyncUtilSeam` in
 test sources; tests must reset it. Reverting the two Trap 4 checks turns the poisoned-root
 test of every caller and of the helper red, plus the `resolveAccountId` one; the
-real-subfolder and UNKNOWN controls stay green. Live, cloud author, 2026-10-07: a
+real-subfolder and UNKNOWN controls stay green. The UNKNOWN control also asserts the move to
+the stored id still happens. `failedRepairSaveRestoresThePropertyWithItsOriginalType` drives
+the save-fail branch (a session whose `save()` is denied) with a LONG-typed id: the property
+is back in the session with its type; it fails if `restore` is skipped or writes a String.
+Live, cloud author, 2026-10-07: a
 root-level activation on the poisoned root left the video in no folder and removed the
 property (`tests/parity/matrix.md` row 31).
 
