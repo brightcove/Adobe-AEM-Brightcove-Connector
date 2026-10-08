@@ -19,15 +19,12 @@
 //     a=update_video endpoint and its dead ExtJS metaEdit() dialog were deleted.
 //   - Labels (Save Labels) and the poster/thumbnail URL are the UI saves that
 //     exist. Save Labels is the live UI path through executePatch.
-const { test, expect, openAdmin, resolveAccountId } = require('../fixtures');
+const { test, expect, openAdmin, resolveAccountId, mediaHostReachable } = require('../fixtures');
 const { AEM_USER, AEM_PASS } = require('../target');
 const { creds, cmsClient } = require('../cms');
-const { readConfig, setProxy, restoreConfig } = require('../connector-config');
+const { readConfig, setProxy, restoreConfig, backupConfig } = require('../connector-config');
 const { LoggingProxy } = require('../proxy-harness');
 const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { AEM_BASE } = require('../target');
 
 const IMAGE_URL = process.env.BRC_E2E_IMAGE_URL || 'https://httpbin.org/image/jpeg';
 
@@ -49,9 +46,10 @@ test.beforeAll(async ({ request }) => {
 });
 
 test.afterAll(async () => {
-  // Runs on failure too. Only ever deletes the video this file created.
-  if (cms && videoId && videoName && videoName.startsWith('e2e-throwaway-')) {
-    await cms.del(videoId);
+  // Runs on failure too. Only ever deletes the video this file created, and only after the
+  // server-side name is re-read (delIfThrowaway), not on the strength of a local variable.
+  if (cms && videoId) {
+    await cms.delIfThrowaway(videoId);
     videoId = null;
   }
 });
@@ -92,7 +90,8 @@ test('the instance JVM is recorded (row 36 is a Java 21 claim)', async ({ reques
 // proxy that refuses cms.api.brightcove.com (OAuth stays allowed), so the real PATCH fails.
 // The UI must say so; before the fix the servlet answered {} and the UI toasted "Labels saved".
 // Runs BEFORE the persistence test so the throwaway still has no labels. The original config
-// is restored by value in a finally and verified; a 0600 backup is kept for crash recovery.
+// is restored by value in a finally and verified; a 0600 backup (gitignored run folder) is kept for
+// crash recovery and deleted on success.
 // Context: ../../parity/probes/proxy/README.md
 test('row 10/36: Save Labels shows an error, not "Labels saved", when the CMS PATCH fails', async ({ page }) => {
   expect((await cms.get(videoId)).labels || []).toEqual([]); // nothing to pass vacuously
@@ -106,8 +105,7 @@ test('row 10/36: Save Labels shows an error, not "Labels saved", when the CMS PA
   await expect(page.locator('#divMeta\\.labels .brc-label-pill')).toContainText(label);
 
   const orig = await readConfig();
-  const backup = path.join(os.tmpdir(), `bcon-proxy-orig-${new URL(AEM_BASE).port}.json`);
-  fs.writeFileSync(backup, JSON.stringify(orig), { mode: 0o600 });
+  const backup = backupConfig(orig, 'bgs-1600-metadata');
   const proxy = await new LoggingProxy({ deny: [/^cms\.api\.brightcove\.com$/] }).start();
   let restored = false;
   try {
@@ -190,6 +188,7 @@ test('row 13 / §3b-1: removing the last label in the admin UI clears it in CMS'
 });
 
 test('row 11: poster URL saved in the admin UI is ingested and persisted to CMS', async ({ page }) => {
+  test.skip(!(await mediaHostReachable(IMAGE_URL)), `NOT MEASURED: ${new URL(IMAGE_URL).host} is unreachable from here (set BRC_E2E_IMAGE_URL to a reachable image)`);
   expect((await cms.get(videoId)).images || {}).not.toHaveProperty('poster');
 
   await openThrowawayPanel(page);
@@ -207,6 +206,7 @@ test('row 11: poster URL saved in the admin UI is ingested and persisted to CMS'
 });
 
 test('row 11: thumbnail URL saved in the admin UI is ingested and persisted to CMS', async ({ page }) => {
+  test.skip(!(await mediaHostReachable(IMAGE_URL)), `NOT MEASURED: ${new URL(IMAGE_URL).host} is unreachable from here (set BRC_E2E_IMAGE_URL to a reachable image)`);
   expect((await cms.get(videoId)).images || {}).not.toHaveProperty('thumbnail');
 
   await openThrowawayPanel(page);
@@ -218,4 +218,6 @@ test('row 11: thumbnail URL saved in the admin UI is ingested and persisted to C
 
   await expect.poll(async () => { const i = (await cms.get(videoId)).images || {}; return i.thumbnail && i.thumbnail.src; },
     { timeout: 120_000, intervals: [3_000] }).toMatch(/^https:\/\//);
+  const persisted = await cms.get(videoId);
+  expect(persisted.images.thumbnail.src).not.toBe(IMAGE_URL); // re-hosted by Brightcove, not echoed back
 });

@@ -22,7 +22,7 @@
 // Writes only e2e-throwaway-* objects and removes them in afterAll, on failure too.
 // The delete case only ever points the step at a video this file created, and checks
 // that before starting the workflow.
-const { test, expect, resolveAccountId } = require('../fixtures');
+const { test, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
 const { creds, cmsClient } = require('../cms');
 const dam = require('../dam');
 
@@ -47,7 +47,7 @@ test.beforeAll(async ({ request }) => {
   if (cms.accountId !== acct) {
     throw new Error('the Video Cloud credentials in the environment belong to a different account than the one configured in AEM; refusing to write');
   }
-  root = `/content/dam/brightcove_assets/${acct}`;
+  root = await brightcoveAssetsRoot(request);
   for (const m of [SYNC_MODEL, DELETE_MODEL]) {
     if (!(await dam.json(request, m))) throw new Error(`workflow model ${m} is not installed`);
   }

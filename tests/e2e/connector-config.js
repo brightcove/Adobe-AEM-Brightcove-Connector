@@ -5,6 +5,8 @@
 // ⚠️ The Felix save posts the COMPLETE property set: any property left out reverts to its
 // metatype default (credentials become empty strings while `is_set` still reads true). So every
 // write here sends every property, and every check compares by value.
+const fs = require('fs');
+const path = require('path');
 const { AEM_BASE, AEM_USER, AEM_PASS } = require('./target');
 
 const FACTORY = 'com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl';
@@ -51,4 +53,16 @@ async function restoreConfig(orig) {
   return false;
 }
 
-module.exports = { FACTORY, readConfig, writeConfig, setProxy, restoreConfig, same };
+// Crash-recovery copy of the config. It holds the account's client_secret, so: mode 0600, in
+// the gitignored parity run folder (tests/parity/.gitignore: runs/), never os.tmpdir(). The
+// caller deletes it once the restore verifies; its CONTENTS are never logged, only the path.
+function backupConfig(orig, tag) {
+  const dir = path.join(__dirname, '..', 'parity', 'runs', 'config-backup');
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const file = path.join(dir, `${tag}-${new URL(AEM_BASE).port || 80}.json`);
+  fs.writeFileSync(file, JSON.stringify(orig), { mode: 0o600 });
+  fs.chmodSync(file, 0o600); // writeFile's mode only applies when the file is created
+  return file;
+}
+
+module.exports = { backupConfig, FACTORY, readConfig, writeConfig, setProxy, restoreConfig, same };

@@ -56,9 +56,12 @@ class BrcReplicationHandlerAuthorizationTest {
     }
 
     @Test
-    void noMatchingGroupIsNotAuthorized() throws Exception {
-        // Mock-only: a user whose memberOf() lacks the listed group is not authorized. (Real
-        // Oak 1.68 includes `everyone` in memberOf(), so there everyone authorizes.)
+    void memberOfWithoutTheListedGroupIsNotAuthorized() throws Exception {
+        // Mock-only, and NOT a statement about `everyone`: the mocked memberOf() returns only
+        // "contributors", so the listed group is absent and the user is not authorized. A real
+        // Oak user's memberOf() includes `everyone`, so on a real instance listing `everyone`
+        // DOES authorize every user (current/docs/dam-sync-on-activation.md). `everyone` is used here
+        // only as an arbitrary group name the mock does not return.
         user(group("contributors"));
         assertFalse(handler.isAuthorized(rr, action, Collections.singletonList("everyone")));
     }

@@ -35,7 +35,7 @@ const { request: pwRequest } = require('@playwright/test');
 const { AEM_BASE, AEM_USER, AEM_PASS } = require('../../../e2e/target');
 const { creds, cmsClient } = require('../../../e2e/cms');
 const dam = require('../../../e2e/dam');
-const { slingPost } = require('../../../e2e/fixtures');
+const { slingPost, brightcoveAssetsRoot, mediaHostReachable } = require('../../../e2e/fixtures');
 const { LoggingProxy, deadPort } = require('../../../e2e/proxy-harness');
 
 const PREFIX = 'e2e-throwaway-';
@@ -69,7 +69,7 @@ async function api(account, params) {
 const failed = (b) => !b || b.error_code !== undefined || b.error !== undefined;
 
 // ---- Config (the real mechanism): tests/e2e/connector-config.js ----------------------------
-const { readConfig, setProxy, restoreConfig, same } = require('../../../e2e/connector-config');
+const { readConfig, setProxy, restoreConfig, backupConfig, same } = require('../../../e2e/connector-config');
 
 // ---- PNG/JPEG dimensions (to tell a real fetched thumbnail from the bundled placeholder) ----
 function dims(buf) {
@@ -88,6 +88,14 @@ function dims(buf) {
   return null;
 }
 
+// The importer encodes the thumbnail as one H.264 frame, which needs even dimensions, so an
+// odd-sized source comes back cropped by up to one pixel per axis: equal within 1px, not ===.
+function dimsMatch(a, b) {
+  if (!a || !b) return false;
+  const [aw, ah] = a.split('x').map(Number); const [bw, bh] = b.split('x').map(Number);
+  return Math.abs(aw - bw) <= 1 && Math.abs(ah - bh) <= 1;
+}
+
 // ---- brightcove.log slice (evidence of which PATCH implementation ran) -------------------
 const LOG = process.env.BRC_LOG;
 const logSize = () => { try { return fs.statSync(LOG).size; } catch (e) { return null; } };
@@ -103,13 +111,12 @@ async function main() {
   const cms = await cmsClient();
   const acct = (await (await request.get('/bin/brightcove/accounts')).json()).accounts[0].value;
   if (String(acct) !== String(cms.accountId)) throw new Error('credentials in the environment belong to another account than the one AEM is configured with');
-  const root = `/content/dam/brightcove_assets/${acct}`;
+  const root = await brightcoveAssetsRoot(request);
   const jvm = /^\s*java\.version\s*=\s*(\S+)/m.exec((await aemText('GET', '/system/console/status-System%20Properties.txt')).text);
   console.log(`target ${AEM_BASE}  java.version=${jvm ? jvm[1] : 'unknown'}  account=<configured>`);
 
   const orig = await readConfig();
-  const backup = path.join(require('os').tmpdir(), `bcon-proxy-orig-${new URL(AEM_BASE).port}.json`);
-  fs.writeFileSync(backup, JSON.stringify(orig), { mode: 0o600 });
+  const backup = backupConfig(orig, 'bgs-1600-proxy-probe'); // 0600, gitignored run folder, deleted once the restore verifies
   console.log(`original proxyServer=${JSON.stringify(orig.props.proxyServer)} (full config backed up 0600 for crash recovery)`);
 
   const proxy = await new LoggingProxy({ logFile: process.env.PROBE_OUT ? path.join(process.env.PROBE_OUT, `proxy-${new URL(AEM_BASE).port}.jsonl`) : null }).start();
@@ -117,6 +124,10 @@ async function main() {
   const stamp = Date.now();
   const created = { videos: new Set(), assets: new Set() };
   const evidence = {};
+  // A dead third-party media host is not a proxy defect: say NOT MEASURED instead of failing.
+  for (const [what, url] of [['video ingest source', VIDEO_URL], ['poster image source', IMAGE_URL]]) {
+    if (!(await mediaHostReachable(url))) { notMeasured('ALL', `${what} ${new URL(url).host} is unreachable from here (set BRC_E2E_VIDEO_URL / BRC_E2E_IMAGE_URL)`); return finish(); } // the finally below restores the config and removes the backup
+  }
   try {
     // ---- throwaway video, ACTIVE with images, listed by the CMS index -----------------------
     const name = `${PREFIX}proxy-${stamp}`;
@@ -226,7 +237,7 @@ async function main() {
 
     // ---- dead proxy: everything must fail and persist nothing --------------------------------
     await setProxy(orig, dead);
-    for (const k of names) await run('dead', k, A[k], {});
+    for (const k of names) { if (k === 'labels' && !label) continue; await run('dead', k, A[k], {}); } // a null label would be sent as the string "null"
     // ---- routed through the logging proxy ----------------------------------------------------
     await setProxy(orig, proxy.address);
     if (!label) notMeasured('labels (PATCH)', 'account has no labels to apply');
@@ -253,7 +264,9 @@ async function main() {
       verdict(label2, probs.length ? 'FAIL' : 'PASS', probs.length ? probs.join('; ') : `routed ok via ${r.hosts.join(',')}; dead proxy -> fails (${d.detail})`);
     };
     judge('search', 'OAuth + CMS read (HttpURLConnection GET/POST via getSSLConnection)', [/^oauth\.brightcove\.com$/, /^cms\.api\.brightcove\.com$/]);
-    if (label) judge('labels', `CMS PATCH (${jvm && /^(1[7-9]|[2-9]\d)/.test(jvm[1]) ? 'Apache HttpClient fallback' : 'reflection PATCH on HttpURLConnection'}) via Save Labels`, [/^oauth\.brightcove\.com$/, /^cms\.api\.brightcove\.com$/]);
+    // Which PATCH implementation ran is read from brightcove.log (BRC_LOG), not inferred from the JVM version.
+    const impl = { 'apache-fallback': 'Apache HttpClient fallback', 'httpurlconnection-reflection': 'reflection PATCH on HttpURLConnection' }[(evidence['routed:labels'] || {}).patch] || 'implementation NOT MEASURED: set BRC_LOG to the instance brightcove.log';
+    if (label) judge('labels', `CMS PATCH (${impl}) via Save Labels`, [/^oauth\.brightcove\.com$/, /^cms\.api\.brightcove\.com$/]);
     judge('poster', 'Dynamic Ingest request (poster upload)', [/^ingest\.api\.brightcove\.com$/]);
     judge('workflow', 'DAM workflow sync: create + Dynamic Ingest + S3 upload', [/^cms\.api\.brightcove\.com$/, /^ingest\.api\.brightcove\.com$/, S3_HOST]);
     judge('dataload', 'dataload sync: CMS list + thumbnail fetch (getRemoteBinary -> executeFullGet)', thumbHost ? [/^cms\.api\.brightcove\.com$/, new RegExp('^' + thumbHost.replace(/\./g, '\\.') + '$')] : [/^cms\.api\.brightcove\.com$/]);
@@ -262,10 +275,10 @@ async function main() {
     const dn = PATHS.dataload && PATHS.dataload.deny, rt = PATHS.dataload && PATHS.dataload.routed;
     if (!thumbHost || !dn || !rt) notMeasured('rendition image fetch honours proxy (deny control)', 'no thumbnail host or phase missing');
     else {
-      const realFetched = rt.rd !== null && rt.rd === realDims; const placeholder = dn.ok && dn.rd !== null && dn.rd !== realDims;
+      const realFetched = dimsMatch(rt.rd, realDims); const placeholder = dn.ok && dn.rd !== null && !dimsMatch(dn.rd, realDims);
       const sawDeny = dn.denied.includes(thumbHost);
       verdict('rendition image fetch honours proxy (deny control)', realFetched && placeholder && sawDeny ? 'PASS' : 'FAIL',
-        `routed rendition ${rt.rd} == real ${realDims}: ${realFetched}; image host denied -> placeholder ${dn.rd}: ${placeholder}; proxy logged the denied CONNECT: ${sawDeny}`);
+        `routed rendition ${rt.rd} ~= real ${realDims} (within 1px, even-dimension encode): ${realFetched}; image host denied -> placeholder ${dn.rd}: ${placeholder}; proxy logged the denied CONNECT: ${sawDeny}`);
     }
     const pd = PATHS.poster && PATHS.poster.deny, pr = PATHS.poster && PATHS.poster.routed;
     if (!pd || !pr || !pr.hasR) notMeasured('poster rendition fetch honours proxy (deny control)', `routed run did not produce a DAM brc_poster.png rendition (hasR=${pr && pr.hasR}); the rendition path was not reached`);
@@ -305,7 +318,17 @@ async function main() {
     } catch (e) { console.log(`config restore ERROR ${e.message}; recover from ${backup}`); process.exitCode = 3; }
     for (const ap of created.assets) { try { if ((await request.get(`${ap}.json`)).status() === 200) await slingPost(request, ap, { ':operation': 'delete' }); } catch (e) { console.log(`cleanup asset ${ap}: ${e.message}`); } }
     for (const v of created.videos) {
-      try { await slingPost(request, `${root}/${v}.mp4`, { ':operation': 'delete' }).catch(() => {}); await cms.delIfThrowaway(v); } catch (e) { console.log(`cleanup video ${v}: ${e.message}`); }
+      // The DAM asset is named by the video id, so it is only removed once the SERVER-SIDE name
+      // of that video is re-read and carries the throwaway prefix (ids can come from brc_id /
+      // getByRef and are not proof of ownership). A video that is already gone is not removed
+      // blind: its asset is left and reported.
+      try {
+        const cur = await cms.tryGet(v);
+        if (cur && String(cur.name || '').startsWith(PREFIX)) {
+          await slingPost(request, `${root}/${v}.mp4`, { ':operation': 'delete' }).catch(() => {});
+          await cms.delIfThrowaway(v);
+        } else console.log(`cleanup video ${v}: ${cur ? 'NOT deleting, name has no throwaway prefix' : 'already gone; its DAM asset (if any) is left, not verifiable'}`);
+      } catch (e) { console.log(`cleanup video ${v}: ${e.message}`); }
     }
     for (const v of created.videos) { try { console.log(`cleanup video ${v}: ${(await cms.tryGet(v)) === null ? 'gone' : 'STILL PRESENT'}`); } catch (e) { /* ignore */ } }
     await proxy.stop();

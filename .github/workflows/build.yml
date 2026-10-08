@@ -60,18 +60,25 @@ jobs:
 
       # Same tests, forked onto a Java 21 JVM (surefire -Djvm), build JDK still 11.
       # HttpServicesPatchFallbackTest asserts the JVM-dependent PATCH behaviour, so
-      # this is the run that measures the 17+ branch (BGS-1600). The last line proves
-      # which JVM the tests actually ran on, read from the surefire XML.
+      # this is the run that measures the 17+ branch (BGS-1600). The last step proves
+      # which JVM the tests actually ran on, read from the surefire XML, and FAILS the
+      # job when it is not 21 (or the XML is missing): without that, dropping -Djvm
+      # leaves the run green on the build JVM.
       - name: Unit tests on Java 21 (${{ matrix.platform }})
         working-directory: current
         run: |
+          set -o pipefail
           JAVA21="$JAVA_HOME_21_X64/bin/java"
           "$JAVA21" -version
           if [ "${{ matrix.platform }}" = onprem ]; then PROFILE=-Daem.platform=onprem; else PROFILE=; fi
           mvn $PROFILE -pl core test -Djvm="$JAVA21"
-          grep -o 'name="java.version" value="[^"]*"' \
-            core/target/surefire-reports/TEST-com.coresecure.brightcove.wrapper.utils.HttpServicesPatchFallbackTest.xml \
-            | sed 's/^/surefire ran HttpServicesPatchFallbackTest on /'
+          XML=core/target/surefire-reports/TEST-com.coresecure.brightcove.wrapper.utils.HttpServicesPatchFallbackTest.xml
+          if ! grep -q 'name="java.version" value="21\.' "$XML"; then
+            echo "::error::HttpServicesPatchFallbackTest did not run on Java 21 (or $XML is missing)"
+            grep -o 'name="java.version" value="[^"]*"' "$XML" || true
+            exit 1
+          fi
+          echo "surefire ran HttpServicesPatchFallbackTest on Java 21"
 
       - name: Build (cloud, default profile)
         if: matrix.platform == 'cloud'
@@ -96,6 +103,35 @@ jobs:
           name: brightcove-all-${{ matrix.platform }}
           path: current/all/target/brightcove.all-*.zip
           if-no-files-found: error
+
+  # Runs after BOTH platform builds: the script reads both zips and fails on any FAIL line.
+  packaging-check:
+    name: DAM sync packaging check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Download cloud package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: brightcove-all-cloud
+          path: pkg/cloud
+
+      - name: Download on-prem package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: brightcove-all-onprem
+          path: pkg/onprem
+
+      # The platform is read from the file name ("-prem.zip" is on-prem), so the on-prem
+      # artifact must keep that suffix. See docs/dam-sync-on-activation.md.
+      - name: Check packaging defaults of both artifacts
+        run: |
+          set -o pipefail
+          ls pkg/cloud pkg/onprem
+          python3 -I current/scripts/check-dam-sync-packaging.py pkg/cloud/brightcove.all-*.zip pkg/onprem/brightcove.all-*-prem.zip
 
   e2e-static:
     name: e2e spec syntax check

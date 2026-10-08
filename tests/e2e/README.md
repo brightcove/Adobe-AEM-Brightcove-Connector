@@ -111,8 +111,12 @@ AEM_BASE=<author> AEM_PUBLISH_URL=<its publish> node_modules/.bin/playwright tes
 
 Preconditions the publish-tier spec checks and names when missing: an author whose
 run modes include `author`, an enabled author replication agent whose transport URI
-targets the publish host, and `BrightcovePublishListener` with `isEnabled=true`
-(metatype default false and no config ships, so it is off on a fresh install).
+targets the publish host, and exactly one live Brightcove publish path: the
+`brightcove://` replication agent (the on-prem package ships one, enabled) or
+`BrightcovePublishListener` with `isEnabled=true` (the cloud opt-in). The listener is
+**off by default** (metatype default false and no config ships), so a fresh cloud
+instance has no live path until it is enabled; the specs that need one say so and
+skip as NOT MEASURED when neither exists.
 Each spec's header records the trigger it drives, read from the code.
 
 - `dam.js` is the kit: DAM folder/asset create (`<folder>.createasset.html`),

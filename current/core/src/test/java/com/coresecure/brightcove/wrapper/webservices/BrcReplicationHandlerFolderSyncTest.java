@@ -143,7 +143,7 @@ class BrcReplicationHandlerFolderSyncTest {
      * An account root poisoned by the pre-guard bug (brc_folder_id pointing at a Video
      * Cloud folder named after the account). On this path it did double damage: the
      * account lookup walked up past the root and skipped the asset, and folder sync
-     * would have filed the video into that folder. Context: core-folder-sync.md "Trap 4".
+     * would have filed the video into that folder. Context: current/docs/core-folder-sync.md "Trap 4".
      */
     @Test
     void poisonedAccountRootResolvesItsAccountAndGivesNoFolder() throws Exception {

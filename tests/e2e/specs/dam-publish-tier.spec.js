@@ -59,7 +59,7 @@
 // account folder, Video Cloud videos and folders. afterAll removes them on failure
 // too. Every Video Cloud assertion is a fresh CMS GET (tests/e2e/cms.js), never a
 // toast or a servlet response.
-const { test, expect, resolveAccountId } = require('../fixtures');
+const { test, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
 const { creds, cmsClient } = require('../cms');
 const dam = require('../dam');
 
@@ -90,7 +90,7 @@ test.beforeAll(async ({ request }) => {
   if (cms.accountId !== acct) {
     throw new Error('the Video Cloud credentials in the environment belong to a different account than the one configured in AEM; refusing to write');
   }
-  root = `/content/dam/brightcove_assets/${acct}`;
+  root = await brightcoveAssetsRoot(request);
 
   const modes = await dam.runModes(request);
   if (!modes.includes('author')) throw new Error(`AEM_BASE is not an author (run modes ${modes.join(',')}); the listener only acts on author`);
@@ -173,6 +173,35 @@ async function activateAndReachPublish(request, assetPath) {
   await dam.activate(request, assetPath);
   const onPub = await dam.waitOnPublish(pub, `${assetPath}/jcr:content/metadata`);
   expect(onPub, `${assetPath} never arrived on ${dam.AEM_PUBLISH_URL}: the replication hop itself failed`).not.toBeNull();
+}
+
+// ---- positive "the connector processed this activation" signal ------------------------
+// A negative assertion ("no second folder", "no duplicate") only means something once the
+// activation under test was demonstrably PROCESSED: after a bare sleep, a dead publish path
+// passes it too. The signal is brc_lastsync advancing on the asset, or one more handler
+// event in brightcove.log naming this asset (listener: "Activating New|Modified Brightcove
+// Asset"; agent: BrcReplicationHandler's "Path: <path>"). No signal -> test.skip, NOT MEASURED.
+function eventCount(lines) {
+  if (!lines) return null; // unreadable log: unknown, never zero
+  const n = (needle) => lines.filter((l) => l.includes(needle)).length;
+  return mode === 'listener'
+    ? n('Activating New Brightcove Asset') + n('Activating Modified Brightcove Asset')
+    : n('Path: ');
+}
+
+async function activationMark(request, assetPath) {
+  const m = await dam.metadata(request, assetPath);
+  return { lastsync: m ? m.brc_lastsync : undefined, events: eventCount(await dam.logLines(request, BRC_LOG, assetPath, 20_000)) };
+}
+
+async function processedSignal(request, assetPath, before) {
+  return dam.pollUntil(async () => {
+    const m = await dam.metadata(request, assetPath);
+    if (m && m.brc_lastsync !== undefined && String(m.brc_lastsync) !== String(before.lastsync)) return 'brc_lastsync advanced';
+    const events = eventCount(await dam.logLines(request, BRC_LOG, assetPath, 20_000));
+    if (events !== null && before.events !== null && events > before.events) return 'handler log line';
+    return null;
+  }, { timeout: 60_000, interval: 3_000 });
 }
 
 async function newThrowawayVideo(label) {
@@ -265,9 +294,13 @@ test('row 32 (BGS-1600): activating in a DAM subfolder creates and uses the matc
   expect(await spuriousAccountFolders(), 'a folder named after the account root was created').toEqual([]);
 
   // Second activation reuses the folder rather than creating another one.
+  const before2 = await activationMark(request, assetPath);
   await dam.touch(request, assetPath);
   await dam.activate(request, assetPath);
-  await dam.sleep(15_000);
+  const signal2 = await processedSignal(request, assetPath, before2);
+  test.skip(!signal2, 'NOT MEASURED: the second activation was not observed being processed (no brc_lastsync change, no handler log line), so "no second folder" would pass for the wrong reason');
+  test.info().annotations.push({ type: 'second activation processed', description: signal2 });
+  await dam.sleep(5_000); // let a spurious folder create land after the processed signal
   expect((await cms.folders()).filter((x) => x.name === f.name).map((x) => x.id)).toEqual([folderId]);
   expect((await cms.get(v.id)).folder_id).toBe(folderId);
 });
@@ -322,8 +355,12 @@ test('row 33 (BGS-1705): a redelivered publish of a new asset does not create a 
   const brcId = await dam.pollUntil(async () => (await dam.metadata(request, assetPath)).brc_id, { timeout: 120_000, interval: 3_000 });
   expect(brcId, 'no brc_id after two activations').toBeTruthy();
   t.videos.add(String(brcId));
+  const before3 = await activationMark(request, assetPath);
   await dam.activate(request, assetPath);
-  await dam.sleep(20_000);
+  const signal3 = await processedSignal(request, assetPath, before3);
+  test.skip(!signal3, 'NOT MEASURED: the redelivered activation was not observed being processed (no brc_lastsync change, no handler log line), so "no duplicate" would pass for the wrong reason');
+  test.info().annotations.push({ type: 'redelivery processed', description: signal3 });
+  await dam.sleep(5_000); // let a duplicate create land after the processed signal
 
   // Persisted state: exactly one video for this asset, and it is the one the asset
   // points at. reference_id makes a second create a 409, so ALSO count by the unique
@@ -352,7 +389,7 @@ test('row 33 (BGS-1705): a redelivered publish of a new asset does not create a 
     const seen = mode === 'listener' ? creates + updates : delivered;
     expect(seen, `the ${mode} path saw fewer than three events, so redelivery was not exercised`).toBeGreaterThanOrEqual(3);
   } else {
-    test.info().annotations.push({ type: 'listener branches', description: 'NOT MEASURED: brightcove.log not readable through the log tailer' });
+    test.skip(true, 'NOT MEASURED: brightcove.log not readable through the log tailer, so the redelivery (three events seen) was not verified');
   }
 });
 

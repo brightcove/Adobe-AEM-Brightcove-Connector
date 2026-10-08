@@ -11,13 +11,18 @@
 //        --zip current/all/target/brightcove.all-<v>-prem.zip [--resync] [--thumbless-delete]
 //     (after installing the -prem package through the package manager)
 //
-// Every check prints PASS, FAIL (expected vs actual) or NOT MEASURED. Exit code is 0 only
-// when every check is PASS. Informational lines are prefixed "INFO".
+// Every check prints PASS, FAIL (expected vs actual), WARN (a named finding that is not a
+// defect of this build, e.g. state an upgrade deliberately leaves behind) or NOT MEASURED.
+// Exit code is 0 only when every check is PASS. Informational lines are prefixed "INFO".
 //
 // --resync          POSTs /bin/brightcove/dataload and asserts no asset is duplicated.
-// --thumbless-delete  DESTRUCTIVE to the DAM of the target instance (throwaway beds only):
-//                   deletes the DAM assets of videos that have no thumbnail, re-runs the
-//                   dataload and asserts they come back (the bundled-placeholder fix).
+// --thumbless-delete  Writes to the target instance (local throwaway beds only). Refuses
+//                   unless --aem is localhost/127.0.0.1. Creates its OWN thumbnail-less
+//                   e2e-throwaway-* video (needs BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET),
+//                   runs the dataload and asserts its DAM asset appears (the bundled-placeholder
+//                   fix), then removes only that asset and that video. Never touches an asset
+//                   or video it did not create. NOT MEASURED on an upgraded bed: the 6.0.x root
+//                   grant lets brightcove_admin read /apps, which masks the fix.
 //
 // Env: AEM_AUTH (default admin:admin). No account ids or secrets are printed: the
 // account id is read at run time from /bin/brightcove/accounts and shown as <account>.
@@ -176,6 +181,7 @@ function rec(name, verdict, detail) {
 const PASS = (n, d) => rec(n, 'PASS', d);
 const FAIL = (n, d) => rec(n, 'FAIL', d);
 const NM = (n, d) => rec(n, 'NOT MEASURED', d);
+const WARN = (n, d) => rec(n, 'WARN', d);
 const info = (s) => console.log(`INFO         ${redact(s)}`);
 async function guard(name, fn) {
   try { await fn(); } catch (e) { NM(name, `probe error: ${e.message}`); }
@@ -281,9 +287,11 @@ async function check() {
     const rootB = before.brcAces.filter((x) => x.path.startsWith('/rep:policy/'));
     const rootA = aces.filter((x) => x.path.startsWith('/rep:policy/'));
     // Pins the MEASURED behaviour: the 7.x package does not own /rep:policy, so the 6.0.x
-    // root grant is left in place. If a later build removes it, update this expectation.
+    // root grant is left in place. That is deliberate (pre-existing state is not changed) but it
+    // is NOT a clean result: the 7.x least-privilege grants only hold on fresh installs, so a
+    // retained grant is a named WARN, never a PASS. If a later build removes it, update this.
     if (rootB.length === 0) NM('6.0.x root policy left as it was', 'no root ACE before the upgrade');
-    else if (JSON.stringify(rootA) === JSON.stringify(rootB)) PASS('6.0.x root policy left as it was', `retained: ${rootA.map((x) => x.privileges.join(' ')).join(' | ')}`);
+    else if (JSON.stringify(rootA) === JSON.stringify(rootB)) WARN('upgraded instance keeps the 6.0.x root grant for brightcove_admin', `retained on /: ${rootA.map((x) => x.privileges.join(' ')).join(' | ')}; least privilege holds on fresh installs only`);
     else FAIL('6.0.x root policy left as it was', `before ${JSON.stringify(rootB)} after ${JSON.stringify(rootA)}`);
     for (const [p, priv] of Object.entries(EXPECTED_GRANTS)) {
       const hit = aces.find((x) => x.path.startsWith(`${p}/rep:policy/`) && x.type === 'rep:GrantACE' && x.privileges.includes(priv));
@@ -353,27 +361,36 @@ async function check() {
   } else NM('dataload re-sync does not duplicate assets', 'run with --resync');
   if (flag('thumbless-delete')) {
     await guard('thumbnail-less videos import', async () => {
-      if (!ACCOUNT) return NM('thumbnail-less videos import', 'no account');
-      const items = await searchVideos(ACCOUNT, 100);
-      const thumbless = (items || []).filter((v) => !(((v.images || {}).thumbnail || {}).src) && v.state === 'ACTIVE');
-      const paths = (await qb(`path=${DAM_ROOT}&type=dam:Asset`)).map((h) => h['jcr:path']);
-      const targets = paths.filter((p) => thumbless.some((v) => p.endsWith(`/${v.id}.mp4`) || p.includes(`/${v.id}.`)));
-      if (targets.length === 0) return NM('thumbnail-less videos import', `${thumbless.length} thumbnail-less videos, none with a DAM asset to delete`);
-      for (const p of targets) await post(p, { ':operation': 'delete' });
-      const gone = (await qb(`path=${DAM_ROOT}&type=dam:Asset`)).length;
-      info(`deleted ${targets.length} thumbnail-less assets; DAM now ${gone}`);
-      await settleDataload('thumbless re-import');
-      const after = (await qb(`path=${DAM_ROOT}&type=dam:Asset`)).map((h) => h['jcr:path']);
-      const back = targets.filter((p) => after.includes(p));
-      if (back.length === targets.length) PASS('thumbnail-less videos import', `${back.length}/${targets.length} re-imported`);
-      else FAIL('thumbnail-less videos import', `${back.length}/${targets.length} re-imported`);
+      const N = 'thumbnail-less videos import';
+      const host = new URL(AEM).hostname;
+      if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) return NM(N, `refusing to write to a non-local target (${host}): throwaway localhost beds only`);
+      if (!ACCOUNT) return NM(N, 'no account');
       const roots = (await brcAces()).filter((x) => x.path.startsWith('/rep:policy/'));
-      if (roots.length) info('⚠️ the 6.0.x root grant is still present, so brightcove_admin can read /apps: this result does not by itself discriminate the bundled-placeholder fix');
+      if (roots.length) return NM(N, 'the 6.0.x root grant is present, so brightcove_admin can read /apps and masks the bundled-placeholder fix; run on a fresh install');
+      let cms;
+      try { cms = await require('../../../e2e/cms.js').cmsClient(); } catch (e) { return NM(N, `no CMS client to create a throwaway video: ${e.message}`); }
+      if (cms.accountId !== ACCOUNT) return NM(N, 'the CMS credentials are for a different account than the one configured on the target');
+      const name = `e2e-throwaway-thumbless-${Date.now()}`;
+      const id = await cms.create(name);
+      let assetPath = null;
+      try {
+        await settleDataload('thumbless import');
+        for (const h of await qb(`path=${DAM_ROOT}&type=dam:Asset`)) {
+          const m = await get(`${h['jcr:path']}/jcr:content/metadata.json`);
+          if (m.json && String(m.json.brc_id) === id) assetPath = h['jcr:path'];
+        }
+        if (assetPath) PASS(N, 'the throwaway thumbnail-less video imported to the DAM');
+        else NM(N, 'no DAM asset for the throwaway video: either the placeholder defect or the connector does not import a video with no source (this mode has not been proven to discriminate)');
+      } finally {
+        // only what this run created: the asset is matched by the brc_id of the video created above
+        if (assetPath) await post(assetPath, { ':operation': 'delete' });
+        await cms.delIfThrowaway(id);
+      }
     });
-  } else NM('thumbnail-less videos import', 'run with --thumbless-delete (destructive to the target DAM)');
+  } else NM('thumbnail-less videos import', 'run with --thumbless-delete (creates and removes one throwaway video and its DAM asset on a local bed)');
 
   const bad = results.filter((r) => r.verdict !== 'PASS');
-  console.log(`\nSUMMARY ${results.length - bad.length}/${results.length} PASS; ${bad.filter((r) => r.verdict === 'FAIL').length} FAIL; ${bad.filter((r) => r.verdict === 'NOT MEASURED').length} NOT MEASURED`);
+  console.log(`\nSUMMARY ${results.length - bad.length}/${results.length} PASS; ${bad.filter((r) => r.verdict === 'FAIL').length} FAIL; ${bad.filter((r) => r.verdict === 'WARN').length} WARN; ${bad.filter((r) => r.verdict === 'NOT MEASURED').length} NOT MEASURED`);
   const out = opt('json');
   if (out) fs.writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), aem: AEM, results }, null, 2));
   process.exit(bad.length ? 1 : 0);
