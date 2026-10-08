@@ -37,7 +37,14 @@ class LoggingProxy {
   record(method, host, port, action) {
     const e = { t: new Date().toISOString(), method, host, port, action };
     this.entries.push(e);
-    if (this.logFile) fs.appendFileSync(this.logFile, JSON.stringify(e) + '\n');
+    // ⚠️ record() runs inside socket callbacks: a throw here is an uncaught exception that kills
+    // the process, skipping a caller's finally (BGS-1600: it stranded a dead proxyServer in the
+    // connector config). A failing log file is reported once and then ignored; entries[] stays.
+    if (this.logFile) {
+      try { fs.appendFileSync(this.logFile, JSON.stringify(e) + '\n'); } catch (err) {
+        if (!this.logFailed) { this.logFailed = true; console.error(`[proxy-harness] cannot write ${this.logFile}: ${err.message} (logging to file disabled)`); }
+      }
+    }
     return e;
   }
 

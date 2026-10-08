@@ -27,8 +27,12 @@
 //   creds of the account AEM is configured with (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID /
 //   _CLIENT_SECRET, e.g. `set -a; source ~/.brightcove/<label>.env; set +a`).
 //   BRC_LOG (optional) path to the instance's brightcove.log, used only to record which
-//   PATCH implementation ran. PROBE_OUT (optional) dir for the raw evidence JSON.
-//   NODE_PATH must reach tests/e2e/node_modules (dam.js needs @playwright/test).
+//   PATCH implementation ran. PROBE_OUT (optional) dir for the raw evidence JSON; created
+//   (mkdir -p) if missing, and an unwritable one is reported and ignored, never fatal.
+//   NODE_PATH must reach tests/e2e/node_modules (dam.js needs @playwright/test), e.g.
+//   NODE_PATH=$PWD/tests/e2e/node_modules node tests/parity/probes/proxy/bgs-1600-proxy-probe.js
+//   Restore of the connector config and cleanup of throwaways run in a finally, each step in
+//   its own try, so one failing step cannot skip the config restore.
 const fs = require('fs');
 const path = require('path');
 const { request: pwRequest } = require('@playwright/test');
@@ -106,6 +110,10 @@ function logSlice(from) {
 }
 
 async function main() {
+  let probeOut = process.env.PROBE_OUT || null;
+  if (probeOut) {
+    try { fs.mkdirSync(probeOut, { recursive: true }); } catch (e) { console.error(`PROBE_OUT ${probeOut} unusable (${e.message}): evidence files disabled`); probeOut = null; }
+  }
   if (!creds()) { notMeasured('ALL', 'BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set: no throwaway video can be created'); return finish(); }
   const request = await pwRequest.newContext({ baseURL: AEM_BASE, extraHTTPHeaders: { Authorization: BASIC } });
   const cms = await cmsClient();
@@ -119,7 +127,7 @@ async function main() {
   const backup = backupConfig(orig, 'bgs-1600-proxy-probe'); // 0600, gitignored run folder, deleted once the restore verifies
   console.log(`original proxyServer=${JSON.stringify(orig.props.proxyServer)} (full config backed up 0600 for crash recovery)`);
 
-  const proxy = await new LoggingProxy({ logFile: process.env.PROBE_OUT ? path.join(process.env.PROBE_OUT, `proxy-${new URL(AEM_BASE).port}.jsonl`) : null }).start();
+  const proxy = await new LoggingProxy({ logFile: probeOut ? path.join(probeOut, `proxy-${new URL(AEM_BASE).port}.jsonl`) : null }).start();
   const dead = `127.0.0.1:${await deadPort()}`;
   const stamp = Date.now();
   const created = { videos: new Set(), assets: new Set() };
@@ -331,8 +339,8 @@ async function main() {
       } catch (e) { console.log(`cleanup video ${v}: ${e.message}`); }
     }
     for (const v of created.videos) { try { console.log(`cleanup video ${v}: ${(await cms.tryGet(v)) === null ? 'gone' : 'STILL PRESENT'}`); } catch (e) { /* ignore */ } }
-    await proxy.stop();
-    if (process.env.PROBE_OUT) fs.writeFileSync(path.join(process.env.PROBE_OUT, `evidence-${new URL(AEM_BASE).port}.json`), JSON.stringify({ verdicts, evidence }, null, 2));
+    try { await proxy.stop(); } catch (e) { console.log(`proxy stop: ${e.message}`); }
+    if (probeOut) { try { fs.writeFileSync(path.join(probeOut, `evidence-${new URL(AEM_BASE).port}.json`), JSON.stringify({ verdicts, evidence }, null, 2)); } catch (e) { console.log(`evidence write: ${e.message}`); } }
   }
   return finish();
 }
