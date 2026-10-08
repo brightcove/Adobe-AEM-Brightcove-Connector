@@ -438,7 +438,7 @@ public class HttpServices {
         int status = 0;
         String failure = null;
         URL url;
-        HttpsURLConnection connection = null;
+        HttpURLConnection connection = null;
         String exPatchResponse = null;
         BufferedReader rd = null;
         DataOutputStream wr = null;
@@ -453,7 +453,10 @@ public class HttpServices {
             LOGGER.debug("URL :" + targetURL);
             LOGGER.debug("payload :" + payload);
 
-            connection = getSSLConnection(url, targetURL);
+            // Plain http as executeFullGet does; the CMS is https, a loopback test server is not.
+            connection = "http".equals(url.getProtocol())
+                    ? getSSLConnection(url, targetURL, HttpURLConnection.class)
+                    : getSSLConnection(url, targetURL);
             if (!configurePatchMethod(connection)) {
                 LOGGER.info("executePatch: PATCH unsupported with HttpURLConnection; switching to Apache HttpClient patch");
                 return executePatchUsingApacheHttpClientFull(targetURL, payload, headers);

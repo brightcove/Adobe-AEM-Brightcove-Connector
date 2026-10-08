@@ -3,8 +3,10 @@ package com.coresecure.brightcove.wrapper.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,15 +20,22 @@ import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.HttpServices.PatchResponse;
 import com.coresecure.brightcove.wrapper.utils.LoopbackHttps;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sun.net.httpserver.HttpServer;
 
 /**
  * BGS-1600: when the CMS PATCH behind {@code update_labels} failed, the servlet returned
  * {@code {}}, which the admin UI reads as success ("Labels saved" while nothing persisted).
  * Every failure now carries {@code error_code} and {@code message}.
+ *
+ * <p>The CMS is a plain-HTTP loopback server so the PATCH cases run on every JVM: on 11 PATCH goes
+ * through HttpURLConnection, on 17+ through the Apache client, which does not use the HTTPS
+ * trust override. OAuth stays on the HTTPS loopback.</p>
  */
 class CmsApiUpdateLabelsTest {
 
     private LoopbackHttps server;
+    private HttpServer cmsServer;
+    private final AtomicReference<String> patchMethod = new AtomicReference<>();
     private final AtomicInteger patchStatus = new AtomicInteger(200);
     private final AtomicReference<String> patchBody = new AtomicReference<>("{\"id\":\"v1\",\"labels\":[\"a\"]}");
 
@@ -35,25 +44,33 @@ class CmsApiUpdateLabelsTest {
         server = new LoopbackHttps()
                 .on("/oauth/access_token", ex -> LoopbackHttps.reply(ex, 200,
                         "{\"access_token\":\"t\",\"token_type\":\"Bearer\",\"expires_in\":300}"))
-                .on("/cms", ex -> LoopbackHttps.reply(ex, patchStatus.get(), "application/json",
-                        patchBody.get().getBytes(java.nio.charset.StandardCharsets.UTF_8)))
                 .start();
+        cmsServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        cmsServer.createContext("/cms", ex -> {
+            patchMethod.set(ex.getRequestMethod());
+            byte[] body = patchBody.get().getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().add("Content-Type", "application/json");
+            ex.sendResponseHeaders(patchStatus.get(), body.length == 0 ? -1 : body.length);
+            try (OutputStream out = ex.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        cmsServer.start();
     }
 
     @AfterEach
     void tearDown() {
+        cmsServer.stop(0);
         server.close();
+    }
+
+    private String plainCms() {
+        return "http://127.0.0.1:" + cmsServer.getAddress().getPort() + "/cms";
     }
 
     private CmsAPI cms(String apiBase) {
         Platform platform = new Platform(server.base() + "/oauth", apiBase, server.base() + "/di", server.base() + "/p");
         return new CmsAPI(new Account(platform, "id", "secret", "123"));
-    }
-
-    /** The PATCH to a TLS server only trusts the loopback certificate on the HttpURLConnection path (JDK 11). */
-    private static void assumeHttpUrlConnectionPatch() {
-        assumeTrue(Runtime.version().feature() < 17,
-                "JDK 17+ routes PATCH through the Apache client, which does not use the test trust override");
     }
 
     @Test
@@ -66,11 +83,10 @@ class CmsApiUpdateLabelsTest {
 
     @Test
     void validationArrayKeepsTheCmsMessage() {
-        assumeHttpUrlConnectionPatch();
         patchStatus.set(422);
         patchBody.set("[{\"error_code\":\"VALIDATION_ERROR\",\"message\":\"labels: ILLEGAL_VALUE\"}]");
 
-        ObjectNode r = cms(server.base() + "/cms").updateLabels("v1", new String[] {"a"});
+        ObjectNode r = cms(plainCms()).updateLabels("v1", new String[] {"a"});
 
         assertEquals("VALIDATION_ERROR", r.path("error_code").asText(), r.toString());
         assertEquals("labels: ILLEGAL_VALUE", r.path("message").asText());
@@ -79,23 +95,22 @@ class CmsApiUpdateLabelsTest {
 
     @Test
     void serverErrorWithEmptyBodyCarriesTheStatus() {
-        assumeHttpUrlConnectionPatch();
         patchStatus.set(503);
         patchBody.set("");
 
-        ObjectNode r = cms(server.base() + "/cms").updateLabels("v1", new String[] {"a"});
+        ObjectNode r = cms(plainCms()).updateLabels("v1", new String[] {"a"});
 
         assertEquals(503, r.path("error_code").asInt(), r.toString());
     }
 
     @Test
     void successReturnsTheUpdatedVideoWithoutAnErrorCode() {
-        assumeHttpUrlConnectionPatch();
 
-        ObjectNode r = cms(server.base() + "/cms").updateLabels("v1", new String[] {"a"});
+        ObjectNode r = cms(plainCms()).updateLabels("v1", new String[] {"a"});
 
         assertFalse(r.has("error_code"), r.toString());
         assertEquals("v1", r.path("id").asText());
+        assertEquals("PATCH", patchMethod.get(), "the CMS must have received a PATCH");
     }
 
     @Test
