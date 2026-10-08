@@ -208,30 +208,8 @@ test.describe('filter panel and move-to-folder (BCON-121/128/131/141/142/146)', 
   });
 });
 
-// §3b item 1: removing the LAST label is a silent no-op with a "Labels saved"
-// toast. jQuery's $.param drops an empty array, so the request carries no
-// `labels` parameter at all and the server treats "absent" as "leave alone".
-// The write is intercepted; the assertion is on the outgoing request shape.
-test.fixme('§3b-1: saving with every label removed still sends an (empty) labels parameter', async ({ page }) => {
-  await openAdmin(page);
-  await page.locator('#tbData tr').first().click();
-  await expect(page.locator('#tdMeta')).toBeVisible();
-  await expect.poll(() => page.locator('#label_list option[value^="/"]').count(), { timeout: 15_000 }).toBeGreaterThan(0);
-  // Make sure there is at least one pill to remove, then remove them all.
-  if ((await page.locator('#divMeta\\.labels .brc-label-pill').count()) === 0) {
-    const known = await page.locator('#label_list option[value^="/"]').first().getAttribute('value');
-    await page.locator('#labelInput').fill(known);
-    await page.locator('#labelInput').press('Enter');
-  }
-  while ((await page.locator('#divMeta\\.labels .brc-label-pill').count()) > 0) {
-    await page.locator('#divMeta\\.labels .brc-label-pill-remove').first().click();
-  }
-  let captured = null;
-  await page.route(/\/bin\/brightcove\/api\.js.*a=update_labels/, (route) => { captured = route.request().url(); return jsonp(route, { id: 'fake', labels: [] }); });
-  await page.locator('#saveLabelsBtn').click();
-  await expect.poll(() => captured, { timeout: 10_000 }).not.toBeNull();
-  expect(decodeURIComponent(captured), 'the empty labels list was dropped from the request').toMatch(/[?&]labels=/);
-});
+// §3b item 1 (row 13, removing a video's last label) is a live write now that it is fixed, so it
+// lives with the throwaway-video specs: bgs-1600-metadata-persistence.spec.js "§3b-1".
 
 // §3b item 5: get_videos_with_label without `start` is a server 500 with an
 // empty body (NumberFormatException in the param parsing). API-level pin.
