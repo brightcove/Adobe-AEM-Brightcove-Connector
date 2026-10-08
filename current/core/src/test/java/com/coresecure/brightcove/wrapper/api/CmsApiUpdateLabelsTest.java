@@ -36,6 +36,7 @@ class CmsApiUpdateLabelsTest {
     private LoopbackHttps server;
     private HttpServer cmsServer;
     private final AtomicReference<String> patchMethod = new AtomicReference<>();
+    private final AtomicReference<String> patchRequestBody = new AtomicReference<>();
     private final AtomicInteger patchStatus = new AtomicInteger(200);
     private final AtomicReference<String> patchBody = new AtomicReference<>("{\"id\":\"v1\",\"labels\":[\"a\"]}");
 
@@ -48,6 +49,7 @@ class CmsApiUpdateLabelsTest {
         cmsServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         cmsServer.createContext("/cms", ex -> {
             patchMethod.set(ex.getRequestMethod());
+            patchRequestBody.set(new String(readAll(ex.getRequestBody()), StandardCharsets.UTF_8));
             byte[] body = patchBody.get().getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(patchStatus.get(), body.length == 0 ? -1 : body.length);
@@ -64,6 +66,16 @@ class CmsApiUpdateLabelsTest {
         server.close();
     }
 
+    private static byte[] readAll(java.io.InputStream in) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        byte[] chunk = new byte[1024];
+        int n;
+        while ((n = in.read(chunk)) != -1) {
+            buf.write(chunk, 0, n);
+        }
+        return buf.toByteArray();
+    }
+
     private String plainCms() {
         return "http://127.0.0.1:" + cmsServer.getAddress().getPort() + "/cms";
     }
@@ -78,7 +90,20 @@ class CmsApiUpdateLabelsTest {
         ObjectNode r = cms("https://127.0.0.1:1/cms").updateLabels("v1", new String[] {"a"});
 
         assertEquals(502, r.path("error_code").asInt(), r.toString());
-        assertTrue(r.path("message").asText().startsWith("No response from Brightcove"), r.toString());
+        assertEquals("No response from Brightcove", r.path("message").asText(), r.toString());
+    }
+
+    /** Row 13: an empty label list is sent as an explicit empty array, which clears them. */
+    @Test
+    void anEmptyLabelListPatchesAnEmptyArray() throws Exception {
+        patchBody.set("{\"id\":\"v1\",\"labels\":[]}");
+
+        ObjectNode r = cms(plainCms()).updateLabels("v1", new String[0]);
+
+        assertEquals("PATCH", patchMethod.get());
+        assertEquals("[]", com.coresecure.brightcove.wrapper.utils.JsonReader.readJsonTree(patchRequestBody.get())
+                .path("labels").toString(), patchRequestBody.get());
+        assertFalse(r.has("error_code"), r.toString());
     }
 
     @Test
@@ -128,14 +153,36 @@ class CmsApiUpdateLabelsTest {
         ObjectNode bare = CmsAPI.toUpdateResult(new PatchResponse(500, "{\"oops\":true}", null));
         assertEquals(500, bare.path("error_code").asInt());
 
-        // no response and a local failure
-        ObjectNode none = CmsAPI.toUpdateResult(new PatchResponse(0, null, "IOException: boom"));
+        // no response and a local failure: the failure text (may name the proxy) stays in the log
+        ObjectNode none = CmsAPI.toUpdateResult(new PatchResponse(0, null, "ConnectException: proxy.internal:3128 boom"));
         assertEquals(502, none.path("error_code").asInt());
-        assertTrue(none.path("message").asText().contains("boom"));
+        assertFalse(none.path("message").asText().contains("boom"), none.toString());
+        assertFalse(none.path("message").asText().contains("3128"), none.toString());
 
         // success object
         ObjectNode ok = CmsAPI.toUpdateResult(new PatchResponse(200, "{\"id\":\"v1\"}", null));
         assertFalse(ok.has("error_code"));
+    }
+
+    /** L2: nothing that is not a video object may come back as {} (the UI reads {} as saved). */
+    @Test
+    void anythingThatIsNotAVideoObjectIsAnExplicitError() throws Exception {
+        PatchResponse[] notAVideo = {
+            new PatchResponse(204, "", null),
+            new PatchResponse(200, null, null),
+            new PatchResponse(302, "", null),
+            new PatchResponse(302, "{\"id\":\"v1\"}", null),
+            new PatchResponse(200, "[]", null),
+            new PatchResponse(200, "\"ok\"", null),
+            new PatchResponse(200, "42", null),
+            new PatchResponse(200, "[1,2]", null),
+        };
+        for (PatchResponse p : notAVideo) {
+            ObjectNode r = CmsAPI.toUpdateResult(p);
+            String shape = "HTTP " + p.status + " body " + p.body + " -> " + r;
+            assertEquals(502, r.path("error_code").asInt(), shape);
+            assertTrue(r.path("message").asText().startsWith("Unexpected response"), shape);
+        }
     }
 
     @Test
