@@ -73,6 +73,14 @@ async function cmsClient() {
         { headers: await auth(), body });
       if (res.status !== 200 && res.status !== 201 && res.status !== 202) throw new Error(`ingest failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
     },
+    // The video's Dynamic Ingest jobs, each with `state` (processing -> finished / failed),
+    // `error_code`, `error_message` and `submitted_at`. ⚠️ `ingest_jobs` (underscore) on the
+    // ingest host, unlike the `ingest-requests` submit path.
+    async ingestJobs(id) {
+      const res = await call('GET', 'ingest.api.brightcove.com', `/v1/accounts/${c.account}/videos/${id}/ingest_jobs`, { headers: await auth() });
+      if (res.status !== 200 || !Array.isArray(res.json)) throw new Error(`list ingest jobs failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+      return res.json;
+    },
     // Resolves true once the video reports state ACTIVE, false on timeout.
     async waitActive(id, timeoutMs = 300_000) {
       const end = Date.now() + timeoutMs;

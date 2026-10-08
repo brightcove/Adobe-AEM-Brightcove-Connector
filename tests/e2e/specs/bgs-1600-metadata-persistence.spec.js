@@ -57,14 +57,23 @@ test.afterAll(async () => {
 // Find the throwaway in the admin list by searching for it and open its panel.
 // CMS search is eventually consistent: a video created seconds ago can be absent
 // from search for a while, so the search is repeated until the row shows up.
+// ⚠️ The unfiltered list openAdmin waits for can ALREADY contain the throwaway row. Clicking
+// that row while the search is in flight opens the panel, and the search's re-render
+// (buildMainVideoList) then hides #tdMeta, so the next panel control is "not visible".
+// Rows on screen are marked before each search; only an unmarked row, i.e. one this
+// search rendered, is clicked.
 async function openThrowawayPanel(page) {
   await openAdmin(page);
-  const row = page.locator('#tbData tr', { hasText: videoName });
+  const row = page.locator('#tbData tr:not([data-e2e-stale])', { hasText: videoName });
   await expect.poll(async () => {
+    await page.locator('#tbData tr').evaluateAll((trs) => trs.forEach((tr) => tr.setAttribute('data-e2e-stale', '')));
+    const searched = page.waitForResponse((r) => r.url().includes('a=search_videos')
+      && new URL(r.url()).searchParams.get('query') === videoName, { timeout: 20_000 });
     await page.locator('#search').click();
     await page.locator('#search').fill(videoName);
     await page.locator('#searchBut').click();
     try {
+      await searched;
       await row.first().waitFor({ state: 'visible', timeout: 8_000 });
     } catch (e) { /* not indexed yet, search again */ }
     return row.count();
@@ -187,7 +196,30 @@ test('row 13 / §3b-1: removing the last label in the admin UI clears it in CMS'
   expect((await cms.get(videoId)).name).toBe(videoName);
 });
 
+// Dynamic Ingest is asynchronous and its latency is Video Cloud's, not the connector's: poll the
+// persisted video for a bounded time, then let the video's ingest jobs give the verdict. No job, a
+// failed job, or a finished job with no image is a FAIL; a job still in flight is NOT MEASURED
+// (skip), never a FAIL. The test timeout is set above the wait so the verdict is always reached.
+const INGEST_WAIT_MS = 120_000;
+async function awaitIngestedImage(kind) {
+  const src = async () => { const i = (await cms.get(videoId)).images || {}; return i[kind] && i[kind].src; };
+  try {
+    await expect.poll(src, { timeout: INGEST_WAIT_MS, intervals: [3_000] }).toMatch(/^https:\/\//);
+    return;
+  } catch (e) { /* not landed yet: the ingest job decides below */ }
+  const jobs = (await cms.ingestJobs(videoId)).sort((a, b) => String(a.submitted_at).localeCompare(String(b.submitted_at)));
+  expect(jobs.length, `no ${kind} after ${INGEST_WAIT_MS / 1000}s and no Dynamic Ingest job exists: the connector never submitted one`).toBeGreaterThan(0);
+  const job = jobs[jobs.length - 1];
+  expect(job.state, `the ${kind} ingest job failed: ${job.error_code} ${job.error_message}`).not.toBe('failed');
+  if (job.state === 'finished') {
+    expect(await src(), `the ingest job finished but the video has no ${kind}`).toMatch(/^https:\/\//);
+    return;
+  }
+  test.skip(true, `NOT MEASURED: the ${kind} ingest job is still "${job.state}" after ${INGEST_WAIT_MS / 1000}s (Video Cloud latency)`);
+}
+
 test('row 11: poster URL saved in the admin UI is ingested and persisted to CMS', async ({ page }) => {
+  test.setTimeout(INGEST_WAIT_MS + 60_000);
   test.skip(!(await mediaHostReachable(IMAGE_URL)), `NOT MEASURED: ${new URL(IMAGE_URL).host} is unreachable from here (set BRC_E2E_IMAGE_URL to a reachable image)`);
   expect((await cms.get(videoId)).images || {}).not.toHaveProperty('poster');
 
@@ -198,14 +230,13 @@ test('row 11: poster URL saved in the admin UI is ingested and persisted to CMS'
   await poster.locator('.brc-image-url-save').click();
   await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/queued/i);
 
-  // Dynamic Ingest is asynchronous: poll the persisted video until the poster lands.
-  await expect.poll(async () => { const i = (await cms.get(videoId)).images || {}; return i.poster && i.poster.src; },
-    { timeout: 120_000, intervals: [3_000] }).toMatch(/^https:\/\//);
+  await awaitIngestedImage('poster');
   const persisted = await cms.get(videoId);
   expect(persisted.images.poster.src).not.toBe(IMAGE_URL); // re-hosted by Brightcove, not echoed back
 });
 
 test('row 11: thumbnail URL saved in the admin UI is ingested and persisted to CMS', async ({ page }) => {
+  test.setTimeout(INGEST_WAIT_MS + 60_000);
   test.skip(!(await mediaHostReachable(IMAGE_URL)), `NOT MEASURED: ${new URL(IMAGE_URL).host} is unreachable from here (set BRC_E2E_IMAGE_URL to a reachable image)`);
   expect((await cms.get(videoId)).images || {}).not.toHaveProperty('thumbnail');
 
@@ -216,8 +247,7 @@ test('row 11: thumbnail URL saved in the admin UI is ingested and persisted to C
   await thumb.locator('.brc-image-url-save').click();
   await expect(page.locator('#brcToast .brc-toast-msg')).toContainText(/queued/i);
 
-  await expect.poll(async () => { const i = (await cms.get(videoId)).images || {}; return i.thumbnail && i.thumbnail.src; },
-    { timeout: 120_000, intervals: [3_000] }).toMatch(/^https:\/\//);
+  await awaitIngestedImage('thumbnail');
   const persisted = await cms.get(videoId);
   expect(persisted.images.thumbnail.src).not.toBe(IMAGE_URL); // re-hosted by Brightcove, not echoed back
 });
