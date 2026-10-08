@@ -9,7 +9,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+
+import javax.jcr.AccessDeniedException;
 import javax.jcr.Node;
+import javax.jcr.PropertyType;
+import javax.jcr.Session;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -108,8 +115,67 @@ class FolderSyncUtilPoisonedRootTest {
                 FolderSyncUtil.NO_RETRY_DELAY);
 
         verify(serviceUtil, never()).createFolder(anyString());
+        // ...and keeps the move, which cannot create a folder (Trap 4, "three states").
+        verify(serviceUtil, times(1)).moveVideoToFolder(STALE_ID, VIDEO_ID);
         assertTrue(node(ROOT).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
                 "nothing verified this is the account root, so nothing is removed");
+    }
+
+    /**
+     * The service user cannot save the removal: the property is put back in the session, with
+     * its original type, so the caller's BGS-1705 marker commit on the same session does not
+     * carry a removal it is not allowed to persist. Still no move and no create.
+     */
+    @Test
+    void failedRepairSaveRestoresThePropertyWithItsOriginalType() throws Exception {
+        Node root = node(ROOT);
+        root.setProperty(FolderSyncUtil.BRC_FOLDER_ID, 4242L);
+        root.getSession().save();
+        Node asset = denySave(node(ROOT + "/root-level.mp4"));
+
+        FolderSyncUtil.syncFolder(serviceUtil, VIDEO_ID, asset, FolderSyncUtil.NO_RETRY_DELAY);
+
+        verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
+        verify(serviceUtil, never()).createFolder(anyString());
+        assertTrue(root.hasProperty(FolderSyncUtil.BRC_FOLDER_ID), "the failed removal must be undone in the session");
+        assertEquals(PropertyType.LONG, root.getProperty(FolderSyncUtil.BRC_FOLDER_ID).getType(),
+                "restored as " + PropertyType.nameFromValue(root.getProperty(FolderSyncUtil.BRC_FOLDER_ID).getType()));
+        assertEquals(4242L, root.getProperty(FolderSyncUtil.BRC_FOLDER_ID).getLong());
+    }
+
+    /** The asset node, whose parent's session refuses save() as a read-only service user would. */
+    private static Node denySave(Node asset) throws Exception {
+        Node parent = asset.getParent();
+        Session session = parent.getSession();
+        Session denying = proxy(Session.class, session, (method, args) ->
+                "save".equals(method) ? new AccessDeniedException("test: save denied") : null);
+        Node parentProxy = proxy(Node.class, parent, (method, args) ->
+                "getSession".equals(method) ? denying : null);
+        return proxy(Node.class, asset, (method, args) -> "getParent".equals(method) ? parentProxy : null);
+    }
+
+    private interface Intercept {
+        /** A replacement result, a Throwable to throw, or null to delegate. */
+        Object apply(String method, Object[] args) throws Exception;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T proxy(Class<T> type, T target, Intercept override) {
+        InvocationHandler h = (p, m, args) -> {
+            Object replaced = override.apply(m.getName(), args);
+            if (replaced instanceof Throwable) {
+                throw (Throwable) replaced;
+            }
+            if (replaced != null) {
+                return replaced;
+            }
+            try {
+                return m.invoke(target, args);
+            } catch (InvocationTargetException e) {
+                throw e.getCause();
+            }
+        };
+        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, h);
     }
 
     private Node node(String path) {

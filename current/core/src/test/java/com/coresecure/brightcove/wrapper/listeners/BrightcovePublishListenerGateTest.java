@@ -21,6 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.osgi.service.event.Event;
 
+import com.day.cq.replication.Agent;
+import com.day.cq.replication.AgentConfig;
+import com.day.cq.replication.AgentManager;
 import com.day.cq.replication.ReplicationAction;
 
 /**
@@ -89,6 +92,49 @@ class BrightcovePublishListenerGateTest {
                 "brightcoveWrite".equals(m.get(ResourceResolverFactory.SUBSERVICE))));
         // try-with-resources: the resolver is released even when the handler bails out.
         verify(rr, times(2)).close();
+    }
+
+    /** M5 (a): an upgraded 7.x install with the listener on AND the restored agent on. */
+    @Test
+    void enabledBrightcoveAgentMakesTheListenerSkipBothTopics() throws Exception {
+        configure(true, "author");
+        inject("agentManager", agents(agent("brightcove://localhost", true), agent("http://publish:4503", true)));
+
+        listener.handleEvent(replicationEvent());
+        listener.handleEvent(distributionEvent());
+
+        verify(rrf, never()).getServiceResourceResolver(any());
+    }
+
+    @Test
+    void disabledOrAbsentBrightcoveAgentLeavesTheListenerInCharge() throws Exception {
+        configure(true, "author");
+        inject("agentManager", agents(agent("brightcove://localhost", false), agent("http://publish:4503", true)));
+        listener.handleEvent(replicationEvent());
+
+        inject("agentManager", null); // AEMaaCS: no AgentManager at all
+        listener.handleEvent(distributionEvent());
+
+        verify(rrf, times(2)).getServiceResourceResolver(any());
+    }
+
+    private static Agent agent(String transportUri, boolean enabled) {
+        Agent agent = mock(Agent.class);
+        AgentConfig config = mock(AgentConfig.class);
+        when(config.getTransportURI()).thenReturn(transportUri);
+        when(agent.getConfiguration()).thenReturn(config);
+        when(agent.isEnabled()).thenReturn(enabled);
+        return agent;
+    }
+
+    private static AgentManager agents(Agent... agents) {
+        Map<String, Agent> byId = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < agents.length; i++) {
+            byId.put("agent" + i, agents[i]);
+        }
+        AgentManager manager = mock(AgentManager.class);
+        when(manager.getAgents()).thenReturn(byId);
+        return manager;
     }
 
     private void configure(boolean enabled, String runMode) {

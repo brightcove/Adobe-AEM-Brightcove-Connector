@@ -39,7 +39,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.Node;
+import javax.jcr.Property;
 import javax.jcr.RepositoryException;
+import javax.jcr.Value;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -231,29 +233,41 @@ public final class FolderSyncUtil {
      */
     private static void repairPoisonedAccountRoot(Node root) {
         String path = null;
-        String stale = null;
+        Property stale = null;
+        Value staleValue = null;
+        Value[] staleValues = null;
         try {
             path = root.getPath();
-            stale = root.getProperty(BRC_FOLDER_ID).getString();
+            stale = root.getProperty(BRC_FOLDER_ID);
+            // Snapshot the Value(s), not getString(): restore() must put back the same type.
+            if (stale.isMultiple()) {
+                staleValues = stale.getValues();
+            } else {
+                staleValue = stale.getValue();
+            }
             LOG.warn("Account root {} carries a stale brc_folder_id={} (written before the "
                     + "account-root guard existed). Ignoring it, so the video stays out of any "
                     + "folder, and removing the property. The Video Cloud folder is NOT deleted.",
-                    path, stale);
-            root.getProperty(BRC_FOLDER_ID).remove();
+                    path, staleValue != null ? staleValue.getString() : java.util.Arrays.toString(staleValues));
+            stale.remove();
             root.getSession().save();
         } catch (RepositoryException | RuntimeException e) {
             LOG.warn("Could not remove the stale brc_folder_id from {}; it stays ignored", path, e);
-            restore(root, stale);
+            restore(root, staleValue, staleValues);
         }
     }
 
-    private static void restore(Node root, String stale) {
-        if (stale == null) {
+    private static void restore(Node root, Value staleValue, Value[] staleValues) {
+        if (staleValue == null && staleValues == null) {
             return;
         }
         try {
             if (!root.hasProperty(BRC_FOLDER_ID)) {
-                root.setProperty(BRC_FOLDER_ID, stale);
+                if (staleValues != null) {
+                    root.setProperty(BRC_FOLDER_ID, staleValues);
+                } else {
+                    root.setProperty(BRC_FOLDER_ID, staleValue);
+                }
             }
         } catch (RepositoryException e) {
             LOG.error("Could not restore the pending brc_folder_id after a failed repair", e);
@@ -308,8 +322,7 @@ public final class FolderSyncUtil {
                 return byPath;
             }
             // No configuration (or a folder outside every account root): walk up past
-            // synced subfolders. ⚠️ Stops at a recognised account root even if it carries
-            // brc_folder_id (Trap 4).
+            // synced subfolders. ⚠️ The isAccountRoot stop cannot fire here; see "Trap 3".
             Node n = parentNode;
             while (n.hasProperty(BRC_FOLDER_ID) && n.getDepth() > 1
                     && !Boolean.TRUE.equals(isAccountRoot(n))) {

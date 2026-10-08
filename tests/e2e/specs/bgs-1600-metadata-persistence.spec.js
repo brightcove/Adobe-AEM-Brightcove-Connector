@@ -152,6 +152,43 @@ test('row 10/36: Save Labels in the admin UI persists to CMS through the PATCH p
   expect(persisted.name).toBe(videoName); // the PATCH changed labels only
 });
 
+// Row 13 / §3b-1 (moved here from bcon-admin-regressions.spec.js, which never writes): removing a
+// video's LAST label. jQuery's $.param drops the empty array, so the request carries no `labels`
+// parameter; the server must read that as "clear all". Before BGS-1600 it was a silent no-op
+// under a "Labels saved" toast, then briefly a 400. Context: ../../../current/docs/admin-labels.md
+test('row 13 / §3b-1: removing the last label in the admin UI clears it in CMS', async ({ page }) => {
+  await openThrowawayPanel(page);
+  await page.waitForFunction(
+    () => document.querySelectorAll('#label_list option[value^="/"]').length > 0, null, { timeout: 20_000 });
+  if (((await cms.get(videoId)).labels || []).length === 0) {
+    // Precondition: exactly the situation the defect needs, a video with a label to remove.
+    const label = await page.locator('#label_list option[value^="/"]').first().getAttribute('value');
+    await page.locator('#labelInput').fill(label.replace(/^\/+|\/+$/g, ''));
+    await page.locator('#labelInput').press('Enter');
+    await page.locator('#saveLabelsBtn').click();
+    await expect(page.locator('#brcToast .brc-toast-msg')).toHaveText(/^Labels saved$/);
+    await expect.poll(async () => ((await cms.get(videoId)).labels || []).length, { timeout: 30_000 }).toBeGreaterThan(0);
+    await openThrowawayPanel(page);
+  }
+  const before = (await cms.get(videoId)).labels || [];
+  expect(before.length, 'no label to remove; the check would pass vacuously').toBeGreaterThan(0);
+  await expect(page.locator('#divMeta\\.labels .brc-label-pill')).toHaveCount(before.length);
+
+  while ((await page.locator('#divMeta\\.labels .brc-label-pill').count()) > 0) {
+    await page.locator('#divMeta\\.labels .brc-label-pill-remove').first().click();
+  }
+  const sent = page.waitForRequest((r) => r.url().includes('/bin/brightcove/api.js') && r.url().includes('a=update_labels'));
+  await page.locator('#saveLabelsBtn').click();
+  // The defect's precondition: the request really carries no labels parameter.
+  expect(new URL((await sent).url()).searchParams.has('labels'), 'the UI now sends labels; this no longer exercises the absent-parameter path').toBe(false);
+  await expect(page.locator('#brcToast .brc-toast-msg')).toHaveText(/^Labels saved$/);
+
+  // Independent re-read: the persisted video, not the toast.
+  // The CMS reports a video with no labels as null/absent, the same as the [] the other tests read.
+  await expect.poll(async () => (await cms.get(videoId)).labels || [], { timeout: 30_000 }).toEqual([]);
+  expect((await cms.get(videoId)).name).toBe(videoName);
+});
+
 test('row 11: poster URL saved in the admin UI is ingested and persisted to CMS', async ({ page }) => {
   expect((await cms.get(videoId)).images || {}).not.toHaveProperty('poster');
 

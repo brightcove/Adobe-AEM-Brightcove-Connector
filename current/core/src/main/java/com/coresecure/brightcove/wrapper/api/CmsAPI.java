@@ -351,9 +351,11 @@ public class CmsAPI {
                 HttpServices.PatchResponse patch = account.platform.patchAPIFull(targetURL, JsonUtil.pretty(request), headers);
                 json = toUpdateResult(patch);
             } catch (Exception e) {
-                LOGGER.error(e.getClass().getName(), e);
+                // The exception text can name the proxy host:port: log it, never return it.
+                LOGGER.error("update_labels failed for video {}", videoId, e);
+                json = JsonNodeFactory.instance.objectNode();
                 json.put("error_code", 500);
-                json.put("message", e.getClass().getSimpleName() + ": " + e.getMessage());
+                json.put("message", "Could not update the labels");
             }
         } else {
             json.put("error_code", 401);
@@ -367,30 +369,29 @@ public class CmsAPI {
      * success, otherwise {@code {"error_code", "message"}}. The UI treats any response without
      * {@code error_code} as saved, so every failure must carry one: no response at all (refused,
      * proxy denied, timeout) is 502, an HTTP error keeps the CMS's own code and message when it
-     * sent them, and the HTTP status otherwise.
+     * sent them, and the HTTP status otherwise. Anything else that is not a video object (an
+     * empty 2xx/3xx body, 204, a redirect, {@code []}, a JSON scalar) is a 502, never {@code {}}.
      */
     static ObjectNode toUpdateResult(HttpServices.PatchResponse patch) throws IOException {
-        ObjectNode json = JsonNodeFactory.instance.objectNode();
         boolean httpError = patch.status >= 400;
+        boolean success = patch.status >= 200 && patch.status < 300;
         String body = patch.body;
         if (body == null || body.trim().isEmpty()) {
             if (httpError) {
-                json.put("error_code", patch.status);
-                json.put("message", "Brightcove returned HTTP " + patch.status);
-            } else if (patch.status == 0) {
-                json.put("error_code", 502);
-                json.put("message", "No response from Brightcove"
-                        + (patch.failure != null ? " (" + patch.failure + ")" : ""));
+                return error(patch.status, "Brightcove returned HTTP " + patch.status);
             }
-            return json;
+            if (patch.status == 0) {
+                // The failure text can name the proxy host:port; it is logged where it was caught.
+                LOGGER.warn("update_labels: no response from Brightcove ({})", patch.failure);
+                return error(502, "No response from Brightcove");
+            }
+            return unexpected(patch.status, "empty body");
         }
         com.fasterxml.jackson.databind.JsonNode parsed;
         try {
             parsed = JsonReader.readJsonTree(body);
         } catch (Exception notJson) {
-            json.put("error_code", httpError ? patch.status : 502);
-            json.put("message", "Unreadable response from Brightcove");
-            return json;
+            return error(httpError ? patch.status : 502, "Unreadable response from Brightcove");
         }
         com.fasterxml.jackson.databind.JsonNode first = parsed.isArray() && parsed.size() > 0 ? parsed.get(0) : parsed;
         if (first != null && first.isObject()) {
@@ -399,6 +400,7 @@ public class CmsAPI {
                 // CMS's own code and message when it returns one; HTTP status (422 for a
                 // bare validation array with no status) otherwise.
                 int fallbackStatus = httpError ? patch.status : 422;
+                ObjectNode json = JsonNodeFactory.instance.objectNode();
                 if (cmsError) {
                     json.put("error_code", first.get("error_code").asText());
                 } else {
@@ -411,12 +413,26 @@ public class CmsAPI {
                 }
                 return json;
             }
-            return (ObjectNode) first;
+            if (success) {
+                return (ObjectNode) first;
+            }
+            return unexpected(patch.status, "not a success status");
         }
         if (httpError) {
-            json.put("error_code", patch.status);
-            json.put("message", "Brightcove returned HTTP " + patch.status);
+            return error(patch.status, "Brightcove returned HTTP " + patch.status);
         }
+        // 200 [], a JSON scalar, a 3xx: none of them is the updated video.
+        return unexpected(patch.status, parsed.isArray() ? "empty array" : "not a video object");
+    }
+
+    private static ObjectNode unexpected(int status, String what) {
+        return error(502, "Unexpected response from Brightcove (HTTP " + status + ", " + what + ")");
+    }
+
+    private static ObjectNode error(int code, String message) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        json.put("error_code", code);
+        json.put("message", message);
         return json;
     }
 

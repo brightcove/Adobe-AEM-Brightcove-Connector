@@ -9,7 +9,8 @@ Asserts, per docs/dam-sync-on-activation.md:
            /etc/replication/agents.author/brightcove, enabled, transport brightcove://,
            under a filter in mode="merge" (an upgraded instance's agent is left alone)
            and the embedded brightcove.ui.config.onprem package carries exactly one repoinit
-           config granting brightcove_admin jcr:read on /home/groups and /home/users,
+           config granting brightcove_admin jcr:read on /home/groups and /home/users (restricted to
+           authorizable node types, rep:password denied),
            nothing broader and nothing on / (the agent's group check needs it)
   cloud    no embedded package carries any /etc/replication content, and no repoinit
            script anywhere in it mentions /home
@@ -113,11 +114,17 @@ def home_grant(packages):
     blocks = acl_blocks(script)
     paths = sorted(b[0] for b in blocks)
     check(paths == ["/home/groups", "/home/users"], f"the grant covers /home/groups and /home/users only (got {paths})")
-    grants = sorted({l for _, ls in blocks for l in ls})
-    check(grants == ["allow jcr:read for brightcove_admin"],
-          f"the only privilege granted is jcr:read for brightcove_admin (got {grants})")
+    lines = [l for _, ls in blocks for l in ls]
+    allows = [l for l in lines if l.startswith("allow ")]
+    check(allows and all(l.startswith("allow jcr:read for brightcove_admin restriction(rep:ntNames,")
+                         for l in allows),
+          f"every grant is jcr:read for brightcove_admin restricted by rep:ntNames (got {allows})")
+    check(all(l.startswith(("allow ", "deny jcr:read for brightcove_admin ")) for l in lines),
+          f"nothing but those grants and jcr:read denies for brightcove_admin ({lines})")
+    check(any(l == "deny jcr:read for brightcove_admin restriction(rep:itemNames,rep:password)" for l in lines),
+          "rep:password is denied to brightcove_admin")
     # The 6.5.0 GA parser (repoinit.parser 1.2.2) aborts the whole script on newer grammar.
-    allowed = ("create service user ", "set ACL on ", "allow ", "end", "scripts=[", "]", "")
+    allowed = ("create service user ", "set ACL on ", "allow ", "deny ", "end", "scripts=[", "]", "")
     odd = [l for l in (x.strip().strip('"').strip() for x in script.splitlines()) if not l.startswith(allowed)]
     check(not odd, f"the grant uses only 6.5.0-GA-safe repoinit grammar {odd or ''}")
     wide = [(pp, n) for pp, n, s in repoinits(packages) for path, _ in acl_blocks(s) if path == "/"]
