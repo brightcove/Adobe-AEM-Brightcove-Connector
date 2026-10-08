@@ -44,6 +44,7 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.Page;
@@ -566,7 +567,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.get(Constants.SENT).asBoolean()) {
                 //text_track.put("url", s3_url_resp.get("signed_url").asText());
                 text_track.put(Constants.URL, s3_url_resp.get(Constants.API_REQUEST_URL).asText());
-                LOGGER.trace("S3URLRESP: {}", s3_url_resp);
+                LOGGER.trace("S3URLRESP: {}", LogRedactor.body(String.valueOf(s3_url_resp)));
             } else {
                 LOGGER.error("FAILED TO INITIALIZE BUCKET");
             }
