@@ -126,7 +126,7 @@ async function main() {
   const evidence = {};
   // A dead third-party media host is not a proxy defect: say NOT MEASURED instead of failing.
   for (const [what, url] of [['video ingest source', VIDEO_URL], ['poster image source', IMAGE_URL]]) {
-    if (!(await mediaHostReachable(url))) { notMeasured('ALL', `${what} ${new URL(url).host} is unreachable from here (set BRC_E2E_VIDEO_URL / BRC_E2E_IMAGE_URL)`); await request.dispose(); fs.unlinkSync(backup); return finish(); }
+    if (!(await mediaHostReachable(url))) { notMeasured('ALL', `${what} ${new URL(url).host} is unreachable from here (set BRC_E2E_VIDEO_URL / BRC_E2E_IMAGE_URL)`); return finish(); } // the finally below restores the config and removes the backup
   }
   try {
     // ---- throwaway video, ACTIVE with images, listed by the CMS index -----------------------
