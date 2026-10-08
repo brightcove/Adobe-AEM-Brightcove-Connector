@@ -74,7 +74,7 @@ the `DynamicMembershipProvider`, and Oak's default `EveryoneMembershipProvider` 
 `everyone` group for every authorizable except `everyone` itself (read from the bytecode of the
 bed's `oak-core` bundle; older Oak lines were not inspected, though the accounts servlet,
 which also uses `memberOf()`, matched `everyone` on 6.5.0 GA). The mocked unit test
-`noMatchingGroupIsNotAuthorized` only pins "no listed group matches", not anything about
+`memberOfWithoutTheListedGroupIsNotAuthorized` only pins "no listed group matches", not anything about
 `everyone`.
 
 Why the earlier :4702 run failed: not `everyone`. The `brightcove_admin` service resolver
