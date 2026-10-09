@@ -155,7 +155,7 @@ The `-prem` package therefore ships a second repoinit factory config,
   installed after it.
 - ⚠️ Grammar limited to what the 6.5.0 GA parser accepts (`create service user`,
   `set ACL on … allow|deny … [restriction(…)] … end`): it aborts the whole script on newer syntax
-  (`ui.config/.../README-repoinit.md`). Checked statically 2026-10-08: this exact script parses
+  (`docs/repoinit.md`). Checked statically 2026-10-08: this exact script parses
   with `org.apache.sling.repoinit.parser` 1.2.2 taken from a 6.5.0 GA instance (restrictions,
   including multi-value `rep:ntNames`, come out intact; the same harness rejects
   `set properties`), and that instance's `org.apache.sling.jcr.repoinit` 1.1.8 applies

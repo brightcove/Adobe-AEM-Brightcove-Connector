@@ -4,12 +4,15 @@
     <filter root="/conf/global" mode="merge"/>
     <filter root="/content/brightcovetools" mode="update"/>
     <!-- Default DAM integration folder (repoinit creates it with portable grammar; title, cq:conf
-         and the Brightcove metadataSchema come from here). mode="update", not "merge": merge
-         leaves an EXISTING folder's properties alone, so an instance upgraded from 6.0.x (or one
-         whose folder repoinit created first) would never get the metadataSchema and therefore no
-         Brightcove tab. update sets these three properties and deletes nothing. A customer's own
-         damIntegrationPath is a different folder and is untouched. -->
-    <filter root="/content/dam/brightcove_assets/jcr:content" mode="update"/>
+         and the Brightcove metadataSchema come from here). ⚠️ mode="merge_properties": each of the
+         three is written only when the folder does not already have it, and an existing value is
+         never changed. Not "merge" (an existing folder, e.g. upgraded from 6.0.x/7.2.x, would never
+         get metadataSchema, so no Brightcove tab) and not "update" (resets a customer's own title,
+         cq:conf or schema on every install, i.e. every AEMaaCS deploy). Other properties on the
+         node (e.g. processingProfile) are untouched in every mode. A customer's own
+         damIntegrationPath is a different folder and is untouched.
+         Context: current/docs/core-folder-sync.md "Default folder properties". -->
+    <filter root="/content/dam/brightcove_assets/jcr:content" mode="merge_properties"/>
     <filter root="/conf/global/settings/workflow/models/bc-sync-new-asset" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/brightcove-delete-asset" mode="update"/>
     <filter root="/var/workflow" mode="merge"/>
