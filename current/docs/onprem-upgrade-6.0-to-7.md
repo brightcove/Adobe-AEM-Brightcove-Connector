@@ -59,10 +59,12 @@ and are corrected: the workflow-model names and the legacy clientlib paths.
 
 - `allowedGroups` must contain a group the connector users belong to. On a stock 6.5 `admin` is
   only in `everyone`; an account restricted to `administrators` is invisible to admin.
-- WCM Core Components are **not** embedded in the on-prem package (they would replace your
-  instance's own Core Components bundle). The connector's admin page uses
-  `core/wcm/components/container/v1` and `page/v3`; make sure your Core Components version
-  provides them.
+- **WCM Core Components must already be installed on the instance** (AEM 6.5 and 6.5 LTS). The
+  connector does not ship them (they would replace your instance's own Core Components bundle; see
+  `core-components-not-embedded.md`). Its player and iframe page components inherit from
+  `core/wcm/components/page/v3/page` and its `/conf/brightcove` templates use
+  `core/wcm/components/container/v1/container`, so make sure your Core Components version
+  provides both. Without them those pages and templates do not render or author correctly.
 - Workflow model names changed: `brightcove-sync-asset-workflow` → `bc-sync-new-asset`,
   `brightcove-delete-asset-workflow` → `brightcove-delete-asset`. **Your existing launchers
   keep working and nothing needs to change on upgrade day.** Measured on an upgraded instance:
@@ -81,6 +83,13 @@ and are corrected: the workflow-model names and the legacy clientlib paths.
   unaffected; a customer template that hardcodes a path (for example a
   `/etc/designs/cs/brightcove/shared/img/*.png` thumbnail) must move to
   `/apps/brightcove/clientlibs/*`.
+- **Design-mode settings under `/etc/designs/cs/brightcove` are removed.** 7.x `ui.content` owns
+  `/etc/designs/cs/brightcove` (that is how the old client libraries are removed), while 6.0.x
+  excluded its `jcr:content`. So anything a site stored under
+  `/etc/designs/cs/brightcove/jcr:content` (design-mode settings) is deleted on upgrade. No
+  connector page or template in 6.0.12 used that design, so this only affects sites that pointed
+  their own pages at it (`cq:designPath`); if yours did, back that node up before upgrading. Not
+  measured on an upgraded instance: this follows from the package filter, not from a run.
 
 ## The upgrade path that was actually verified
 

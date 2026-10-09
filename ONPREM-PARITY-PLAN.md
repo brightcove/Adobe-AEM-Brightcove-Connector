@@ -5,8 +5,8 @@ survey of the repo and both local AEM runtimes. Every fact below carries the com
 that produced it so it can be re-verified rather than trusted.
 
 Public repo. Ticket IDs only in commits, branch names, comments and this file. No
-customer names, account IDs or internal URLs. See the wiki page
-`aem-connector-release` "Public repo" gotcha and the 2026-06-02 leak decision record.
+customer names, account IDs or internal URLs. See the maintainers'
+internal notes on this repo being public and the 2026-06-02 leak decision record.
 
 ---
 
@@ -89,7 +89,7 @@ git rev-list --left-right --count origin/master...origin/onprem-master         #
   2026-07-11) but **not** the `brcTransport.js` `Load()` restore. 🔴 A build off `master`
   has a broken Brightcove Admin tool (25 `Load(` call sites, no definition). Same failure
   shape as `7.2.2-cloud`. `master` is also the only protected branch and nothing releases
-  from it (wiki: `aem-connector-repo-governance`).
+  from it (internal notes).
 - 🔴 **The live working tree at that path is the maintainer's.** It has untracked planning files
   and often a feature branch checked out. Never `checkout`/`pull` there. All work in this
   plan happens in `git worktree add` directories.
@@ -189,7 +189,7 @@ the message.
 | Libraries | current | Jackson **2.9.5**, Sling API **2.18.4**, httpclient 4.5.4, repoinit 1.1.8 |
 
 Boot recipe, readiness check, and the license gotcha (`curl -L` shows 200 for the license
-page, check `%{url_effective}`) are on wiki page `aem-connector-local-dev`. A Temurin 21
+page, check `%{url_effective}`) are in the maintainers' internal notes. A Temurin 21
 JDK is also installed for a Java 21 run of the on-prem instance later (6.5 LTS supports
 Java 21; 6.5.0 GA does not officially).
 
@@ -414,7 +414,7 @@ including the two known defects reproducing identically.
 Step 6 (Java 21) is **blocked, not skipped**: the local on-prem instance is 6.5.0 GA, which
 Adobe does not support on Java 17/21, so a Java 21 boot there would measure the quickstart, not
 the connector, and risks the test bed. It needs a 6.5 LTS quickstart (Adobe Software
-Distribution; download access exists per the `adobe-partner-software-access` wiki page). The
+Distribution; download access exists, see the maintainers' internal notes). The
 connector-side fix (`HttpServices` PATCH fallback) is in the shared core and already proven on
 AEMaaCS Java 21 by customers on 7.0.3+.
 
@@ -450,6 +450,9 @@ AEMaaCS Java 21 by customers on 7.0.3+.
      `LinkManagerImpl` and fail with `NoSuchMethodError SetUtils.unmodifiableSet` under the
      on-prem profile. Test bed repaired by deleting the three embedded CC nodes under
      `/apps/brightcove-packages/application/install` + `refreshPackages`; stock 2.3.2 came back Active.
+     **Update (BGS-1746, 7.4.0):** the three Core Components embeds were later removed from the
+     cloud profile as well, so they are embedded on neither platform. See
+     `current/docs/core-components-not-embedded.md`.
      Follow-up for the on-prem docs: the connector's `ui.content` uses `core/wcm/components/container/v1`
      and `page/v3` resource types, so Core Components must already be present on the target
      (they are on every 6.5; check the `page/v3` minimum when writing the compatibility matrix).
@@ -720,7 +723,7 @@ was bumped `7.3.8` → `7.4.0` in all ten module poms and gated green on both in
 deploy (AEM ignores a same-version redeploy), so eight dev bumps had passed it; why not `7.3.8`
 as-is: a fresh minor marks the point where the on-prem line joined.
 
-1. Cut `7.4.0-cloud` and `7.4.0-prem` from the same commit per `aem-connector-release`
+1. Cut `7.4.0-cloud` and `7.4.0-prem` from the same commit per the maintainers' internal release notes
    (detached worktree, `mvn clean package -DskipTests` not `-PautoInstallPackage`,
    `gh release create --target <full SHA>` — a short SHA returns HTTP 422 — both assets each).
 2. Rename `cloud-master` → `main`; `onprem-master` → `legacy/onprem-6.0.x`;
@@ -740,8 +743,8 @@ as-is: a fresh minor marks the point where the on-prem line joined.
    protected branch is the one nothing releases from.
 4. Support-site docs: Downloads point at both artifacts; publish the compatibility matrix
    (connector × AEM × Java) that BGS-1671 asked for.
-5. Wiki: update `aem-connector-release` (two lines → one line, two tags),
-   `aem-connector-local-dev` (two instances, one suite), close the loop on BGS-1671 and
+5. Internal notes: update the release notes (two lines → one line, two tags) and
+   the local-dev notes (two instances, one suite), close the loop on BGS-1671 and
    BGS-1677 with the measured Java 21 result.
 
 ---
@@ -857,5 +860,5 @@ verify a label/folder write, re-fetch the video record (`a=search_videos&isID=tr
   release 7.4.0 with a shared `-prem` number; `legacy/onprem-6.0.x` frozen; §3b as TODOs.)
 - **Subagent routing decided by the maintainer 2026-09-17:** straightforward tasks go to lower
   models (Sonnet); keep Opus for design calls and triage.
-- Log substantive findings to the wiki (`aem-connector-*` pages) as they land, not at the
-  end. The `aem-connector-unified-build` page holds the probe results this plan is built on.
+- Log substantive findings to the maintainers' internal notes as they land, not at the
+  end. Those notes hold the probe results this plan is built on.

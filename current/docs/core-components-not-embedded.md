@@ -31,8 +31,12 @@ Core Components `pom.xml` inside a nested archive, and any content under `/apps/
   as an upgrade of the instance's stock Core Components and the new bundle did not resolve on older
   service packs. See `ONPREM-PARITY-PLAN.md` §3 Phase 2 step 4.
 - **Security scanners read the POMs inside the embedded jar and ignore scope.** BGS-1746: a scan of
-  the 7.2.0 cloud package reported 4 Critical and 3 High findings, all from test-scope or `provided`
-  dependencies declared in the Core Components and jsoup POMs, none in connector code.
+  the 7.2.0 cloud package reported 4 Critical and 3 High findings, none in connector code. Three
+  come from dependencies declared in the embedded POMs: `commons-io` (`provided`) and `logback`
+  (test) in the Core Components POM, and Jetty (test) in jsoup's POM. `guava` 15.0 and
+  `commons-collections` 3.2.1 are not declared there; they arrive transitively through Adobe's test
+  libraries (aem-mock, caconfig). The reported `commons-fileupload` 1.3.3 was not found in the
+  resolved tree (it resolves to 1.5, test scope), so its origin is unconfirmed.
 
 ## What the connector depends on
 

@@ -151,9 +151,11 @@
                         <groupId>org.apache.jackrabbit</groupId>
                         <artifactId>filevault-package-maven-plugin</artifactId>
                         <configuration>
-                            <!-- Overridden, not appended (see the cloud profile): repeats the
-                                 four base entries and adds the on-prem-only content package
-                                 with the Brightcove replication agent.
+                            <!-- Overridden, not appended: repeats the four base entries and
+                                 adds the on-prem-only content package with the Brightcove
+                                 replication agent. combine.children="append" duplicated
+                                 entries across the plugin's executions and dropped the core
+                                 jar from the zip (seen 2026-09-17).
                                  Context: ../docs/dam-sync-on-activation.md -->
                             <embeddeds combine.self="override">
                                 <embedded>
