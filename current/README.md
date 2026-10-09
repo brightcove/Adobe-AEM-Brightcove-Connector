@@ -7,6 +7,11 @@ This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.co
  - **AEM as a Cloud Service** — the `*-cloud` artifact
  - **AEM 6.5 LTS** on-premise — the `*-prem` artifact
 
+**AEM 6.5 and 6.5 LTS: WCM Core Components (page v3 and container v1) must already be installed
+on the instance.** The connector's player and iframe page components and its `/conf/brightcove`
+templates inherit from them, and it does not ship them (`docs/core-components-not-embedded.md`).
+AEM as a Cloud Service always provides them.
+
 Both artifacts are built from the same commit. AEM 6.2, 6.3 and 6.4 are no longer
 supported: 6.5 LTS is the on-premise migration target, and the shared code needs a
 Sling API and Jackson version that the earlier lines do not ship. Upgrading an
@@ -69,7 +74,7 @@ Default differs per line, as it always has (details: `docs/dam-sync-on-activatio
 * **On-prem (`-prem` package): on by default.** The package installs the *Brightcove Replication Agent* at `/etc/replication/agents.author/brightcove` (enabled, transport `brightcove://`), so activating an asset under the DAM integration path creates or updates its Video Cloud video. An existing agent from an earlier install is left exactly as it is.
 * **AEM as a Cloud Service: opt-in.** Enable the DAM publish listener with an OSGi config for PID `com.coresecure.brightcove.wrapper.listeners.BrightcovePublishListener`, property `isEnabled` set to `true`, for example `ui.config/.../config.author/com.coresecure.brightcove.wrapper.listeners.BrightcovePublishListener.cfg.json` containing `{ "isEnabled": true }`.
 
-Do not enable both on one instance: each activation would then be pushed to Video Cloud twice.
+Do not enable both on one instance. If the listener is enabled while an enabled `brightcove://` replication agent exists, the listener skips the event and logs a WARN, so each activation is handled once, by the agent. Disable one of the two to silence the warning.
 
 Folders follow activation, not moves. An asset in a subfolder of the account folder is filed in the Video Cloud folder of the same name (created on its first activation); an asset directly in the account folder is not filed in any folder. Moving an asset in the DAM changes nothing in Video Cloud until the asset is activated again. Moving an asset back to the account folder and re-activating it leaves the video in its previous Video Cloud folder; remove it from that folder in Video Cloud if needed.
 
@@ -81,7 +86,7 @@ A configuration carried over from an on-premise setup that still uses the old cl
 
 The connector ships a Repo Init script (`RepositoryInitializer-brightcove`) that creates the `brightcove_admin` service user, grants it read, write, and replicate on `/content`, and creates the default `/content/dam/brightcove_assets` folder. These narrow grants hold on fresh installs only: an instance upgraded in place from 6.0.x keeps the 6.0.x grant of read, write, replicate, versioning, locking and ACL management on `/` for `brightcove_admin` (see `docs/onprem-upgrade-6.0-to-7.md`). A custom DAM integration path is covered by the `/content` ACL but is not created by Repo Init, so the target folder must exist or be created separately. The on-prem (`-prem`) package also grants `brightcove_admin` read on `/home/groups` and `/home/users` through a second Repo Init script: the Brightcove replication agent needs it to check that the user who activated an asset is in one of the account's `allowedGroups`. `everyone` matches every user (Oak includes it in `memberOf()`), so it disables the restriction; name a group those users are declared members of to restrict who can sync.
 
-The service user has no read access outside `/content`, so code that runs as `brightcove_admin` must not read from `/apps` or `/libs`: the read returns nothing rather than failing. The placeholder image used when importing a video that has no thumbnail is therefore read from the `brightcove.core` bundle (`Constants.DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE`), not from its copy under `/apps/brightcove/clientlibs`. Before 7.4.0 the import read the `/apps` copy and skipped every thumbnail-less video on a fresh install.
+The service user has no read access outside `/content` (the `-prem` artifact additionally grants restricted `jcr:read` on `/home/groups` and `/home/users`, see `ui.config.onprem` repoinit), so code that runs as `brightcove_admin` must not read from `/apps` or `/libs`: the read returns nothing rather than failing. The placeholder image used when importing a video that has no thumbnail is therefore read from the `brightcove.core` bundle (`Constants.DEFAULT_THUMBNAIL_CLASSPATH_RESOURCE`), not from its copy under `/apps/brightcove/clientlibs`. Before 7.4.0 the import read the `/apps` copy and skipped every thumbnail-less video on a fresh install.
 
 ## How to build
 

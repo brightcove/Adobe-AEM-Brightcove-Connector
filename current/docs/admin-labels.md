@@ -38,5 +38,5 @@ Exception and connection-failure text stays in the log: it can name the proxy ho
   CMS with an empty list); blank values are dropped.
 - `CmsApiUpdateLabelsTest`: an empty list PATCHes `{"labels":[]}` over a real loopback server;
   every non-video shape is a 502; failure text is not returned.
-- e2e `bcon-admin-regressions.spec.js` "§3b-1": removes the last label of a throwaway video in
+- e2e `bgs-1600-metadata-persistence.spec.js` "§3b-1": removes the last label of a throwaway video in
   the admin UI and re-reads the video from the CMS to confirm `labels` is empty.

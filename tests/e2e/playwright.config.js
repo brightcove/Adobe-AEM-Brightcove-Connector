@@ -4,7 +4,7 @@
 // Brightcove account already configured (verify with `GET /bin/brightcove/accounts`).
 // The admin tool itself is served at /brightcove/admin.html.
 //
-// See wiki/api/aem-connector-local-dev.md ("Admin tool e2e testing") for setup.
+// See tests/e2e/README.md for setup.
 const { defineConfig, devices } = require('@playwright/test');
 
 // Target-derived paths (state file, output dir) live in target.js so that

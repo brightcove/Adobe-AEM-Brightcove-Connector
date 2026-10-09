@@ -18,7 +18,7 @@ local AEM author, against a real configured Brightcove account.
   time; set `BRC_ACCOUNT_ID` to pin a specific one.
 - The tool itself is served at `http://localhost:4502/brightcove/admin.html`.
 
-See `wiki/api/aem-connector-local-dev.md` → "Admin tool e2e testing" for the full
+See the maintainers' internal notes ("Admin tool e2e testing") for the full
 context (config mechanism, api.js contract, account data).
 
 ## Install (once)
@@ -138,7 +138,6 @@ content-package checks, then this suite, before a ticket goes to Ready for QA.
 It gates cloud (`:4502`), on-prem (`:4602`), or both, and defaults to probing
 both instances. The JSON report is `tests/parity/runs/<date>/gate-<platform>-<port>-<version>.json`,
 so runs against different instances do not overwrite each other. See `./pre-qa-gate.sh --help`; details in
-`wiki/api/aem-connector-local-dev.md` → "Pre-QA gate" and
 `ONPREM-PARITY-PLAN.md` §3 Phase 1.
 
 **Live specs.** The specs that create throwaway videos need the Video Cloud credentials

@@ -71,9 +71,9 @@ six tests (three checks at two viewports):
    by accident. This one calls the product's own `showPopup()` with a long body, because
    the only live surface with a long list is the bulk-delete confirmation and driving
    that in an automated spec risks deleting real playlists from a shared account.
-3. **Negative control**: the pre-fix CSS is re-applied with `addStyleTag` and checks 1
-   and 2 are required to go red. Without it, a root-served, short-content run would pass
-   whether the fix were present or not.
+3. **Negative control**: the pre-fix CSS is re-applied with `addStyleTag` and at least one of
+   the two defects (off-center, overflowing the viewport) must show. Without it, a root-served,
+   short-content run would pass whether the fix were present or not.
 
 Both viewports matter: the defect only appears when the content is tall relative to the
 viewport, so a single roomy viewport proves nothing.
