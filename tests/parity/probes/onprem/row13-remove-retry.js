@@ -1,8 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
+const guards = require('../lib/guards');
 
 const BASE = 'http://localhost:4602';
+const { allowRemote } = guards.cli();
 const AUTH_STATE = path.join(__dirname, '../../../e2e/.auth/state-localhost-4602.json');
 const OUT_DIR = path.join(__dirname, '../../runs/2026-09-17/onprem-6.0.12/matrix');
 
@@ -13,6 +15,8 @@ async function getVideo(page, acct, id) {
 }
 
 async function main() {
+  // Guards (../lib/guards.js): loopback AEM only, and the target video must be named e2e-throwaway-*.
+  guards.assertLocalTarget(BASE, { allowRemote });
   const browser = await chromium.launch();
   const context = await browser.newContext({ storageState: AUTH_STATE, baseURL: BASE });
   const page = await context.newPage();
@@ -20,12 +24,15 @@ async function main() {
   const ACCOUNT_ID = (await acctRes.json()).accounts[0].value;
   const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_LABELS || (() => { throw new Error('set PARITY_VIDEO_ID_LABELS to a video with no labels'); })();
 
+  const targetVideo = await getVideo(page, ACCOUNT_ID, TARGET_VIDEO_ID);
+  guards.assertMutable('video', { id: TARGET_VIDEO_ID, name: targetVideo && targetVideo.name });
+
   await page.goto('/brightcove/admin.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#tbData tr', { timeout: 20000 });
-  await page.fill('#search', '42min');
+  await page.fill('#search', targetVideo.name);
   await page.click('#searchDiv #searchBut');
   await page.waitForTimeout(1200);
-  await page.locator('#tbData tr', { hasText: '42min - sync' }).first().click();
+  await page.locator('#tbData tr', { hasText: targetVideo.name }).first().click();
   await page.waitForTimeout(500);
   await page.click('a:has-text("Edit")');
   await page.waitForTimeout(400);
@@ -60,5 +67,8 @@ async function main() {
 
   await context.close();
   await browser.close();
+  // The output JSON above records what was OBSERVED. Only the final state is a real check here:
+  // the video's labels must be empty again after the remove.
+  guards.finish([{ name: 'labels empty after remove (video record re-read)', ok: Array.isArray(after.labels) || after.labels === undefined ? (after.labels || []).length === 0 : null }]);
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(guards.fatal);

@@ -18,6 +18,13 @@ from `/bin/brightcove/accounts`. Mutation probes take their target objects from 
 environment (`PARITY_VIDEO_ID_LABELS`, `PARITY_VIDEO_ID_FOLDER`) so no live-account ids
 are committed.
 
+The probes that mutate the account (`cloud/admin-{label,playlist,folder}-mutation-probe.js`,
+`onprem/admin-mutations-probe.js`, `onprem/row13-*.js`, `onprem73/admin-label-mutation-safe-probe.js`)
+call `probes/lib/guards.js`: loopback AEM only (`--allow-remote` overrides), only objects named
+`e2e-throwaway-*` are mutated (create one first; the on-prem mutation probe also takes
+`PARITY_FOLDER_NAME`), and each ends with PASS / FAIL / NOT MEASURED and a non-zero exit on
+anything but PASS. `node probes/lib/guards.test.js` self-tests the guards.
+
 `probes/upgrade/onprem-upgrade-probe.js` is the exception: a re-runnable PASS / FAIL /
 NOT MEASURED check of the on-prem 6.0.x -> 7.x in-place upgrade (plain Node 18+, no
 Playwright). `snapshot` on the 6.0.x install, `check` after installing the -prem package;

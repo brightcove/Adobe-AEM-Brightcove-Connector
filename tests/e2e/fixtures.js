@@ -3,6 +3,7 @@ const base = require('@playwright/test');
 const { AEM_BASE } = require('./target');
 
 const ADMIN_PATH = '/brightcove/admin.html';
+const CONNECTOR_FACTORY = 'com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl';
 
 const test = base.test;
 const expect = base.expect;
@@ -40,9 +41,36 @@ async function resolveAccountId(request) {
   return String(accounts[0].value);
 }
 
-// Path of the account's DAM folder, e.g. /content/dam/brightcove_assets/<account id>.
+const DEFAULT_DAM_INTEGRATION_PATH = '/content/dam/brightcove_assets';
+const damPathCache = new Map();
+
+// The account's configured `damIntegrationPath`, read from the connector's factory OSGi config
+// through the Felix console (the saved login is an admin session). Falls back to the connector's
+// own default, with an INFO line, when the console cannot be read or no config matches the
+// account. Only that one property is read; nothing else from the config is kept or logged.
+async function resolveDamIntegrationPath(request, accountId) {
+  if (damPathCache.has(accountId)) return damPathCache.get(accountId);
+  let found = null;
+  let why = 'not configured';
+  try {
+    const res = await request.get(`/system/console/configMgr/${CONNECTOR_FACTORY}.*.json`, { headers: { Referer: `${AEM_BASE}/` } });
+    if (!res.ok()) why = `configMgr HTTP ${res.status()}`;
+    else {
+      const match = (await res.json()).find((c) => c.properties && c.properties.accountId && String(c.properties.accountId.value) === String(accountId));
+      const v = match && match.properties.damIntegrationPath && match.properties.damIntegrationPath.value;
+      if (v) found = String(v).replace(/\/+$/, '');
+    }
+  } catch (e) { why = e.message; }
+  if (!found) console.log(`INFO: damIntegrationPath not read for the account (${why}); using the default ${DEFAULT_DAM_INTEGRATION_PATH}`);
+  const out = found || DEFAULT_DAM_INTEGRATION_PATH;
+  damPathCache.set(accountId, out);
+  return out;
+}
+
+// Path of the account's DAM folder, e.g. <damIntegrationPath>/<account id>.
 async function brightcoveAssetsRoot(request) {
-  return `/content/dam/brightcove_assets/${await resolveAccountId(request)}`;
+  const accountId = await resolveAccountId(request);
+  return `${await resolveDamIntegrationPath(request, accountId)}/${accountId}`;
 }
 
 // First Brightcove-linked dam:Asset under that folder. Resolved at run time rather

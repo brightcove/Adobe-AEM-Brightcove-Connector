@@ -140,3 +140,23 @@ both instances. The JSON report is `tests/parity/runs/<date>/gate-<platform>-<po
 so runs against different instances do not overwrite each other. See `./pre-qa-gate.sh --help`; details in
 `wiki/api/aem-connector-local-dev.md` → "Pre-QA gate" and
 `ONPREM-PARITY-PLAN.md` §3 Phase 1.
+
+**Live specs.** The specs that create throwaway videos need the Video Cloud credentials
+(`BRIGHTCOVE_ACCOUNT_ID`, `BRIGHTCOVE_CLIENT_ID`, `BRIGHTCOVE_CLIENT_SECRET`) in the
+environment; without them they skip, and a run with every live spec skipped looks green
+(measured: 59 passed / 25 skipped without credentials, 74 / 10 with). So the gate **fails**
+when any of the three is unset, naming the cause. `--allow-no-live` accepts that
+explicitly: live coverage is then reported as NOT MEASURED and the last line reads
+`PRE-QA GATE PASSED (live specs NOT MEASURED)`, which is not enough for Ready for QA on
+its own. `--dry-run` reports the same status and contacts no AEM.
+
+## Write guards
+
+The harness writes to the AEM under test (connector OSGi config via `connector-config.js`,
+DAM and CMS throwaways). Config writes refuse a non-loopback `AEM_BASE` unless
+`E2E_ALLOW_REMOTE=1` is set on purpose. The mutating parity probes
+(`tests/parity/probes/lib/guards.js`) refuse a non-loopback AEM without `--allow-remote`,
+only mutate objects named `e2e-throwaway-*` (or created in the same run), and end with a
+PASS / FAIL / NOT MEASURED verdict and a matching exit code. Self-test:
+`node tests/parity/probes/lib/guards.test.js`.
+

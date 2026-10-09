@@ -114,7 +114,7 @@ async function main() {
   if (probeOut) {
     try { fs.mkdirSync(probeOut, { recursive: true }); } catch (e) { console.error(`PROBE_OUT ${probeOut} unusable (${e.message}): evidence files disabled`); probeOut = null; }
   }
-  if (!creds()) { notMeasured('ALL', 'BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set: no throwaway video can be created'); return finish(); }
+  if (!creds()) { notMeasured('ALL', 'BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set: no throwaway video can be created'); return; }
   const request = await pwRequest.newContext({ baseURL: AEM_BASE, extraHTTPHeaders: { Authorization: BASIC } });
   const cms = await cmsClient();
   const acct = (await (await request.get('/bin/brightcove/accounts')).json()).accounts[0].value;
@@ -132,16 +132,20 @@ async function main() {
   const stamp = Date.now();
   const created = { videos: new Set(), assets: new Set() };
   const evidence = {};
+  // ⚠️ The config backup (holds client_secret) and the logging proxy exist from here on, so EVERY
+  // exit path below, early returns included, must run through this try's finally, which restores
+  // the config, deletes the backup and stops the proxy. An early return placed before the `try`
+  // left the backup on disk and the proxy server holding the process open.
+  try {
   // A dead third-party media host is not a proxy defect: say NOT MEASURED instead of failing.
   for (const [what, url] of [['video ingest source', VIDEO_URL], ['poster image source', IMAGE_URL]]) {
-    if (!(await mediaHostReachable(url))) { notMeasured('ALL', `${what} ${new URL(url).host} is unreachable from here (set BRC_E2E_VIDEO_URL / BRC_E2E_IMAGE_URL)`); return finish(); } // the finally below restores the config and removes the backup
+    if (!(await mediaHostReachable(url))) { notMeasured('ALL', `${what} ${new URL(url).host} is unreachable from here (set BRC_E2E_VIDEO_URL / BRC_E2E_IMAGE_URL)`); return; } // the finally below restores the config and removes the backup
   }
-  try {
     // ---- throwaway video, ACTIVE with images, listed by the CMS index -----------------------
     const name = `${PREFIX}proxy-${stamp}`;
     const vid = await cms.create(name); created.videos.add(vid);
     await cms.ingest(vid, VIDEO_URL);
-    if (!(await cms.waitActive(vid))) { notMeasured('ALL', `throwaway ${vid} never became ACTIVE`); return finish(); }
+    if (!(await cms.waitActive(vid))) { notMeasured('ALL', `throwaway ${vid} never became ACTIVE`); return; }
     let thumb = null;
     for (let i = 0; i < 60 && !thumb; i++) { const v = await cms.get(vid); thumb = v.images && v.images.thumbnail && v.images.thumbnail.src; if (!thumb) await sleep(5000); }
     if (!thumb) { notMeasured('rendition/image fetch', 'throwaway never got a thumbnail'); }
@@ -340,9 +344,9 @@ async function main() {
     }
     for (const v of created.videos) { try { console.log(`cleanup video ${v}: ${(await cms.tryGet(v)) === null ? 'gone' : 'STILL PRESENT'}`); } catch (e) { /* ignore */ } }
     try { await proxy.stop(); } catch (e) { console.log(`proxy stop: ${e.message}`); }
+    try { await request.dispose(); } catch (e) { /* ignore */ }
     if (probeOut) { try { fs.writeFileSync(path.join(probeOut, `evidence-${new URL(AEM_BASE).port}.json`), JSON.stringify({ verdicts, evidence }, null, 2)); } catch (e) { console.log(`evidence write: ${e.message}`); } }
   }
-  return finish();
 }
 
 function finish() {
@@ -351,4 +355,8 @@ function finish() {
   if (bad.length && !process.exitCode) process.exitCode = 1;
 }
 
-main().catch((e) => { console.error('PROBE ERROR', e.stack || e.message); process.exitCode = 2; });
+// Summary after main() and its finally have run; then exit explicitly so no lingering
+// handle (proxy sockets, keep-alive agents) can hang the process.
+main()
+  .catch((e) => { console.error('PROBE ERROR', e.stack || e.message); process.exitCode = 2; })
+  .then(() => { finish(); process.exit(process.exitCode || 0); });

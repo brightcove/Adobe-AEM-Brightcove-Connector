@@ -23,7 +23,17 @@
 #   --aem-onprem <url>              On-prem AEM instance. Default http://localhost:4602
 #   --skip-build                   Skip the mvn build+install step (assume the
 #                                   instance(s) already run the code to gate).
-#   --dry-run                      Print the resolved plan and exit; run nothing.
+#   --allow-no-live                Permit a run WITHOUT the Video Cloud credentials
+#                                   (BRIGHTCOVE_ACCOUNT_ID / BRIGHTCOVE_CLIENT_ID /
+#                                   BRIGHTCOVE_CLIENT_SECRET). Without them every live
+#                                   spec skips (measured: 59 passed / 25 skipped vs
+#                                   74 / 10 with credentials), so by default the gate
+#                                   FAILS when they are absent. With this flag the gate
+#                                   reports live coverage as NOT MEASURED and ends with
+#                                   "PASSED (live specs NOT MEASURED)", not "PASSED".
+#   --dry-run                      Print the resolved plan and exit; run nothing, contact
+#                                   no AEM. Also reports the live-spec status, and exits
+#                                   non-zero when a real run would fail on it.
 #   --help                         Show this help and exit.
 #
 # Env overrides: AEM_AUTH (default admin:admin), JAVA_HOME, PARITY_BASE_REF,
@@ -45,7 +55,7 @@ step() { echo; echo "── $1"; }
 fail() { echo "❌ PRE-QA GATE FAILED: $1" >&2; exit 1; }
 
 usage() {
-  sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---- argument parsing (POSIX-ish; macOS bash 3.2 compatible: no assoc arrays) ----
@@ -55,6 +65,7 @@ AEM_CLOUD_URL="http://localhost:4502"
 AEM_ONPREM_URL="http://localhost:4602"
 SKIP_BUILD=0
 DRY_RUN=0
+ALLOW_NO_LIVE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -72,6 +83,8 @@ while [ $# -gt 0 ]; do
       AEM_ONPREM_URL="$2"; shift 2 ;;
     --skip-build)
       SKIP_BUILD=1; shift ;;
+    --allow-no-live)
+      ALLOW_NO_LIVE=1; shift ;;
     --dry-run)
       DRY_RUN=1; shift ;;
     --help|-h)
@@ -86,6 +99,20 @@ case "$PLATFORM_ARG" in
   ""|cloud|onprem|both) : ;;
   *) fail "--platform must be one of cloud|onprem|both (got: $PLATFORM_ARG)" ;;
 esac
+
+# ---- live (credential-dependent) specs ----
+# Presence only: the values are never printed. Missing creds make every live spec skip,
+# which Playwright reports as a pass, so absence is a gate failure unless opted out.
+MISSING_LIVE=""
+[ -n "${BRIGHTCOVE_ACCOUNT_ID:-}" ] || MISSING_LIVE="$MISSING_LIVE BRIGHTCOVE_ACCOUNT_ID"
+[ -n "${BRIGHTCOVE_CLIENT_ID:-}" ] || MISSING_LIVE="$MISSING_LIVE BRIGHTCOVE_CLIENT_ID"
+[ -n "${BRIGHTCOVE_CLIENT_SECRET:-}" ] || MISSING_LIVE="$MISSING_LIVE BRIGHTCOVE_CLIENT_SECRET"
+MISSING_LIVE="${MISSING_LIVE# }"
+LIVE_MEASURED=1
+[ -z "$MISSING_LIVE" ] || LIVE_MEASURED=0
+live_fail_msg() {
+  echo "live specs did not run: $(echo "$MISSING_LIVE" | tr ' ' '/') not set. Every credential-dependent spec would skip and the run would look green. Source the account env file, or pass --allow-no-live to accept live coverage as NOT MEASURED."
+}
 
 # ---- resolve which port a URL uses (for -Daem.port) ----
 port_of() {
@@ -164,8 +191,24 @@ if [ "$DRY_RUN" = "1" ]; then
     echo "    content check: /apps/brightcove/clientlibs/clientlib-tools/js.txt has brcTransport.js, not com.iskitz"
     echo "    e2e:          AEM_BASE=$url, JSON report -> $out"
   done
+  echo
+  if [ "$LIVE_MEASURED" = "1" ]; then
+    echo "  live specs:    credentials present (BRIGHTCOVE_* set); live coverage will be measured"
+  elif [ "$ALLOW_NO_LIVE" = "1" ]; then
+    echo "  live specs:    NOT MEASURED (missing: $MISSING_LIVE); allowed by --allow-no-live, final line will read 'PASSED (live specs NOT MEASURED)'"
+  else
+    echo "  live specs:    WOULD FAIL, missing: $MISSING_LIVE (pass --allow-no-live to accept NOT MEASURED)"
+    fail "$(live_fail_msg)"
+  fi
   exit 0
 fi
+
+# Fail before the (slow) build, not after it.
+if [ "$LIVE_MEASURED" = "0" ] && [ "$ALLOW_NO_LIVE" = "0" ]; then
+  fail "$(live_fail_msg)"
+fi
+[ "$LIVE_MEASURED" = "1" ] || echo "⚠️ live specs NOT MEASURED (missing: $MISSING_LIVE); running with --allow-no-live"
+
 
 # ---- version-bump check (unchanged logic; platform-independent, computed once) ----
 git -C "$ROOT" fetch origin --quiet 2>/dev/null || true
@@ -333,6 +376,11 @@ for p in $PLATFORM_LIST; do
 done
 
 echo
-echo "🎉 PRE-QA GATE PASSED for $ver_local on: $PLATFORM_LIST — safe to transition to Ready for QA."
+if [ "$LIVE_MEASURED" = "1" ]; then
+  echo "🎉 PRE-QA GATE PASSED for $ver_local on: $PLATFORM_LIST — safe to transition to Ready for QA."
+else
+  echo "⚠️ live coverage: NOT MEASURED (missing: $MISSING_LIVE). The credential-dependent specs skipped."
+  echo "🎉 PRE-QA GATE PASSED (live specs NOT MEASURED) for $ver_local on: $PLATFORM_LIST — not sufficient on its own for Ready for QA."
+fi
 echo "   Still verify by hand: visual diff vs Figma for any UI change, and"
 echo "   environment/account parity (account feature flags, data scale, scrollbar style)."
