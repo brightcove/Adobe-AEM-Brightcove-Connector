@@ -10,6 +10,7 @@
          this folder. Nothing in the connector set it before; on the cloud test instance it had
          been assigned by hand in the Assets UI (jcr:lastModifiedBy=admin), so a fresh install
          on either platform showed the default video schema with no Brightcove tab
-         (measured on AEM 6.5.0, 2026-09-17). Filter mode is merge: a customer who chose a
-         different schema keeps it. Context: ONPREM-PARITY-PLAN.md §3 Phase 2 step 5. -->
+         (measured on AEM 6.5.0, 2026-09-17). ⚠️ Filter mode is merge_properties: each property
+         here is written only if the folder lacks it, so a customer who chose a different title or
+         schema keeps it. Context: current/docs/core-folder-sync.md "Default folder properties". -->
 </jcr:root>

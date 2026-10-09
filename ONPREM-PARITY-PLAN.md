@@ -465,7 +465,7 @@ AEMaaCS Java 21 by customers on 7.0.3+.
   aborts the whole script, so a fresh 6.5.0 would get no `brightcove_admin` and no ACLs. Fixed
   by keeping the script to `create path` / `create service user` / `set ACL` and moving the
   folder title + `cq:conf` into `ui.content` (`/content/dam/brightcove_assets`, filter mode
-  `merge`). `README-repoinit.md` sits next to the config. (b) The legacy `/apps/brightcove/runmodes`
+  `merge`). `current/docs/repoinit.md` documents it (moved out of the package in 7.4.0: FileVault plugin 1.3.6 rejects non-config files in a container package). (b) The legacy `/apps/brightcove/runmodes`
   config folder from 6.0.12 kept its `ServiceUserMapperImpl.amended~brightcove_admin` value active
   (`com.coresecure.brightcove.cq5.brightcove-services:brightcoveWrite=…`), which names the OLD
   bundle, so 7.x's `getServiceResourceResolver("brightcoveWrite")` would have failed on the

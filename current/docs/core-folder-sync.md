@@ -120,6 +120,41 @@ ignored either way. Do not use `refresh(false)` to drop it (Trap 2).
 Three states still hold: only TRUE repairs. UNKNOWN (no OSGi) keeps the id and moves,
 which can never create a folder; FALSE is a real subfolder.
 
+## Default folder properties
+
+The default DAM integration folder's `jcr:content` (`/content/dam/brightcove_assets/jcr:content`)
+ships three properties from `ui.content`: `jcr:title` "Brightcove Connector", `cq:conf`
+`/conf/brightcove`, and `metadataSchema` (the Brightcove schema, which is what puts the
+"Brightcove" tab on the asset metadata editor in that folder).
+
+⚠️ Its filter mode is `merge_properties`: a property is written only when the node does not
+already have it, and an existing value is never changed. On AEMaaCS the package is installed on
+every pipeline deploy, so the mode decides what happens on every deploy, not just at upgrade.
+
+| Situation | Result |
+|---|---|
+| Fresh install, or the node is missing | All three written |
+| Existing folder without a schema (upgraded from 6.0.x / 7.2.x) | Missing `metadataSchema` and `cq:conf` added: the Brightcove tab appears |
+| Customer renamed the folder or chose their own schema | Kept |
+| Other properties on the node (e.g. `processingProfile`) | Untouched |
+| A customer's own `damIntegrationPath` folder | Not covered by this filter at all |
+
+Alternatives that were shipped or considered:
+- `update` (7.4.0 pre-release): guaranteed the tab but reset a customer's title, `cq:conf` or
+  schema on every install.
+- `merge`: kept customer values, but an existing folder never got the schema, so upgraded
+  instances had no Brightcove tab.
+
+Build requirement: FileVault package plugin 1.1.6 (FileVault 3.4.8) rejects `merge_properties`
+at build time; the plugin is 1.3.6 (the AEM archetype's version). The instances apply the
+filter with their own FileVault (4.1.x on the AEMaaCS SDK, 3.8.0 on 6.5 LTS); both support it.
+
+Proved by `tests/parity/probes/dam-folder-filter-mode.sh <aem> <ui.content zip> <mode>`, which
+sets a customer value, installs, and asserts the result for all three situations above. It
+discriminates: the `update` build passes as `update` and fails as `merge_properties`. Run on the
+AEMaaCS SDK author and on 6.5 LTS author, plus a full 7.3.8 to 7.4.0 package upgrade on each
+with a customer title set beforehand (kept).
+
 ## How it is proved
 
 `core/src/test/java/.../webservices/BrcReplicationHandlerFolderSyncTest.java` (AEM mocks,
