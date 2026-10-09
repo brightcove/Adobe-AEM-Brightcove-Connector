@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.coresecure</groupId>
+        <artifactId>brightcove</artifactId>
+        <version>7.4.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <!-- On-prem-only OSGi config. Built and embedded only under -Daem.platform=onprem
+         (parent and all/ onprem profiles), so the cloud artifact never carries it.
+         Holds the repoinit grant that lets brightcove_admin read users and groups, which
+         the brightcove:// replication agent needs to authorize the replicating user.
+         Context: ../docs/dam-sync-on-activation.md -->
+    <artifactId>brightcove.ui.config.onprem</artifactId>
+    <packaging>content-package</packaging>
+    <name>Brightcove Connector - UI config (on-prem only)</name>
+    <description>On-prem-only config for Brightcove Connector: read on /home for the agent's group check</description>
+    <build>
+        <sourceDirectory>src/main/content/jcr_root</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>filevault-package-maven-plugin</artifactId>
+                <configuration>
+                    <group>com.coresecure</group>
+                    <name>brightcove.ui.config.onprem</name>
+                    <packageType>container</packageType>
+                    <showImportPackageReport>false</showImportPackageReport>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.day.jcr.vault</groupId>
+                <artifactId>content-package-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <verbose>true</verbose>
+                    <failOnError>true</failOnError>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

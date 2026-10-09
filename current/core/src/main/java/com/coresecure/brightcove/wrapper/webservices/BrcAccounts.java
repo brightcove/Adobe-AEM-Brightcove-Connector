@@ -34,16 +34,10 @@
 
 package com.coresecure.brightcove.wrapper.webservices;
 
-import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
-import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
-import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
-import com.coresecure.brightcove.wrapper.utils.TextUtil;
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.propertytypes.ServiceDescription;
 import javax.servlet.Servlet;
-import org.apache.jackrabbit.api.security.user.Authorizable;
-import org.apache.jackrabbit.api.security.user.Group;
-import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
@@ -54,12 +48,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 @Component(service = { Servlet.class },
@@ -115,51 +106,22 @@ public class BrcAccounts extends SlingAllMethodsServlet {
 
         LOGGER.debug("get account");
         try {
-            Session session = request.getResourceResolver().adaptTo(Session.class);
-            UserManager userManager = request.getResourceResolver().adaptTo(UserManager.class);
-                /* to get the current user */
-            Authorizable auth = userManager.getAuthorizable(session.getUserID());
-            if (auth != null) {
-                List<String> memberOf = new ArrayList<String>();
-                Iterator<Group> groups = auth.memberOf();
-                while (groups.hasNext()) {
-                    Group group = groups.next();
-                    memberOf.add(group.getID());
+            List<AccountsList.Option> visible = AccountsList.forUser(request.getResourceResolver());
+            if (visible != null) {
+                for (AccountsList.Option opt : visible) {
+                    ObjectNode accountJson = JsonNodeFactory.instance.objectNode();
+                    accountJson.put("text", opt.getText());
+                    accountJson.put("value", opt.getValue());
+                    accountJson.put("id", opt.getId());
+                    accounts.add(accountJson);
                 }
-                ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-
-                int i = 0;
-                for (String account : cg.getAvailableServices()) {
-                    LOGGER.debug("get account: " + account);
-                    ConfigurationService cs = cg.getConfigurationService(account);
-                    List<String> allowedGroups = new ArrayList<String>();
-                    allowedGroups.addAll(cs.getAllowedGroupsList());
-                    allowedGroups.retainAll(memberOf);
-
-                    String optionText = account;
-                    String alias = cs.getAccountAlias();
-                    if (TextUtil.notEmpty(alias)) {
-                        optionText = String.format("%s [%s]", alias, account);
-                    }
-                    if (allowedGroups.size() > 0) {
-                        ObjectNode accountJson = JsonNodeFactory.instance.objectNode();
-                        accountJson.put("text", optionText);
-                        accountJson.put("value", account);
-                        accountJson.put("id", i);
-                        i++;
-                        accounts.add(accountJson);
-                    }
-                }
-
                 LOGGER.debug("accounts: " + accounts.toString());
-
-
             } else {
                 LOGGER.debug("not authorized");
                 root.put("error", 403);
             }
             root.set("accounts", accounts);
-            outWriter.write(root.toPrettyString());
+            outWriter.write(JsonUtil.pretty(root));
         } catch (RepositoryException e) {
             LOGGER.error("RepositoryException", e);
             outWriter.write("{\"accounts\":[],\"error\":\"" + e.getMessage() + "\"}");

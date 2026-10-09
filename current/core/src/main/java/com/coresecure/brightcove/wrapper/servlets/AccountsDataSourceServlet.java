@@ -14,6 +14,7 @@ import java.util.List;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
+import javax.jcr.RepositoryException;
 
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
@@ -22,18 +23,15 @@ import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
-import org.apache.sling.engine.SlingRequestProcessor;
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.sling.api.wrappers.ValueMapDecorator;
+import com.coresecure.brightcove.wrapper.webservices.AccountsList;
 import com.adobe.granite.ui.components.ds.DataSource;
 import com.adobe.granite.ui.components.ds.SimpleDataSource;
 import com.adobe.granite.ui.components.ds.ValueMapResource;
-import com.coresecure.brightcove.wrapper.utils.SlingUtils;
-import com.google.gson.Gson;
 
 /**
  * Servlet which handles Brightcove accounts export json.
@@ -49,12 +47,7 @@ public class AccountsDataSourceServlet extends SlingSafeMethodsServlet {
 	 */
 	private static final long serialVersionUID = 7211849230412200970L;
 
-	/** The Constant BRIGHTCOVE_API_PATH. */
-	private static final String BRIGHTCOVE_API_PATH = "/bin/brightcove/accounts";
 
-	/** The request processor. */
-	@Reference
-	private SlingRequestProcessor requestProcessor;
 
 	/**
 	 * Do get.
@@ -68,63 +61,24 @@ public class AccountsDataSourceServlet extends SlingSafeMethodsServlet {
 	protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response)
 			throws ServletException, IOException {
 
-		String apiUrl = BRIGHTCOVE_API_PATH + ".json";
-
 		ResourceResolver resourceResolver = request.getResourceResolver();
-
-		logger.debug("api path is " + apiUrl);
-		String jsonString = SlingUtils.makeSlingRequest(this.requestProcessor,
-				resourceResolver, apiUrl);
-		logger.debug("account json is " + jsonString);
-
-		Gson gson = new Gson();
-		Option[] accounts = gson.fromJson(jsonString, Option[].class);
 		List<Resource> optionResourceList = new ArrayList<Resource>();
-
-		for (Option opt : accounts) {
-			ValueMap vm = getOptionValueMap(opt);
-			optionResourceList
-					.add(new ValueMapResource(resourceResolver, new ResourceMetadata(), "nt:unstructured", vm));
+		try {
+			List<AccountsList.Option> accounts = AccountsList.forUser(resourceResolver);
+			if (accounts != null) {
+				for (AccountsList.Option opt : accounts) {
+					ValueMap vm = new ValueMapDecorator(new HashMap<String, Object>());
+					vm.put("value", opt.getValue());
+					vm.put("text", opt.getText());
+					optionResourceList.add(
+							new ValueMapResource(resourceResolver, new ResourceMetadata(), "nt:unstructured", vm));
+				}
+			}
+		} catch (RepositoryException e) {
+			logger.error("Could not list Brightcove accounts for the datasource", e);
 		}
 
 		DataSource source = new SimpleDataSource(optionResourceList.iterator());
 		request.setAttribute(DataSource.class.getName(), source);
-	}
-
-	private ValueMap getOptionValueMap(Option opt) {
-		ValueMap vm = new ValueMapDecorator(new HashMap<String, Object>());
-
-		vm.put("value", opt.getValue());
-		vm.put("text", opt.getText());
-		if (opt.isSelected()) {
-			vm.put("selected", true);
-		}
-		if (opt.isDisabled()) {
-			vm.put("disabled", true);
-		}
-		return vm;
-	}
-
-	private class Option {
-		String text;
-		String value;
-		boolean selected;
-		boolean disabled;
-
-		public String getText() {
-			return text;
-		}
-
-		public String getValue() {
-			return value;
-		}
-
-		public boolean isSelected() {
-			return selected;
-		}
-
-		public boolean isDisabled() {
-			return disabled;
-		}
 	}
 }

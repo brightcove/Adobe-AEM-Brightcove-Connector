@@ -1,11 +1,14 @@
 package com.coresecure.brightcove.wrapper.api;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -97,7 +100,7 @@ public class CmsAPI {
                 {
                     payload.put("profile", profile);
                 }
-                String response = account.platform.postDIRequest_API(targetURL, payload.toPrettyString(), headers);
+                String response = account.platform.postDIRequest_API(targetURL, JsonUtil.pretty(payload), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -115,7 +118,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + aVideo.id + Constants.INGEST_REQUEST;
             try {
-                String response = account.platform.postDI_API(targetURL, aIngest.toJSON().toPrettyString(), headers);
+                String response = account.platform.postDI_API(targetURL, JsonUtil.pretty(aIngest.toJSON()), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -257,7 +260,7 @@ public class CmsAPI {
             try {
                 ObjectNode videoObj = aVideo.toJSON();
                 videoObj.remove(Constants.ACCOUNT_ID);
-                String response = account.platform.postAPI(targetURL, videoObj.toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(videoObj), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -282,7 +285,7 @@ public class CmsAPI {
                 video.remove(Constants.ID);
                 video.remove(Constants.ACCOUNT_ID);
 
-                String response = account.platform.patchAPI(targetURL, video.toPrettyString(), headers);
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(video), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (Exception e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -318,8 +321,8 @@ public class CmsAPI {
                 if (name != null && !name.isEmpty()) {
                     request.put("name", name);
                 }
-                LOGGER.info("updatePlaylistParams: {}", request.toPrettyString());
-                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
+                LOGGER.info("updatePlaylistParams: {}", JsonUtil.pretty(request));
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(request), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -344,38 +347,92 @@ public class CmsAPI {
                     labelArray.add(item);
                 }
                 request.set("labels", labelArray);
-                LOGGER.info("updateVideoParams: {}", request.toPrettyString());
-                String response = account.platform.patchAPI(targetURL, request.toPrettyString(), headers);
-                if (response != null && !response.isEmpty()) {
-                    // Brightcove returns an object on success ({ ...video fields... })
-                    // and an array on validation failure
-                    // (e.g. [{"error_code":"VALIDATION_ERROR","message":"foo: ILLEGAL_VALUE"}]).
-                    // The old `(ObjectNode) readTree(...)` cast threw on the array form
-                    // and the exception was swallowed below, so the JS client received
-                    // an empty {} and falsely showed "Labels saved" while nothing
-                    // persisted.
-                    com.fasterxml.jackson.databind.JsonNode parsed = JsonReader.readJsonTree(response);
-                    if (parsed.isObject()) {
-                        json = (ObjectNode) parsed;
-                    } else if (parsed.isArray() && parsed.size() > 0) {
-                        com.fasterxml.jackson.databind.JsonNode first = parsed.get(0);
-                        json.put("error_code", 422);
-                        if (first.has("message")) {
-                            json.put("message", first.get("message").asText());
-                        } else if (first.has("error_code")) {
-                            json.put("message", first.get("error_code").asText());
-                        }
-                    }
-                }
+                LOGGER.info("updateVideoParams: {}", JsonUtil.pretty(request));
+                HttpServices.PatchResponse patch = account.platform.patchAPIFull(targetURL, JsonUtil.pretty(request), headers);
+                json = toUpdateResult(patch);
             } catch (Exception e) {
-                LOGGER.error(e.getClass().getName(), e);
+                // The exception text can name the proxy host:port: log it, never return it.
+                LOGGER.error("update_labels failed for video {}", videoId, e);
+                json = JsonNodeFactory.instance.objectNode();
                 json.put("error_code", 500);
-                json.put("message", e.getClass().getSimpleName() + ": " + e.getMessage());
+                json.put("message", "Could not update the labels");
             }
         } else {
             json.put("error_code", 401);
             json.put("message", "No auth token");
         }
+        return json;
+    }
+
+    /**
+     * Maps a CMS PATCH outcome to the shape the admin UI reads: the updated video object on
+     * success, otherwise {@code {"error_code", "message"}}. The UI treats any response without
+     * {@code error_code} as saved, so every failure must carry one: no response at all (refused,
+     * proxy denied, timeout) is 502, an HTTP error keeps the CMS's own code and message when it
+     * sent them, and the HTTP status otherwise. Anything else that is not a video object (an
+     * empty 2xx/3xx body, 204, a redirect, {@code []}, a JSON scalar) is a 502, never {@code {}}.
+     */
+    static ObjectNode toUpdateResult(HttpServices.PatchResponse patch) throws IOException {
+        boolean httpError = patch.status >= 400;
+        boolean success = patch.status >= 200 && patch.status < 300;
+        String body = patch.body;
+        if (body == null || body.trim().isEmpty()) {
+            if (httpError) {
+                return error(patch.status, "Brightcove returned HTTP " + patch.status);
+            }
+            if (patch.status == 0) {
+                // The failure text can name the proxy host:port; it is logged where it was caught.
+                LOGGER.warn("update_labels: no response from Brightcove ({})", patch.failure);
+                return error(502, "No response from Brightcove");
+            }
+            return unexpected(patch.status, "empty body");
+        }
+        com.fasterxml.jackson.databind.JsonNode parsed;
+        try {
+            parsed = JsonReader.readJsonTree(body);
+        } catch (Exception notJson) {
+            return error(httpError ? patch.status : 502, "Unreadable response from Brightcove");
+        }
+        com.fasterxml.jackson.databind.JsonNode first = parsed.isArray() && parsed.size() > 0 ? parsed.get(0) : parsed;
+        if (first != null && first.isObject()) {
+            boolean cmsError = first.has("error_code") && !first.get("error_code").isNull();
+            if (cmsError || httpError || parsed.isArray()) {
+                // CMS's own code and message when it returns one; HTTP status (422 for a
+                // bare validation array with no status) otherwise.
+                int fallbackStatus = httpError ? patch.status : 422;
+                ObjectNode json = JsonNodeFactory.instance.objectNode();
+                if (cmsError) {
+                    json.put("error_code", first.get("error_code").asText());
+                } else {
+                    json.put("error_code", fallbackStatus);
+                }
+                json.put("message", first.has("message") ? first.get("message").asText()
+                        : "Brightcove returned HTTP " + fallbackStatus);
+                if (cmsError && httpError) {
+                    json.put("status", patch.status);
+                }
+                return json;
+            }
+            if (success) {
+                return (ObjectNode) first;
+            }
+            return unexpected(patch.status, "not a success status");
+        }
+        if (httpError) {
+            return error(patch.status, "Brightcove returned HTTP " + patch.status);
+        }
+        // 200 [], a JSON scalar, a 3xx: none of them is the updated video.
+        return unexpected(patch.status, parsed.isArray() ? "empty array" : "not a video object");
+    }
+
+    private static ObjectNode unexpected(int status, String what) {
+        return error(502, "Unexpected response from Brightcove (HTTP " + status + ", " + what + ")");
+    }
+
+    private static ObjectNode error(int code, String message) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        json.put("error_code", code);
+        json.put("message", message);
         return json;
     }
 
@@ -438,7 +495,7 @@ public class CmsAPI {
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + "/playlists";
             try {
                 LOGGER.debug("Playlist {}", aPlaylist.toJSON().toString());
-                String response = account.platform.postAPI(targetURL, aPlaylist.toJSON().toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(aPlaylist.toJSON()), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -608,7 +665,7 @@ public class CmsAPI {
         ArrayNode json = JsonNodeFactory.instance.arrayNode();
         LOGGER.debug("account: {}" , account.getAccount_ID());
         TokenObj authToken = account.getLoginToken();
-        LOGGER.debug("authToken: {}" , authToken.getToken());
+        LOGGER.debug("authToken: {}", LogRedactor.headerValue(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken()));
         String tagParam = getTagParam(dam_only);
         try {
             Map<String, String> headers = new HashMap<String, String>();
@@ -849,7 +906,7 @@ public class CmsAPI {
             headers.put(Constants.CONTENT_TYPE_HEADER, "application/json");
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants";
             try {
-                String response = account.platform.postAPI(targetURL, variantBody.toPrettyString(), headers);
+                String response = account.platform.postAPI(targetURL, JsonUtil.pretty(variantBody), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);
@@ -867,7 +924,7 @@ public class CmsAPI {
             headers.put(Constants.AUTHENTICATION_HEADER, authToken.getTokenType() + " " + authToken.getToken());
             String targetURL = Constants.ACCOUNTS_API_PATH + account.getAccount_ID() + Constants.VIDEOS_API_PATH + videoId + "/variants/" + language;
             try {
-                String response = account.platform.patchAPI(targetURL, variantBody.toPrettyString(), headers);
+                String response = account.platform.patchAPI(targetURL, JsonUtil.pretty(variantBody), headers);
                 if (response != null && !response.isEmpty()) json = JsonReader.readJsonFromString(response);
             } catch (IOException e) {
                 LOGGER.error(e.getClass().getName(), e);

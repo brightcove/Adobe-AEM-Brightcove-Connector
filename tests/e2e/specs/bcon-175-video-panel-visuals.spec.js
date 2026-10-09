@@ -22,17 +22,30 @@ test('BCON-175: Properties panel matches Figma visual spec', async ({ page }) =>
   await expect(page.locator('#tdMeta')).toBeVisible();
   await page.waitForSelector('.brc-panel-inner', { state: 'visible' });
 
-  // -------- 1. Outer panel border --------
+  // -------- 1. Panel divider: left-only --------
+  // commit 1239c07 (BCON-175/BCON-184) narrowed the outer divider to the left
+  // side only: a full border put a stray vertical bar down the panel's right
+  // edge and doubled the left divider against the list section's own border.
   const innerBorder = await page.locator('.brc-panel-inner').evaluate((el) => {
     const cs = getComputedStyle(el);
     return {
-      width: cs.borderTopWidth,
-      style: cs.borderTopStyle,
-      color: cs.borderTopColor,
+      leftWidth: cs.borderLeftWidth,
+      leftStyle: cs.borderLeftStyle,
+      leftColor: cs.borderLeftColor,
+      topWidth: cs.borderTopWidth,
+      topStyle: cs.borderTopStyle,
+      rightWidth: cs.borderRightWidth,
+      rightStyle: cs.borderRightStyle,
+      bottomWidth: cs.borderBottomWidth,
+      bottomStyle: cs.borderBottomStyle,
     };
   });
-  expect(parseFloat(innerBorder.width)).toBeGreaterThan(0);
-  expect(innerBorder.style).not.toBe('none');
+  expect(parseFloat(innerBorder.leftWidth)).toBeGreaterThan(0);
+  expect(innerBorder.leftStyle).not.toBe('none');
+  // Inverse assertion: the removed full border must not have come back.
+  expect(parseFloat(innerBorder.topWidth) || 0).toBe(0);
+  expect(parseFloat(innerBorder.rightWidth) || 0).toBe(0);
+  expect(parseFloat(innerBorder.bottomWidth) || 0).toBe(0);
 
   // -------- 2. Header grey background --------
   const headerBg = await page.locator('.brc-panel-header').evaluate(
@@ -85,9 +98,12 @@ test('BCON-175: Properties panel matches Figma visual spec', async ({ page }) =>
   }
 
   // -------- 7. Economics pill --------
-  // The cell must (a) be populated and (b) have a non-transparent background.
+  // commit 1239c07 (BCON-175) moved the pill styling off the <td> itself
+  // (`#divMeta.economics`) onto an inner `.brc-economics-pill` span, because
+  // making the cell inline-block pulled it out of the table and broke the row
+  // divider (#4/#5). The <td> stays a normal table cell; the pill is the span.
   const economics = await page
-    .locator('#divMeta\\.economics')
+    .locator('#divMeta\\.economics .brc-economics-pill')
     .evaluate((el) => ({
       text: (el.textContent || '').trim(),
       bg: getComputedStyle(el).backgroundColor,
@@ -98,4 +114,9 @@ test('BCON-175: Properties panel matches Figma visual spec', async ({ page }) =>
   expect(economics.bg).not.toBe('rgba(0, 0, 0, 0)');
   expect(economics.display).not.toBe('block'); // inline-block, not the default td child
   expect(parseFloat(economics.radius)).toBeGreaterThan(0);
+  // Inverse: the <td> itself must NOT be the styled element anymore.
+  const tdDisplay = await page
+    .locator('#divMeta\\.economics')
+    .evaluate((el) => getComputedStyle(el).display);
+  expect(tdDisplay).not.toBe('inline-block');
 });

@@ -38,6 +38,16 @@ import java.util.List;
 
 public interface ConfigurationService {
 
+    /**
+     * True when this configuration was read from the legacy on-prem 6.0.x factory PID
+     * ({@code …sling.BrcServiceImpl}, snake_case keys). Used only to prefer a current-format
+     * configuration when both exist for the same account. Context: ONPREM-PARITY-PLAN.md §1.3.
+     */
+    default boolean isLegacy() {
+        return false;
+    }
+
+
 
 
     String getPlayersLoc();

@@ -33,6 +33,7 @@
 
 package com.coresecure.brightcove.wrapper.webservices;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.enums.PlaylistTypeEnum;
 import com.coresecure.brightcove.wrapper.objects.Playlist;
 import com.coresecure.brightcove.wrapper.objects.Text_track;
@@ -43,6 +44,7 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.utils.AccountUtil;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.TextUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.wcm.api.Page;
@@ -321,7 +323,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
         playlist.setVideoIds(videoIDs);
         ObjectNode videoItem = brAPI.cms.createPlaylist(playlist);
-        LOGGER.info("New Playlist id: " + videoItem.toPrettyString());
+        LOGGER.info("New Playlist id: " + JsonUtil.pretty(videoItem));
         if (!videoItem.has(Constants.ID)) {
             result.put(Constants.ERROR, 409);
         } else {
@@ -444,36 +446,6 @@ public class BrcApi extends SlingAllMethodsServlet {
         return result;
     }
 
-    private ObjectNode updateVideo(SlingHttpServletRequest request) throws IOException {
-        Collection<String> tagsToAdd = new ArrayList<String>();
-        if (request.getParameter("tags") != null) {
-
-            List<String> tags = Arrays.asList(request.getParameterValues("tags"));
-            for (String tag : tags) {
-                if (tag.startsWith("+")) tagsToAdd.add(tag.substring(1));
-            }
-
-        }
-        com.coresecure.brightcove.wrapper.objects.RelatedLink link = new com.coresecure.brightcove.wrapper.objects.RelatedLink(request.getParameter("linkText"), request.getParameter("linkURL"));
-        com.coresecure.brightcove.wrapper.objects.Video video = new com.coresecure.brightcove.wrapper.objects.Video(
-                request.getParameter(Constants.ID),
-                request.getParameter(Constants.NAME),
-                request.getParameter("referenceId"),
-                request.getParameter(Constants.DESCRIPTION),
-                request.getParameter(Constants.LONG_DESCRIPTION),
-                "",
-                tagsToAdd,
-                null,
-                null,
-                false,
-                link
-        );
-        ObjectNode videoItem = brAPI.cms.updateVideo(video);
-        //LOGGER.debug("videoItem", videoItem);
-
-        return null;
-    }
-
     private ObjectNode updatePlaylist(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         String playlistId = request.getParameter("playlistId");
@@ -490,10 +462,24 @@ public class BrcApi extends SlingAllMethodsServlet {
 
     private ObjectNode updateLabels(SlingHttpServletRequest request) throws IOException {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
-        if ( (request.getParameter("labels") != null) && (request.getParameter("videoId") != null) ) {
-            String[] labels = request.getParameterValues("labels");
-            String videoId = request.getParameter("videoId");
-            result = brAPI.cms.updateLabels(videoId, labels);
+        String videoId = request.getParameter("videoId");
+        if (videoId != null && !videoId.trim().isEmpty()) {
+            // ⚠️ No labels parameter means "clear them all": jQuery's $.param drops an empty array,
+            // so that is how the admin UI sends a last-label removal. Context: docs/admin-labels.md
+            String[] sent = request.getParameterValues("labels");
+            List<String> labels = new ArrayList<>();
+            if (sent != null) {
+                for (String label : sent) {
+                    if (label != null && !label.trim().isEmpty()) {
+                        labels.add(label);
+                    }
+                }
+            }
+            result = brAPI.cms.updateLabels(videoId, labels.toArray(new String[0]));
+        } else {
+            // An empty {} reads as success to the UI, so a malformed request must say so.
+            result.put("error_code", 400);
+            result.put("message", "videoId is required");
         }
         return result;
     }
@@ -546,10 +532,10 @@ public class BrcApi extends SlingAllMethodsServlet {
                     updated_tracks
             );
 
-            //LOGGER.debug("GOT VIDEO: "+ down_video.toPrettyString());
-            LOGGER.debug("REBUILT VIDEO: {}", video.toJSON().toPrettyString());
+            //LOGGER.debug("GOT VIDEO: "+ JsonUtil.pretty(down_video));
+            LOGGER.debug("REBUILT VIDEO: {}", JsonUtil.pretty(video.toJSON()));
             ObjectNode videoItem = brAPI.cms.updateVideo(video);
-            LOGGER.trace("RESP TXT TRACK : {}", videoItem.toPrettyString());
+            LOGGER.trace("RESP TXT TRACK : {}", JsonUtil.pretty(videoItem));
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
         }
@@ -573,7 +559,7 @@ public class BrcApi extends SlingAllMethodsServlet {
         }
         text_track.put(Constants.DEFAULT, "true".equals(request.getParameter(Constants.TRACK_DEFAULT)));
         text_track.put(Constants.MIME_TYPE, request.getParameter(Constants.TRACK_MIME_TYPE));
-        //LOGGER.trace(text_track.toPrettyString());
+        //LOGGER.trace(JsonUtil.pretty(text_track));
 
 
         //FILE UPLOAD CASE***
@@ -591,7 +577,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             if (s3_url_resp != null && s3_url_resp.has(Constants.SENT) && s3_url_resp.get(Constants.SENT).asBoolean()) {
                 //text_track.put("url", s3_url_resp.get("signed_url").asText());
                 text_track.put(Constants.URL, s3_url_resp.get(Constants.API_REQUEST_URL).asText());
-                LOGGER.trace("S3URLRESP: {}", s3_url_resp);
+                LOGGER.trace("S3URLRESP: {}", LogRedactor.body(String.valueOf(s3_url_resp)));
             } else {
                 LOGGER.error("FAILED TO INITIALIZE BUCKET");
             }
@@ -608,7 +594,7 @@ public class BrcApi extends SlingAllMethodsServlet {
 
 
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), text_track_payload);
-        //DEBUGGER PRINT - LOGGER.trace("**:" + videoItem.toPrettyString());
+        //DEBUGGER PRINT - LOGGER.trace("**:" + JsonUtil.pretty(videoItem));
 
         if (videoItem.has(Constants.RESPONSE) && !videoItem.get(Constants.RESPONSE).isNull()) {
             com.fasterxml.jackson.databind.JsonNode parsedResponse = MAPPER.readTree(videoItem.get(Constants.RESPONSE).asText());
@@ -642,10 +628,10 @@ public class BrcApi extends SlingAllMethodsServlet {
             images_payload.set(Constants.POSTER, poster);
         }
 
-        LOGGER.trace("UploadImagesPayload>> {}", images_payload.toPrettyString());
+        LOGGER.trace("UploadImagesPayload>> {}", JsonUtil.pretty(images_payload));
 
         ObjectNode videoItem = brAPI.cms.uploadInjest(request.getParameter(Constants.ID), images_payload);
-        LOGGER.trace(videoItem.toPrettyString());
+        LOGGER.trace(JsonUtil.pretty(videoItem));
 
         // Parse the DI response so the JS can tell whether the QUEUE succeeded.
         // (The actual image processing is async — Brightcove returns 200 +
@@ -790,8 +776,6 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = createPlaylist(request);
         } else if ("create_video".equals(requestedAPI)) {
             result = createVideo(request);
-        } else if ("update_video".equals(requestedAPI)) {
-            result = updateVideo(request);
         } else if ("remove_text_track".equals(requestedAPI)) {
             result = removeTextTrack(request);
         } else if ("upload_text_track".equals(requestedAPI)) {
@@ -830,6 +814,7 @@ public class BrcApi extends SlingAllMethodsServlet {
             result = deleteVariant(request);
         } else {
             result.put(Constants.ERROR, 404);
+            result.put("message", "Unknown or unsupported action");
         }
         return result;
     }

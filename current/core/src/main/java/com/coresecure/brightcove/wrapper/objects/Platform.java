@@ -33,6 +33,7 @@
 package com.coresecure.brightcove.wrapper.objects;
 
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import org.apache.sling.servlets.post.JSONResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,7 +120,7 @@ public class Platform {
         LOGGER.trace("POST URL: " + URL);
 
         String response = HttpServices.executePost(URL, payload, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -128,7 +129,7 @@ public class Platform {
         LOGGER.trace("POST URL: " + URL);
 
         String response = HttpServices.executePut(URL, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -136,15 +137,21 @@ public class Platform {
         String URL = getAPI_Url() + targetURL;
         LOGGER.trace("patchAPI URL: " + URL);
         String response = HttpServices.executePatch(URL, payload, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
+    }
+
+    public HttpServices.PatchResponse patchAPIFull(String targetURL, String payload, Map<String, String> headers) {
+        String URL = getAPI_Url() + targetURL;
+        LOGGER.trace("patchAPI URL: " + URL);
+        return HttpServices.executePatchFull(URL, payload, headers);
     }
 
     public String postDI_API(String targetURL, String payload, Map<String, String> headers) {
         String URL = getDI_API_Url() + targetURL;
         LOGGER.trace("postDI_API: " + URL);
         String response = HttpServices.executePost(URL, payload, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -152,7 +159,7 @@ public class Platform {
         String URL = getDI_API_Url() + targetURL;
         LOGGER.trace("getDI_API: " + URL);
         String response = HttpServices.executeGet(URL, payload, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -160,7 +167,7 @@ public class Platform {
         String URL = getDI_API_Url() + targetURL;
         LOGGER.trace("postDI_API: " + URL);
         String response = HttpServices.executePost(URL, payload, headers, JSONResponse.RESPONSE_CONTENT_TYPE);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -168,7 +175,7 @@ public class Platform {
         String URL = getAPI_Url() + targetURL;
         LOGGER.trace("deleteAPI: " + URL);
         String response = HttpServices.executeDelete(URL, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
@@ -176,10 +183,17 @@ public class Platform {
         String URL = getAPI_Url() + targetURL;
         LOGGER.trace("deleteAPI: " + URL);
         String response = HttpServices.executeDelete(URL, headers);
-        LOGGER.trace(response);
+        traceResponse(response);
         return response;
     }
 
+
+    /** Upload-urls responses carry AWS keys and pre-signed URLs; never trace a raw body. */
+    private static void traceResponse(String response) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("{}", LogRedactor.body(response));
+        }
+    }
 
     public void setProxy(String proxy) {
         LOGGER.info("setProxy: " + proxy);

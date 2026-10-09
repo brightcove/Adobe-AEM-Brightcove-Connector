@@ -1,5 +1,9 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
+import com.day.cq.replication.Agent;
+import com.day.cq.replication.AgentConfig;
+import com.day.cq.replication.AgentManager;
 import com.day.cq.replication.ReplicationAction;
 import com.day.cq.replication.ReplicationActionType;
 
@@ -7,6 +11,9 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
@@ -27,6 +34,7 @@ import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.coresecure.brightcove.wrapper.objects.Video;
 import com.coresecure.brightcove.wrapper.utils.Constants;
+import com.coresecure.brightcove.wrapper.utils.FolderSyncUtil;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 
 import com.day.cq.dam.api.Asset;
@@ -63,6 +71,14 @@ public class BrightcovePublishListener implements EventHandler {
     @Reference
     SlingSettingsService slingSettings;
 
+    // Optional: AEMaaCS has no classic replication agents to find.
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC,
+            policyOption = ReferencePolicyOption.GREEDY)
+    volatile AgentManager agentManager;
+
+    /** The transport prefix BrcReplicationHandler handles (its brightcoveProtocol default). */
+    static final String BRIGHTCOVE_TRANSPORT_PREFIX = "brightcove://";
+
     private static final Logger LOG = LoggerFactory.getLogger(BrightcovePublishListener.class);
     private static final String SERVICE_ACCOUNT_IDENTIFIER = "brightcoveWrite";
 
@@ -88,7 +104,7 @@ public class BrightcovePublishListener implements EventHandler {
             // // make the actual video upload call
             ObjectNode api_resp = serviceUtil.createVideoS3(video, _asset.getName(), is);
 
-            // LOGGER.trace("API-RESP >>" + api_resp.toPrettyString());
+            // LOGGER.trace("API-RESP >>" + JsonUtil.pretty(api_resp));
             boolean sent = api_resp.has(Constants.SENT) && api_resp.get(Constants.SENT).asBoolean();
             if (sent) {
 
@@ -125,7 +141,9 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
-    private void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
+    // Package-private (not private) so BrightcovePublishListenerFolderSyncTest can drive
+    // the update path with a mocked ServiceUtil; activateAsset builds its own.
+    void activateModified(Asset _asset, ServiceUtil serviceUtil, Video video,
             ModifiableValueMap brc_lastsync_map) {
 
         LOG.info("Entering activateModified()");
@@ -226,78 +244,16 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
+    // Delegates to the shared helper so all three publish paths (this listener, the
+    // workflow step and BrcReplicationHandler) behave identically.
+    // Context: current/docs/core-folder-sync.md
     private void syncFolder(ServiceUtil serviceUtil, ObjectNode api_resp, Node assetNode) {
         try {
-            LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: " + assetNode.getParent().getPath());
-            Node parentNode = assetNode.getParent();
-            String videoId = api_resp.get(Constants.VIDEOID).asText();
-
-            // Skip folder sync if the asset lives directly in the account root folder.
-            // The account root (e.g. /content/dam/brightcove_assets/{accountId}) has no
-            // brc_folder_id, so without this guard syncFolder would create a spurious
-            // Brightcove folder named after the account ID and move the video into it.
-            ConfigurationGrabber cg = ServiceUtil.getConfigurationGrabber();
-            for (String accountId : cg.getAvailableServices()) {
-                ConfigurationService cs = cg.getConfigurationService(accountId);
-                if (cs == null) continue;
-                String integrationPath = cs.getAssetIntegrationPath();
-                String normalized = integrationPath.endsWith("/")
-                        ? integrationPath.substring(0, integrationPath.length() - 1)
-                        : integrationPath;
-                String accountRootPath = normalized + "/" + accountId;
-                if (parentNode.getPath().equals(accountRootPath)) {
-                    LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", accountRootPath);
-                    return;
-                }
-            }
-
-            if (!parentNode.hasProperty("brc_folder_id")) {
-                String folderId = serviceUtil.createFolder(assetNode.getParent().getName());
-                if (folderId != null && !folderId.isEmpty()) {
-                    setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
-                } else {
-                    LOG.error("*************************** No folder created ***************************");
-                    // Re-read the parent from the persistent store in case a concurrent publish
-                    // created the folder. keepChanges=true: in Oak refresh() is session-wide, so
-                    // refresh(false) would discard pending metadata (e.g. BRC_ID) set before this
-                    // call. No sleep here: this runs on a shared OSGi EventAdmin delivery thread
-                    // and must not block.
-                    parentNode.refresh(true);
-                    if (!parentNode.hasProperty("brc_folder_id")) {
-                        folderId = serviceUtil.createFolder(assetNode.getParent().getName());
-                        if (folderId != null && !folderId.isEmpty()) {
-                            setFolderIdMoveAssetInBC(serviceUtil, parentNode, videoId, folderId);
-                        } else {
-                            LOG.error("*************************** No folder created attempt 2 ***************************");
-                        }
-                    } else {
-                        // this is in a subfolder so we need to formally move the asset to this folder
-                        String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
-                        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
-                        serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
-                    }
-                }
-            } else {
-                // this is in a subfolder so we need to formally move the asset to this folder
-                String brc_folder_id = parentNode.getProperty("brc_folder_id").getString();
-                LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + brc_folder_id + "'");
-                serviceUtil.moveVideoToFolder(brc_folder_id, videoId);
-            }
-
+            FolderSyncUtil.syncFolder(serviceUtil, api_resp.get(Constants.VIDEOID).asText(),
+                    assetNode, FolderSyncUtil.NO_RETRY_DELAY);
         } catch (Exception e) {
-
-            // log the error
-            LOG.error("Error syncing folder");
-
+            LOG.error("Error syncing folder", e);
         }
-    }
-
-    private void setFolderIdMoveAssetInBC(ServiceUtil serviceUtil, Node parentNode, String videoId, String folderId) throws Exception {
-        parentNode.setProperty("brc_folder_id", folderId);
-        parentNode.getSession().save();
-
-        LOG.trace("SUBFOLDER FOUND - SETTING THE FOLDER ID to '" + folderId + "'");
-        serviceUtil.moveVideoToFolder(folderId, videoId);
     }
 
     private void deactivateAsset(ResourceResolver rr, Asset _asset, String accountId) {
@@ -350,11 +306,41 @@ public class BrightcovePublishListener implements EventHandler {
 
     }
 
+    /** The id of an enabled agent whose transport is brightcove://, or null when there is none. */
+    String enabledBrightcoveAgent() {
+        AgentManager manager = agentManager;
+        if (manager == null) {
+            return null;
+        }
+        try {
+            for (Map.Entry<String, Agent> entry : manager.getAgents().entrySet()) {
+                Agent agent = entry.getValue();
+                AgentConfig config = agent == null ? null : agent.getConfiguration();
+                String uri = config == null ? null : config.getTransportURI();
+                if (agent.isEnabled() && uri != null && uri.toLowerCase(java.util.Locale.ROOT).startsWith(BRIGHTCOVE_TRANSPORT_PREFIX)) {
+                    return entry.getKey();
+                }
+            }
+        } catch (RuntimeException e) {
+            LOG.warn("Could not list replication agents; assuming no brightcove:// agent", e);
+        }
+        return null;
+    }
+
     @Override
     public void handleEvent(Event event) {
         LOG.debug("handleEvent: topic={}", event.getTopic());
         // check that the service is enabled and that we are running on Author
         if (enabled && slingSettings.getRunModes().contains("author")) {
+            // ⚠️ With an enabled brightcove:// agent every activation would be handled twice,
+            // once there and once here (duplicate videos). Context: docs/dam-sync-on-activation.md
+            String agent = enabledBrightcoveAgent();
+            if (agent != null) {
+                LOG.warn("Brightcove publish listener is enabled but replication agent '{}' already syncs "
+                        + "activations to Brightcove ({}); skipping {} to avoid processing it twice. "
+                        + "Disable one of the two.", agent, BRIGHTCOVE_TRANSPORT_PREFIX, event.getTopic());
+                return;
+            }
 
             try {
 

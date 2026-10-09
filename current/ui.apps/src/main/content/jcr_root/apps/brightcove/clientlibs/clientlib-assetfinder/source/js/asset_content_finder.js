@@ -4,7 +4,7 @@
         CONTENT_FINDER_NAME = 'Brightcove Videos';
     
     // Get Brightcove Videos Asset Path from OSGI Config
-    $.getJSON("/bin/brightcove/getBrightcoveAssetPath.json").done(function(data){
+    $.getJSON(brc.url("/bin/brightcove/getBrightcoveAssetPath.json")).done(function(data){
         assetPath = data["brightcoveAssetPath"];
         
         getBrightcoveAssetsPath(assetPath);

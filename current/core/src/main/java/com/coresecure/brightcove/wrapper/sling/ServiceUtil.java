@@ -32,11 +32,13 @@
 */
 package com.coresecure.brightcove.wrapper.sling;
 
+import com.coresecure.brightcove.wrapper.utils.JsonUtil;
 import com.coresecure.brightcove.wrapper.BrightcoveAPI;
 import com.coresecure.brightcove.wrapper.enums.EconomicsEnum;
 import com.coresecure.brightcove.wrapper.objects.*;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.coresecure.brightcove.wrapper.utils.JcrUtil;
 import com.coresecure.brightcove.wrapper.utils.S3UploadUtil;
 import com.day.cq.commons.jcr.JcrConstants;
@@ -196,8 +198,15 @@ public class ServiceUtil {
     public ArrayNode getVideoSources(String videoID) {
         return brAPI.cms.getVideoSources(videoID);
     }
+    /**
+     * ⚠️ dam_only defaults to TRUE: videos tagged AEM_NO_DAM must stay out of the DAM.
+     * This overload used to pass false, so a full-scroll import pulled in tagged videos
+     * from page 2 onwards while page 1 excluded them (CmsAPI's own 4-arg getVideos
+     * forces the filter). Ported from on-prem ccdaeb2; see ONPREM-PARITY-PLAN.md §3
+     * Phase 3 item 3 and the §3b entry for the first-page inconsistency that remains.
+     */
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort) {
-        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, false, false);
+        return getList(exportCSV,  offset,  limit, full_scroll, query, sort, true, false);
     }
     public String getList(Boolean exportCSV, int offset, int limit, boolean full_scroll, String query, String sort, boolean dam_only) {
         return getList(exportCSV,  offset,  limit, full_scroll, query, sort, dam_only, false);
@@ -239,7 +248,7 @@ public class ServiceUtil {
             } else {
                 items.set("items", videos);
                 items.put("totals", totalItems);
-                result = items.toPrettyString();
+                result = JsonUtil.pretty(items);
             }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -412,7 +421,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, videos.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -430,7 +439,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, videos.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -457,7 +466,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, folders.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -476,7 +485,7 @@ public class ServiceUtil {
                 items.put(Constants.TOTALS, labelsArr.size());
             }
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -504,7 +513,7 @@ public class ServiceUtil {
             }
             items.put("playlist", id);
 
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -521,7 +530,7 @@ public class ServiceUtil {
         try {
             items = brAPI.cms.getExperiences(q, Constants.NAME);
             LOGGER.info("getExperiences count(): " + items.size());
-            result = items.toPrettyString();
+            result = JsonUtil.pretty(items);
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
@@ -563,7 +572,7 @@ public class ServiceUtil {
             } else {
                 items.set("items", playlists);
                 items.put("totals", totalItems);
-                result = items.toPrettyString();
+                result = JsonUtil.pretty(items);
             }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -693,7 +702,7 @@ public class ServiceUtil {
                 result.put(Constants.ERROR, e.getStackTrace()[0].getMethodName());
                 brAPI.cms.deleteVideo(newVideoId);
             }
-            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, LogRedactor.body(String.valueOf(result)));
 
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
@@ -721,7 +730,7 @@ public class ServiceUtil {
 
             boolean sent = S3UploadUtil.uploadToUrl(new URL(assetIngested.get(Constants.SIGNED_URL).asText()), is , HttpServices.getProxy());
             result.put(Constants.SENT, sent);
-            LOGGER.trace(Constants.RESULT_LOG_TMPL, result.toPrettyString());
+            LOGGER.trace(Constants.RESULT_LOG_TMPL, LogRedactor.body(String.valueOf(result)));
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
             result.put(Constants.SENT, false);
@@ -1107,7 +1116,7 @@ public class ServiceUtil {
             InputStream original_rendition_is = _asset.getRendition(DamConstants.ORIGINAL_FILE) != null ? _asset.getRendition(DamConstants.ORIGINAL_FILE).getStream() : null;
             ObjectNode s3_url_resp_original = serviceUtil.createAssetS3(currentVideo.id, _asset.getName() ,original_rendition_is);
 
-            LOGGER.trace("S3RESP : " + s3_url_resp_original);
+            LOGGER.trace("S3RESP : {}", LogRedactor.body(String.valueOf(s3_url_resp_original)));
             LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
             if (s3_url_resp_original != null && s3_url_resp_original.has(Constants.SENT) && s3_url_resp_original.get(Constants.SENT).asBoolean()) {
                 ObjectNode masterUrl = JsonNodeFactory.instance.objectNode();
@@ -1137,7 +1146,7 @@ public class ServiceUtil {
             InputStream poster_rendition_is = _asset.getRendition(Constants.BRC_POSTER_PNG) != null ? _asset.getRendition(Constants.BRC_POSTER_PNG).getStream() : null;
             ObjectNode s3_url_resp_poster = serviceUtil.createAssetS3(currentVideo.id,Constants.BRC_POSTER_PNG,poster_rendition_is);
 
-            LOGGER.trace("S3RESP : " + s3_url_resp_poster);
+            LOGGER.trace("S3RESP : {}", LogRedactor.body(String.valueOf(s3_url_resp_poster)));
             LOGGER.trace("##CURRENT VIDEO " + currentVideo.toJSON());
             //POSTER
             if (s3_url_resp_poster != null && s3_url_resp_poster.has(Constants.SENT) && s3_url_resp_poster.get(Constants.SENT).asBoolean()) {

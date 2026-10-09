@@ -5,6 +5,13 @@
             <meta http-equiv="Content-Type" content="text/html; utf-8"/>
             <title>Brightcove Admin</title>
             <script type="text/javascript">
+                // This page has no Granite runtime, so the servlet context path
+                // cannot be read client-side. Publish it from the request; the
+                // brc.url() helper (clientlib brc.url) prefers this source.
+                // Context: current/docs/clientlibs-context-path.md
+                window.brc = window.brc || {};
+                window.brc.contextPath = "${request.contextPath @ context='scriptString'}";
+
                 var brc_admin = brc_admin || {};
                 brc_admin.apiProxy = "/bin/brightcove/api";
                 //This should be the direct URL to a preview player,  corresponding to the account of the tokens
@@ -254,7 +261,7 @@
                             </td>
 
                             <!-- start right metadata column, fields filled in by showMetaData() -->
-                            <!--Element Id's have the meta. prefix followed by the actual name of the Video object field.  This allows the fields to be easily compared.  See  metaSubmit()  -->
+                            <!--Element Id's have the meta. prefix followed by the actual name of the Video object field. -->
                             <td id="tdMeta" valign="top" class="tdMetadata brc-panel" style="display:none;">
                                 <div class="brc-panel-inner">
 

@@ -61,34 +61,54 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
 
     private static String KEY = "key";
 
+    // Current-format (ConfigurationServiceImpl) and legacy 6.0.x (LegacyConfigurationServiceImpl)
+    // configurations are held separately and preferred at LOOKUP time. Deciding at bind time
+    // and dropping the loser does not work: DS never re-offers an already-bound reference, so
+    // when the current one was deleted the legacy account vanished with it (measured
+    // 2026-09-17: accounts went to [] after deleting the current config while the legacy one
+    // was still active). Context: ONPREM-PARITY-PLAN.md §3 Phase 4 step 1.
     private final Map<String, ConfigurationService> myConfigurationServices = new ConcurrentHashMap<String, ConfigurationService>();
+    private final Map<String, ConfigurationService> legacyConfigurationServices = new ConcurrentHashMap<String, ConfigurationService>();
     private ComponentContext componentContext;
 
     protected final void bindConfigurationService(final ConfigurationService config,
-            final Map<Object, Object> props) {
-
-        LOGGER.info("ConfigurationService bind() called");
-        if (config != null) {
-            LOGGER.info("I am here");
+                                                  final java.util.Map<String, Object> props) {
+        String accountId = config.getAccountID();
+        LOGGER.info("accountid: " + accountId);
+        if (config.isLegacy()) {
+            legacyConfigurationServices.put(accountId, config);
+            if (myConfigurationServices.containsKey(accountId)) {
+                LOGGER.warn("Account {} has both a current (ConfigurationServiceImpl) and a legacy (BrcServiceImpl) "
+                        + "configuration; the current one is used. Delete the legacy one.", accountId);
+            }
         } else {
-            LOGGER.info("null pointer");
+            myConfigurationServices.put(accountId, config);
+            if (legacyConfigurationServices.containsKey(accountId)) {
+                LOGGER.warn("Account {} has both a current (ConfigurationServiceImpl) and a legacy (BrcServiceImpl) "
+                        + "configuration; the current one is used. Delete the legacy one.", accountId);
+            }
         }
-        LOGGER.info("accountid: " + config.getAccountID());
-        LOGGER.info("Config: " + config);
-        myConfigurationServices.put(config.getAccountID(), config);
     }
 
     protected final void unbindConfigurationService(final ConfigurationService config,
-            final Map<Object, Object> props) {
-        myConfigurationServices.remove(config.getAccountID());
+                                                    final java.util.Map<String, Object> props) {
+        String accountId = config.getAccountID();
+        Map<String, ConfigurationService> map = config.isLegacy() ? legacyConfigurationServices : myConfigurationServices;
+        if (map.get(accountId) == config) {
+            map.remove(accountId);
+        }
     }
 
     public ConfigurationService getConfigurationService(String key) {
-        return myConfigurationServices.get(key);
+        ConfigurationService current = myConfigurationServices.get(key);
+        return current != null ? current : legacyConfigurationServices.get(key);
     }
 
+    /** Account ids from both current and legacy configurations (a current one masks a legacy one). */
     public Set<String> getAvailableServices() {
-        return myConfigurationServices.keySet();
+        Set<String> all = new HashSet<String>(myConfigurationServices.keySet());
+        all.addAll(legacyConfigurationServices.keySet());
+        return all;
     }
 
     public Set<String> getAvailableServices(SlingHttpServletRequest request) {
@@ -121,7 +141,7 @@ public class ConfigurationGrabberImpl implements ConfigurationGrabber {
             LOGGER.info("memberof: " + memberOf.toString());
             int i = 0;
             LOGGER.info("groups work");
-            LOGGER.info("key set: " + myConfigurationServices.keySet().toString());
+            LOGGER.info("key set: " + getAvailableServices().toString());
             for (String account : getAvailableServices()) {
                 ConfigurationService cs = getConfigurationService(account);
                 LOGGER.info("allowedgroupslist" + cs.getAllowedGroupsList());

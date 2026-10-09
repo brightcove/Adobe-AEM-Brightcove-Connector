@@ -368,7 +368,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -393,7 +393,7 @@ $(function () {
             };
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: data,
                 async: true,
                 success: function (data)
@@ -420,7 +420,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -437,7 +437,7 @@ $(function () {
                 };
                 $.ajax({
                     type: 'GET',
-                    url: '/bin/brightcove/api.js',
+                    url: brc.url('/bin/brightcove/api.js'),
                     data: data,
                     async: true,
                     success: function (data)
@@ -512,7 +512,7 @@ $(function () {
                 ids.forEach(function (id) {
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'delete_playlist', playlist: id },
                         async: true,
                         complete: onDone
@@ -627,9 +627,26 @@ function showPopup(title, message, btnPrimaryText, btnSecondaryText, onSuccess, 
         $popup.find('.pml-dialog_footer .btn-secondary').hide();
     }
 
-    $popup.show();
+    // NOT .show(): jQuery would set display:block, and .pml-dialog centers its
+    // container with flexbox. Context: current/docs/pml-dialog-layout.md
+    $popup.css('display', 'flex');
 }
 
+// ⚠️ DEAD CODE, measured 2026-09-17. suggestLabelsForVideo and
+// suggestVideosForPlaylist are JSONP callbacks for the keyup handlers on
+// '.label-add-input input' / '.playlist-add-input input', and that markup exists
+// NOWHERE: not in brightcoveadmin.html, not anywhere else in ui.apps, and not in
+// the served DOM of either instance. The cloud line replaced these .pml-dialog
+// listings with #editPlaylistModal and the label pills, so nothing ever creates
+// the nodes these two functions append to.
+// 🔴 Both also carry a live bug if they are ever revived: `$item.localName` on a
+// jQuery object is always undefined, so a click landing on the add-icon <img>
+// keeps the <img> as $item and reads data-name/data-id off it, i.e. undefined.
+// The on-prem line fixed exactly this in afa58e7 ($item.get(0).nodeName). It is
+// NOT ported here, because a fix to unreachable code cannot be verified and
+// would claim a behaviour nothing exercises. Recorded in
+// tests/parity/onprem-commit-ledger.md, Port plan item 4. Delete both functions
+// and their two keyup binders, or restore the markup and then port the fix.
 function suggestLabelsForVideo(data) {
     $('.pml-dialog .autocomplete').empty();
     if (data.items.length > 0) {
@@ -710,7 +727,7 @@ function openMoveToFolderModal() {
         $('#mtfFolderList').html('<li class="brc-mtf-empty">Loading\u2026</li>');
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: { a: 'list_folders', account_id: $('#selAccount').val(), callback: 'mtfFolderLoadCallback' },
             async: true
         });
@@ -801,7 +818,7 @@ $(function () {
         $.each(paging.selectedVideos, function (i, checkbox) {
             requests.push($.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'move_video_to_folder',
                     folder: folderId,
@@ -1081,7 +1098,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1164,7 +1181,7 @@ $(function () {
         _epSearchDebounce = setTimeout(function () {
             $.ajax({
                 type: 'GET',
-                url: '/bin/brightcove/api.js',
+                url: brc.url('/bin/brightcove/api.js'),
                 data: {
                     a: 'search_videos',
                     callback: 'epVideoSearchCallback',
@@ -1246,7 +1263,7 @@ function loadFolders() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1317,7 +1334,7 @@ function loadLabels() {
 
                     $.ajax({
                         type: 'GET',
-                        url: '/bin/brightcove/api.js',
+                        url: brc.url('/bin/brightcove/api.js'),
                         data: { a: 'create_label', label: labelName },
                         async: true,
                         // Inspect the raw response in `complete` rather than
@@ -1376,7 +1393,7 @@ function loadLabels() {
     };
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: data,
         async: true,
         success: function (data)
@@ -1454,7 +1471,7 @@ function openEditPlaylistModal(playlistId, playlistName, playlistType) {
     if (!isSmart) {
         $.ajax({
             type: 'GET',
-            url: '/bin/brightcove/api.js',
+            url: brc.url('/bin/brightcove/api.js'),
             data: {
                 a: 'list_videos_in_playlist',
                 callback: 'editPlaylistListingCallback',
@@ -1604,7 +1621,7 @@ function epSavePlaylist(showToast) {
 
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: qs,
         async: true,
         success: function() {
@@ -1692,7 +1709,7 @@ function sort(object) {
         if (window.brcCurrentView === 'playlists') {
             var asc = sortType === '';
             // Brightcove playlist IDs are integer strings of varying lengths
-            // (e.g. 5822937673001 vs 1860563059155019833). Sorting them via
+            // (e.g. a 13-digit id vs a 16-digit one). Sorting them via
             // localeCompare gives lexicographic order, which puts shorter
             // (smaller) IDs after longer (larger) ones. Compare by length
             // first to get correct numeric order. JS Number can't safely
@@ -2367,7 +2384,7 @@ function saveLabels() {
     var savedLabels = _currentLabels.slice();
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         // The endpoint is JSONP — let jQuery wire the callback so the response
         // body is actually parsed into `resp`. The prior `dataType` omission
         // caused the response to be executed as a script (`cb({...})`) and the
@@ -2378,8 +2395,12 @@ function saveLabels() {
         jsonp: 'callback',
         async: true,
         success: function(resp) {
-            if (resp && resp.error_code) {
-                brcToast('Labels not saved: ' + (resp.message || 'Brightcove rejected one or more labels'));
+            // error_code: the servlet's failure shape (CMS refused, unreachable, proxy denied).
+            // error: the dispatcher's own, e.g. 403 when the account is not authorized.
+            if (!resp || typeof resp !== 'object' || resp.error_code || resp.error) {
+                var code = resp && (resp.error_code || resp.error);
+                brcToast('Labels not saved: ' + ((resp && resp.message) ||
+                    (code ? 'error ' + code : 'Brightcove rejected one or more labels')));
                 return;
             }
             var idx = parseInt($('tr.select').attr('id'), 10);
@@ -2457,7 +2478,7 @@ CQ.Ext.brightcove.economics = new CQ.Ext.data.JsonStore({
 function syncDB()
 {
     syncStart();
-    var url = window.location.origin + "/bin/brightcove/dataload";
+    var url = window.location.origin + brc.url("/bin/brightcove/dataload");
     data = "account_id="+$("#selAccount").val();
     $.ajax({
         type: 'GET',
@@ -2825,209 +2846,6 @@ function uploadtrack()
     document.body.style.overflow = 'hidden';
 }
 
-function extMetaEdit() {
-
-    var v = oCurrentVideoList[$("tr.select").attr("id")],
-        modDate = new Date(v.updated_at),
-        tags = ((v.tags != null) ? v.tags : new Array()),
-        sec = String((Math.floor(v.duration * .001)) % 60); //The number of seconds not part of a whole minute
-    sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
-
-
-         var combo = new CQ.Ext.form.ComboBox({
-            store: CQ.Ext.brightcove.economics,
-            fieldLabel: 'Economics:',
-            displayField: 'text',
-            valueField: 'value',
-            mode: 'local',
-            forceSelection: true,
-            editable: false,
-            width: "100%",
-            hiddenName: "economics",
-            id: "economics",
-            triggerAction: "all",
-            value: (v.economics != null) ? v.economics : ""
-        }),
-
-        form = new CQ.Ext.form.FormPanel({
-            baseCls: 'x-plain',
-            labelWidth: 130,
-            url: apiLocation,
-            method: "POST",
-            standardSubmit: false,
-            defaults: {
-                xtype: 'textfield'
-            },
-
-            items: [{
-                xtype: 'hidden',
-                fieldLabel: 'Account ID:',
-                value: $("#selAccount").val(),
-                name:"account_id",
-                width: "100%"
-            },{
-                xtype: 'textfield',
-                fieldLabel: 'Title:',
-                id: 'name',
-                name: 'name',
-                value: v.name,
-                width: "100%",
-                allowBlank: false
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Last Updated:',
-                value: (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear(),
-                disabled: true,
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Date Published:',
-                value: (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear(),
-                disabled: true,
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Duration:',
-                value: Math.floor(v.duration / 60000) + ":" + sec,
-                disabled: true,
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Video ID:',
-                value: v.id,
-                disabled: true,
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Short Description:',
-                id: 'shortDescription',
-                name: 'shortDescription',
-                value: v.description,
-                width: "100%",
-                allowBlank: false
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Link to Related Item:',
-                id: 'linkURL',
-                name: 'linkURL',
-                value: (v.link != null && v.link.url != null) ? v.link.url : "",
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Text for Related Item:',
-                id: 'linkText',
-                name: 'linkText',
-                value: (v.link != null && v.link.text != null) ? v.link.text : "",
-                width: "100%"
-            }, {
-                xtype: 'tags',
-                fieldLabel: 'Tags:',
-                id: 'tags',
-                name: 'tags',
-                value: tags,
-                width: "100%"
-            }, {
-                xtype: 'textfield',
-                fieldLabel: 'Reference ID:',
-                id: 'referenceId',
-                name: 'referenceId',
-                value: (v.reference_id != null) ? v.reference_id : "",
-                width: "100%"
-            }, combo, {
-                xtype: 'hidden',
-                id: 'id',
-                name: 'id',
-                value: v.id,
-                width: "100%"
-            }, {
-                xtype: 'hidden',
-                id: 'a',
-                name: 'a',
-                value: 'update_video',
-                width: "100%"
-            }, {
-                xtype: 'hidden',
-                id: 'existingTags',
-                name: 'existingTags',
-                value: tags.join(),
-                width: "100%"
-            }]
-        }),
-
-        w = new CQ.Ext.Window({
-            title: 'Update Video',
-            collapsible: true,
-            maximizable: true,
-            width: 750,
-            height: 500,
-            minWidth: 300,
-            minHeight: 200,
-            bodyStyle: 'padding:5px;',
-            buttonAlign: 'center',
-            items: form,
-            buttons: [{
-                text: 'Send',
-                handler: function (btn, evt)
-                {
-                    var formobj = form.getForm();
-                    if (formobj.isValid()) {
-                        loadStart();
-
-                        formobj.submit({
-                            success: function (form, action) {
-                                w.destroy();
-                                window.selectedVideoId = v.id;
-                                Load(getAllVideosURL());
-                            },
-                            failure: function (form, action) {
-                                window.selectedVideoId = v.id;
-                                CQ.Ext.Msg.alert('Submission Failed', action.result && action.result.msg != "" ? action.result.msg : 'ERROR: Please try again.');
-                                Load(getAllVideosURL());
-                            }
-                        });
-                    }
-                    else alert('Invalid form');
-                }
-            }, {
-                text: 'Cancel',
-                handler: function (btn, evt) {
-                    w.destroy()
-                }
-            }]
-        });
-
-    w.setPosition(10, 10);
-    w.show();
-
-}
-
-function metaEdit() {
-    var v = oCurrentVideoList[$("tr.select").attr("id")],
-        modDate = new Date().setTime(v.lastModifiedDate);
-
-    document.getElementById('meta.name').value = v.name;
-    document.getElementById('meta.lastModifiedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
-
-    //v.length is the running time of the video in ms
-    var sec = String((Math.floor(v.length * .001)) % 60); //The number of seconds not part of a whole minute
-    sec.length < 2 ? sec = sec + "0" : sec;  //Make sure  the one's place 0 is included.
-
-    document.getElementById('meta.length').innerHTML = Math.floor(v.length / 60000) + ":" + sec;
-    document.getElementById('tdmeta.id').innerHTML = v.id;
-    document.getElementById('meta.id').value = v.id;
-    document.getElementById('meta.shortDescription').value = v.shortDescription;
-    document.getElementById('meta.tags').value = (v.tags != null) ? v.tags : "";
-    document.getElementById('meta.linkURL').value = (v.linkURL != null) ? v.linkURL : "";
-    document.getElementById('meta.linkText').value = (v.linkText != null) ? v.linkText : "";
-    document.getElementById('meta.economics').value = (v.economics != null) ? v.economics : "";
-
-    modDate.setTime(v.publishedDate);
-    document.getElementById('meta.publishedDate').innerHTML = (modDate.getMonth() + 1) + "/" + modDate.getDate() + "/" + modDate.getFullYear();
-    document.getElementById('meta.referenceId').value = (v.referenceId != null) ? v.referenceId : "";
-
-    openBox('metaEditPop');
-}
-
 // BCON-148: loadStart/loadEnd now use the scoped table spinner (BCON-141)
 // instead of the old top-right toast. The toast has been removed.
 function loadStart()
@@ -3098,7 +2916,7 @@ function cpSubmit() {
     var videoIds = _cpVideos.map(function(v) { return v.id; }).join(',');
     $.ajax({
         type: 'GET',
-        url: '/bin/brightcove/api.js',
+        url: brc.url('/bin/brightcove/api.js'),
         data: {
             a: 'create_playlist',
             account_id: $('#selAccount').val(),

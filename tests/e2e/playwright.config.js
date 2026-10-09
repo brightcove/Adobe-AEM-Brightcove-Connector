@@ -7,9 +7,9 @@
 // See wiki/api/aem-connector-local-dev.md ("Admin tool e2e testing") for setup.
 const { defineConfig, devices } = require('@playwright/test');
 
-const AEM_BASE = process.env.AEM_BASE || 'http://localhost:4502';
-const AEM_USER = process.env.AEM_USER || 'admin';
-const AEM_PASS = process.env.AEM_PASS || 'admin';
+// Target-derived paths (state file, output dir) live in target.js so that
+// concurrent runs against different instances do not collide.
+const { AEM_BASE, STATE_PATH, OUTPUT_DIR } = require('./target');
 
 module.exports = defineConfig({
   testDir: './specs',
@@ -19,10 +19,11 @@ module.exports = defineConfig({
   workers: 1,
   reporter: [['list']],
   globalSetup: require.resolve('./global-setup'),
+  outputDir: OUTPUT_DIR,
   use: {
     baseURL: AEM_BASE,
-    // Reuse the AEM login-token cookie captured by global-setup.
-    storageState: require('path').join(__dirname, '.auth', 'state.json'),
+    // Reuse the AEM login-token cookie captured by global-setup, per target.
+    storageState: STATE_PATH,
     ignoreHTTPSErrors: true,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',

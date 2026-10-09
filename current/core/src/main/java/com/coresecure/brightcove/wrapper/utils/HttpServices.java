@@ -284,7 +284,7 @@ public class HttpServices {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20"));
             LOGGER.debug("URL :" + targetURL);
-            LOGGER.debug("payload :" + payload);
+            if (LOGGER.isDebugEnabled()) LOGGER.debug("payload :" + LogRedactor.body(payload));
 
             LOGGER.debug("is proxy valid? :" + PROXY.toString());
             connection = getSSLConnection(url, targetURL);
@@ -297,7 +297,7 @@ public class HttpServices {
             connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
-                LOGGER.debug("setting header... " + key + ": " + headers.get(key));
+                LOGGER.debug("setting header... " + LogRedactor.header(key, headers.get(key)));
             }
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -331,7 +331,7 @@ public class HttpServices {
                 }
 
                 exPostResponse = response.toString();
-                LOGGER.debug("exPostResponse >>>" + exPostResponse);
+                if (LOGGER.isDebugEnabled()) LOGGER.debug("exPostResponse >>>" + LogRedactor.body(exPostResponse));
 
                 if (connection.getResponseCode() == 200 || connection.getResponseCode() == 201) {
                     //CORRECT ADDITION OF THE REQUEST BODY
@@ -359,13 +359,13 @@ public class HttpServices {
                     }
                 }
 
-                LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));
+                if (LOGGER.isDebugEnabled()) LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
             } else {
                 throw new Exception("**** Input Stream Coming Back is Null");
 
             }
 
-            LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), responseJSON.toString()));
+            if (LOGGER.isDebugEnabled()) LOGGER.debug(String.format("getResponseCode: %s  getResponseMessage:  %s getResponseJSON: %s", connection.getResponseCode(), connection.getResponseMessage(), LogRedactor.body(responseJSON.toString())));
 
 
         } catch (Exception e) {
@@ -392,7 +392,7 @@ public class HttpServices {
                 }
             }
         }
-        LOGGER.debug("finally - > exPostResponse[1]: {}", responseJSON.toString());
+        if (LOGGER.isDebugEnabled()) LOGGER.debug("finally - > exPostResponse[1]: {}", LogRedactor.body(responseJSON.toString()));
         return responseJSON.toString();
     }
 
@@ -414,11 +414,31 @@ public class HttpServices {
         return context;
     }
 
+    /** A PATCH outcome: HTTP status (0 when no response was received), body, and any local failure. */
+    public static final class PatchResponse {
+        public final int status;
+        public final String body;
+        public final String failure;
+
+        public PatchResponse(int status, String body, String failure) {
+            this.status = status;
+            this.body = body;
+            this.failure = failure;
+        }
+    }
+
     public static String executePatch(String targetURL, String payload,
                                       Map<String, String> headers) {
+        return executePatchFull(targetURL, payload, headers).body;
+    }
+
+    public static PatchResponse executePatchFull(String targetURL, String payload,
+                                                 Map<String, String> headers) {
         LOGGER.debug("executePatch - START: " + targetURL);
+        int status = 0;
+        String failure = null;
         URL url;
-        HttpsURLConnection connection = null;
+        HttpURLConnection connection = null;
         String exPatchResponse = null;
         BufferedReader rd = null;
         DataOutputStream wr = null;
@@ -433,18 +453,13 @@ public class HttpServices {
             LOGGER.debug("URL :" + targetURL);
             LOGGER.debug("payload :" + payload);
 
-            connection = getSSLConnection(url, targetURL);
-            boolean patchConfigured = false;
-            try {
-                setRequestMethod(connection, "PATCH");
-                patchConfigured = "PATCH".equalsIgnoreCase(connection.getRequestMethod());
-            } catch (Exception e) {
-                LOGGER.warn("executePatch: setRequestMethod(PATCH) failed, fallback strategy engaged: {}", e.getMessage());
-            }
-
-            if (!patchConfigured) {
+            // Plain http as executeFullGet does; the CMS is https, a loopback test server is not.
+            connection = "http".equals(url.getProtocol())
+                    ? getSSLConnection(url, targetURL, HttpURLConnection.class)
+                    : getSSLConnection(url, targetURL);
+            if (!configurePatchMethod(connection)) {
                 LOGGER.info("executePatch: PATCH unsupported with HttpURLConnection; switching to Apache HttpClient patch");
-                return executePatchUsingApacheHttpClient(targetURL, payload, headers);
+                return executePatchUsingApacheHttpClientFull(targetURL, payload, headers);
             }
 
             // PATCH configured using HttpsURLConnection path.
@@ -464,6 +479,7 @@ public class HttpServices {
             //            wr.writeBytes(payload);
 
             int responseCode = connection.getResponseCode();
+            status = responseCode;
             String responseMessage = connection.getResponseMessage();
             String allowHeader = connection.getHeaderField(Constants.ALLOW_HEADER);
             LOGGER.info("executePatch - response code: {} {}; Allow: {}", responseCode, responseMessage, allowHeader);
@@ -500,6 +516,7 @@ public class HttpServices {
 
         } catch (Exception e) {
             LOGGER.error(Constants.ERROR_LOG_TMPL, e);
+            failure = e.getClass().getSimpleName() + ": " + e.getMessage();
 
         } finally {
 
@@ -526,10 +543,28 @@ public class HttpServices {
         }
 
         LOGGER.debug("executePatch - END");
-        return exPatchResponse;
+        return new PatchResponse(status, exPatchResponse, failure);
     }
 
-    private static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
+    /**
+     * Tries to put the connection into PATCH. Returns false when the JVM refuses it
+     * (Java 17+ blocks the reflection fallback), so the caller must use the Apache client.
+     */
+    static boolean configurePatchMethod(HttpURLConnection connection) {
+        try {
+            setRequestMethod(connection, "PATCH");
+            return "PATCH".equalsIgnoreCase(connection.getRequestMethod());
+        } catch (Exception e) {
+            LOGGER.warn("executePatch: setRequestMethod(PATCH) failed, fallback strategy engaged: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    static String executePatchUsingApacheHttpClient(String targetURL, String payload, Map<String, String> headers) throws IOException {
+        return executePatchUsingApacheHttpClientFull(targetURL, payload, headers).body;
+    }
+
+    static PatchResponse executePatchUsingApacheHttpClientFull(String targetURL, String payload, Map<String, String> headers) throws IOException {
         LOGGER.debug("executePatchUsingApacheHttpClient - START: {}", targetURL);
         HttpClientBuilder builder = HttpClients.custom();
         if (PROXY != Proxy.NO_PROXY && PROXY.address() instanceof InetSocketAddress) {
@@ -569,7 +604,7 @@ public class HttpServices {
                 }
 
                 LOGGER.debug("executePatchUsingApacheHttpClient - END");
-                return body;
+                return new PatchResponse(responseCode, body, null);
             }
         }
     }
@@ -645,7 +680,7 @@ public class HttpServices {
         try {
             // Create connection
             url = new URL(targetURL.replaceAll(" ", "%20") + "?" + urlParameters);
-            LOGGER.trace("url: " + targetURL + "?" + urlParameters + " Protocol:" + url.getProtocol());
+            if (LOGGER.isTraceEnabled()) LOGGER.trace("url: " + targetURL + "?" + LogRedactor.body(urlParameters) + " Protocol:" + url.getProtocol());
             if ("http".equals(url.getProtocol())) {
                 connection = getSSLConnection(url, targetURL, HttpURLConnection.class);
             } else {
@@ -659,7 +694,7 @@ public class HttpServices {
             connection.setRequestProperty(Constants.CONTENT_LANGUAGE_HEADER, Constants.CONTENT_LANGUAGE_LOCALITY);
             for (String key : headers.keySet()) {
                 connection.setRequestProperty(key, headers.get(key));
-                LOGGER.trace("-H \"" + key + ": " + headers.get(key) + "\"");
+                LOGGER.trace("-H \"" + LogRedactor.header(key, headers.get(key)) + "\"");
             }
             connection.setUseCaches(false);
             connection.setDoInput(true);

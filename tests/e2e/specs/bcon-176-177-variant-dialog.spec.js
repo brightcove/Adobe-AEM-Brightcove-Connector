@@ -9,15 +9,19 @@
 //   of red. Fix: wrap in the same red span the Language Code already used. This
 //   account has no required custom fields, so we verify the shared red-asterisk
 //   rendering via the Language Code + Name required fields.
-const { test, expect } = require('../fixtures');
+const { test, expect, firstBrightcoveAsset } = require('../fixtures');
 
-// A Brightcove-linked asset present in the local DAM.
-const ASSET = '/content/dam/brightcove_assets/5822937471001/6238746490001.mp4';
-const EDITOR = '/mnt/overlay/dam/gui/content/assets/metadataeditor.external.html' + ASSET;
+// Metadata editor for a Brightcove-linked asset. The asset is resolved at run
+// time from the account's DAM folder (fixtures.js): no video or account ids in
+// this public repo, and the fixture asset differs between instances.
+const METADATA_EDITOR = '/mnt/overlay/dam/gui/content/assets/metadataeditor.external.html';
+async function editorUrl(page) {
+  return METADATA_EDITOR + await firstBrightcoveAsset(page.request);
+}
 const RED = 'rgb(217, 83, 79)'; // #d9534f
 
 async function openVariantDialog(page) {
-  await page.goto(EDITOR, { waitUntil: 'networkidle' });
+  await page.goto(await editorUrl(page), { waitUntil: 'networkidle' });
   // Activate the Brightcove tab so the variant section (and its Add button) is interactable.
   await page.locator('coral-tab:has-text("Brightcove")').click();
   const addBtn = page.locator('.brc-add-variant-btn').first();
@@ -31,7 +35,7 @@ test('the Brightcove tab is not falsely flagged invalid on load', async ({ page 
   // Regression: marking the dialog's Name field aria-required flagged the whole
   // Brightcove tab as invalid (red icon, no message) because the dialog markup
   // lives inside the asset metadata form. The tab must load clean.
-  await page.goto(EDITOR, { waitUntil: 'networkidle' });
+  await page.goto(await editorUrl(page), { waitUntil: 'networkidle' });
   const bcTab = page.locator('coral-tab:has-text("Brightcove")');
   await expect(bcTab).not.toHaveClass(/is-invalid/);
   await bcTab.click();

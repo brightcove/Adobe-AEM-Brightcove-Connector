@@ -5,11 +5,7 @@ const { request } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 
-const AEM_BASE = process.env.AEM_BASE || 'http://localhost:4502';
-const AEM_USER = process.env.AEM_USER || 'admin';
-const AEM_PASS = process.env.AEM_PASS || 'admin';
-
-const STATE_PATH = path.join(__dirname, '.auth', 'state.json');
+const { AEM_BASE, AEM_USER, AEM_PASS, STATE_PATH, TARGET_KEY } = require('./target');
 
 module.exports = async () => {
   fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
@@ -28,5 +24,6 @@ module.exports = async () => {
   }
 
   await ctx.storageState({ path: STATE_PATH });
+  console.log(`[global-setup] ${AEM_BASE} -> ${path.relative(__dirname, STATE_PATH)} (target ${TARGET_KEY})`);
   await ctx.dispose();
 };

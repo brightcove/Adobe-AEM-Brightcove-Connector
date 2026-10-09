@@ -33,7 +33,7 @@
 //CONFIG
 
 var brc_admin = brc_admin || {},
-    apiLocation = brc_admin.apiProxy; //This should be set to point to proxy.jsp on your server
+    apiLocation = brc.url(brc_admin.apiProxy); //This should be set to point to proxy.jsp on your server
 
 function togglePlSearchHint(field) {
     var hint = document.getElementById('pl_search_hint');
@@ -261,18 +261,6 @@ function findByTagCallBack(o) {
         console.log("Server Error: " + message);
     }
     loadEnd();
-}
-
-//Function calls update_video to change metadata
-//Also see metaEdit in vm_ui.js
-function metaSubmit() {
-    var form = document.getElementById("metaEditForm");
-    form.action = apiLocation;
-    form.submit();
-    loadStart();
-    //noWrite();
-    closeBox('metaEditPop');
-    Load(getAllVideosURL());
 }
 
 function delConfYes() {

@@ -35,6 +35,7 @@ package com.coresecure.brightcove.wrapper.objects;
 import com.coresecure.brightcove.wrapper.utils.Constants;
 import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.JsonReader;
+import com.coresecure.brightcove.wrapper.utils.LogRedactor;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.jackrabbit.util.Base64;
 import org.apache.jackrabbit.webdav.DavConstants;
@@ -70,7 +71,7 @@ public class Account {
         authToken = null;
         LOGGER.debug("getAccount_ID");
         String token = Base64.encode(client_id + ":" + client_secret);
-        LOGGER.debug("token: {}", token);
+        LOGGER.debug("token: {}", LogRedactor.headerValue("Authorization", "Basic " + token));
 
         Map<String, String> headers = new HashMap<String, String>();
         headers.put(DavConstants.HEADER_AUTHORIZATION, "Basic " + token);
@@ -80,7 +81,7 @@ public class Account {
             String loginResponse = HttpServices.executePost(targetURL, urlParameters, headers);
             if (loginResponse == null) return false;
             ObjectNode response = JsonReader.readJsonFromString(loginResponse);
-            LOGGER.debug(Constants.RESPONSE ,response);
+            LOGGER.debug("{}: {}", Constants.RESPONSE, LogRedactor.body(String.valueOf(response)));
 
             if (response.get(Constants.ACCESS_TOKEN) != null && response.get("token_type") != null && response.get("expires_in") != null) {
                 authToken = new TokenObj(response.get(Constants.ACCESS_TOKEN).asText(), response.get("token_type").asText(), response.get("expires_in").asInt());
