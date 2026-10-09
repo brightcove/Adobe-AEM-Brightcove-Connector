@@ -14,6 +14,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const guards = require('../lib/guards');
 
 async function fetchVideoById(page, accountId, videoId) {
   const url = `/bin/brightcove/api.json?isID=true&account_id=${accountId}&a=search_videos&query=${videoId}`;
@@ -27,10 +28,15 @@ async function fetchVideoById(page, accountId, videoId) {
 }
 
 (async () => {
-  const AEM_BASE = process.argv[2] || 'http://localhost:4502';
-  const STATE_PATH = process.argv[3];
-  const OUT_DIR = process.argv[4];
-  const VIDEO_ID = process.argv[5]; // pre-selected, currently unfoldered video
+  // Guards (../lib/guards.js): loopback AEM only (--allow-remote to override); the video AND the
+  // destination folder must both be named e2e-throwaway-*.
+  // Usage: node <probe> <AEM_BASE> <state.json> <out dir> <video id> [--allow-remote]
+  const { positional, allowRemote } = guards.cli();
+  const AEM_BASE = positional[0] || 'http://localhost:4502';
+  const STATE_PATH = positional[1];
+  const OUT_DIR = positional[2];
+  const VIDEO_ID = positional[3]; // pre-selected, currently unfoldered throwaway video
+  guards.assertLocalTarget(AEM_BASE, { allowRemote });
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ baseURL: AEM_BASE, storageState: STATE_PATH });
@@ -48,6 +54,7 @@ async function fetchVideoById(page, accountId, videoId) {
     result.accountId = accountId;
 
     const before = await fetchVideoById(page, accountId, VIDEO_ID);
+    guards.assertMutable('video', { id: VIDEO_ID, name: before.json && before.json.items && before.json.items[0] && before.json.items[0].name });
     result.folderBefore = before.json && before.json.items && before.json.items[0] ? before.json.items[0].folder_id || null : undefined;
 
     // Row 15a: list folders (filter panel dropdown).
@@ -86,7 +93,9 @@ async function fetchVideoById(page, accountId, videoId) {
     result.modalHasNoFolderOption = folderItems.some((t) => /no folder/i.test(t));
     await page.screenshot({ path: path.join(OUT_DIR, 'row15-move-modal-open.png'), fullPage: true });
 
-    const targetFolder = page.locator('#mtfFolderList li').filter({ hasText: 'aem_test_folder' }).first();
+    const targetFolder = page.locator('#mtfFolderList li').filter({ hasText: guards.THROWAWAY_PREFIX }).first();
+    if ((await targetFolder.count()) === 0) throw new guards.GuardError(`no destination folder named ${guards.THROWAWAY_PREFIX}*: create a throwaway folder first`);
+    guards.assertMutable('folder', { name: (await targetFolder.innerText()).trim() });
     await targetFolder.click();
     const moveReq = page.waitForRequest((r) => r.url().includes('a=move_video_to_folder'), { timeout: 10000 });
     await page.locator('#mtfMove').click();
@@ -114,7 +123,8 @@ async function fetchVideoById(page, accountId, videoId) {
     result.folderAfterMoveBack = afterBack.json && afterBack.json.items && afterBack.json.items[0] ? afterBack.json.items[0].folder_id || null : undefined;
     result.movedBackConfirmedByApi = !result.folderAfterMoveBack;
   } catch (err) {
-    result.error = String(err && err.stack || err);
+    if (err instanceof guards.GuardError) result.refused = err.message;
+    else result.error = String(err && err.stack || err);
   }
 
   result.consoleErrors = consoleErrors;
@@ -122,4 +132,10 @@ async function fetchVideoById(page, accountId, videoId) {
   fs.writeFileSync(path.join(OUT_DIR, 'row15-folder-mutation-result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
-})().catch((err) => { console.error(err); process.exit(1); });
+  if (result.refused) console.error(`GUARD: ${result.refused}`);
+  const known = (v) => (typeof v === 'boolean' ? v : null);
+  guards.finish(result.refused || result.error ? [{ name: result.refused ? 'guard refused: nothing mutated' : `probe error: ${String(result.error).split('\n')[0]}`, ok: result.error ? false : null }] : [
+    { name: 'video moved into folder (video record re-read)', ok: known(result.moveConfirmedByApi) },
+    { name: 'video moved back out (video record re-read)', ok: known(result.movedBackConfirmedByApi) },
+  ]);
+})().catch(guards.fatal);

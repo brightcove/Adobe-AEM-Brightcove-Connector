@@ -14,6 +14,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const guards = require('../lib/guards');
 
 async function fetchVideoById(page, accountId, videoId) {
   const url = `/bin/brightcove/api.json?isID=true&account_id=${accountId}&a=search_videos&query=${videoId}`;
@@ -27,9 +28,13 @@ async function fetchVideoById(page, accountId, videoId) {
 }
 
 (async () => {
-  const AEM_BASE = process.argv[2] || 'http://localhost:4502';
-  const STATE_PATH = process.argv[3];
-  const OUT_DIR = process.argv[4];
+  // Guards (../lib/guards.js): loopback AEM only (--allow-remote to override), and only a
+  // video named e2e-throwaway-* is mutated. Usage: node <probe> <AEM_BASE> <state.json> <out dir> [--allow-remote]
+  const { positional, allowRemote } = guards.cli();
+  const AEM_BASE = positional[0] || 'http://localhost:4502';
+  const STATE_PATH = positional[1];
+  const OUT_DIR = positional[2];
+  guards.assertLocalTarget(AEM_BASE, { allowRemote });
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ baseURL: AEM_BASE, storageState: STATE_PATH });
@@ -44,7 +49,10 @@ async function fetchVideoById(page, accountId, videoId) {
     await page.goto('/brightcove/admin.html', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#tbData tr', { timeout: 20000 });
     const accountId = await page.locator('#selAccount').inputValue();
-    await page.locator('#tbData tr').first().click();
+    // Only a throwaway-named row is ever opened for editing (never "the first video").
+    const throwawayRow = page.locator('#tbData tr', { hasText: guards.THROWAWAY_PREFIX }).first();
+    if ((await throwawayRow.count()) === 0) throw new guards.GuardError(`no video named ${guards.THROWAWAY_PREFIX}* in the first page of the list: create a throwaway video first`);
+    await throwawayRow.click();
     await page.waitForSelector('#tdMeta', { state: 'visible' });
     await page.waitForSelector('#labelInput', { state: 'visible' });
     await page.waitForFunction(() => document.querySelectorAll('#label_list option[value^="/"]').length > 0, null, { timeout: 15000 });
@@ -62,6 +70,8 @@ async function fetchVideoById(page, accountId, videoId) {
 
     // Baseline: the video's own record, fetched fresh, before any mutation.
     const before = await fetchVideoById(page, accountId, videoId);
+    const beforeItem = before.json && before.json.items && before.json.items[0];
+    guards.assertMutable('video', { id: videoId, name: beforeItem && beforeItem.name });
     const beforeLabels = before.json && before.json.items && before.json.items[0] ? (before.json.items[0].labels || []) : null;
     result.beforeLabels = beforeLabels;
 
@@ -110,7 +120,8 @@ async function fetchVideoById(page, accountId, videoId) {
       result.removedConfirmedByApi = Array.isArray(afterRemoveLabels) ? !afterRemoveLabels.includes(unappliedLabel) : true;
     }
   } catch (err) {
-    result.error = String(err && err.stack || err);
+    if (err instanceof guards.GuardError) result.refused = err.message;
+    else result.error = String(err && err.stack || err);
   }
 
   result.consoleErrors = consoleErrors;
@@ -118,4 +129,10 @@ async function fetchVideoById(page, accountId, videoId) {
   fs.writeFileSync(path.join(OUT_DIR, 'row13-label-mutation-result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
-})().catch((err) => { console.error(err); process.exit(1); });
+  if (result.refused) console.error(`GUARD: ${result.refused}`);
+  const known = (v) => (typeof v === 'boolean' ? v : null);
+  guards.finish(result.refused || result.error || result.skipped ? [{ name: result.refused ? 'guard refused: nothing mutated' : (result.error ? `probe error: ${String(result.error).split('\n')[0]}` : result.skipped), ok: result.error ? false : null }] : [
+    { name: 'label applied (video record re-read)', ok: known(result.appliedConfirmedByApi) },
+    { name: 'label removed (video record re-read)', ok: known(result.removedConfirmedByApi) },
+  ]);
+})().catch(guards.fatal);

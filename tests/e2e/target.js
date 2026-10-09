@@ -20,4 +20,19 @@ const TARGET_KEY = `${u.hostname}-${u.port || (u.protocol === 'https:' ? '443' :
 const STATE_PATH = path.join(__dirname, '.auth', `state-${TARGET_KEY}.json`);
 const OUTPUT_DIR = path.join(__dirname, 'test-results', TARGET_KEY);
 
-module.exports = { AEM_BASE, AEM_USER, AEM_PASS, TARGET_KEY, STATE_PATH, OUTPUT_DIR };
+// True only for a loopback AEM. Anything else (a shared QA or customer instance) is remote.
+// The ONE implementation: the parity probe guards (parity/probes/lib/guards.js) reuse it.
+function isLocalHost(url) {
+  let h;
+  try { h = new URL(url).hostname.toLowerCase(); } catch (e) { return false; }
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1';
+}
+
+// Gate for harness code that WRITES to the AEM under test (OSGi config, etc.): refuse a
+// non-loopback AEM_BASE unless E2E_ALLOW_REMOTE=1 is set explicitly. Throws; never returns false.
+function assertLocalOrOptIn(what, url = AEM_BASE) {
+  if (isLocalHost(url) || process.env.E2E_ALLOW_REMOTE === '1') return;
+  throw new Error(`refusing to ${what} on non-local AEM ${new URL(url).host}: the harness only writes to localhost. Set E2E_ALLOW_REMOTE=1 to override on purpose.`);
+}
+
+module.exports = { AEM_BASE, AEM_USER, AEM_PASS, TARGET_KEY, STATE_PATH, OUTPUT_DIR, isLocalHost, assertLocalOrOptIn };

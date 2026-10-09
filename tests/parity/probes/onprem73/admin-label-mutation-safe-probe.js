@@ -19,6 +19,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const guards = require('../lib/guards');
 
 async function fetchVideoById(page, accountId, videoId) {
   const url = `/bin/brightcove/api.json?isID=true&account_id=${accountId}&a=search_videos&query=${videoId}`;
@@ -32,9 +33,13 @@ async function fetchVideoById(page, accountId, videoId) {
 }
 
 (async () => {
-  const AEM_BASE = process.argv[2] || 'http://localhost:4602';
-  const STATE_PATH = process.argv[3];
-  const OUT_DIR = process.argv[4];
+  // Guards (../lib/guards.js): loopback AEM only (--allow-remote to override), and the target
+  // video must be named e2e-throwaway-*. Usage: node <probe> <AEM_BASE> <state.json> <out dir> [--allow-remote]
+  const { positional, allowRemote } = guards.cli();
+  const AEM_BASE = positional[0] || 'http://localhost:4602';
+  const STATE_PATH = positional[1];
+  const OUT_DIR = positional[2];
+  guards.assertLocalTarget(AEM_BASE, { allowRemote });
   const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_LABELS
     || (() => { throw new Error('set PARITY_VIDEO_ID_LABELS to a video that already has >=1 label'); })();
 
@@ -56,6 +61,7 @@ async function fetchVideoById(page, accountId, videoId) {
     // Baseline via a fresh, direct video-record read (not the laggy label
     // search index — see cloud probe header comment for why).
     const before = await fetchVideoById(page, accountId, TARGET_VIDEO_ID);
+    guards.assertMutable('video', { id: TARGET_VIDEO_ID, name: before.json && before.json.items && before.json.items[0] && before.json.items[0].name });
     const preExistingLabels = before.json && before.json.items && before.json.items[0] ? (before.json.items[0].labels || []) : null;
     result.preExistingLabels = preExistingLabels;
     if (!preExistingLabels || preExistingLabels.length === 0) {
@@ -82,6 +88,8 @@ async function fetchVideoById(page, accountId, videoId) {
       return null;
     });
     result.confirmedRowMatchesTarget = confirmedId === TARGET_VIDEO_ID;
+    // The search-then-first-row click can land on another video: never mutate unless the panel is the guarded target.
+    if (!result.confirmedRowMatchesTarget) throw new guards.GuardError(`opened row is video ${confirmedId}, not the guarded target ${TARGET_VIDEO_ID}`);
 
     const currentPillTexts = await page.locator('#divMeta\\.labels .brc-label-pill').allInnerTexts();
     const allKnown = await page.locator('#label_list option[value^="/"]').evaluateAll((els) => els.map((e) => e.value));
@@ -129,7 +137,8 @@ async function fetchVideoById(page, accountId, videoId) {
       result.preExistingLabelsIntact = Array.isArray(afterRemoveLabels) && JSON.stringify(afterRemoveLabels.slice().sort()) === JSON.stringify(preExistingLabels.slice().sort());
     }
   } catch (err) {
-    result.error = String(err && err.stack || err);
+    if (err instanceof guards.GuardError) result.refused = err.message;
+    else result.error = String(err && err.stack || err);
   }
 
   result.consoleErrors = consoleErrors;
@@ -137,4 +146,11 @@ async function fetchVideoById(page, accountId, videoId) {
   fs.writeFileSync(path.join(OUT_DIR, 'row13-label-mutation-result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
-})().catch((err) => { console.error(err); process.exit(1); });
+  if (result.refused) console.error(`GUARD: ${result.refused}`);
+  const known = (v) => (typeof v === 'boolean' ? v : null);
+  guards.finish(result.refused || result.error || result.skipped ? [{ name: result.refused ? 'guard refused: nothing mutated' : (result.error ? `probe error: ${String(result.error).split('\n')[0]}` : result.skipped), ok: result.error ? false : null }] : [
+    { name: 'additional label applied (video record re-read)', ok: known(result.appliedConfirmedByApi) },
+    { name: 'additional label removed (video record re-read)', ok: known(result.removedConfirmedByApi) },
+    { name: 'pre-existing labels intact', ok: known(result.preExistingLabelsIntact) },
+  ]);
+})().catch(guards.fatal);

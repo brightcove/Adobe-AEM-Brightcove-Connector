@@ -45,6 +45,17 @@ test.beforeAll(async ({ request }) => {
   videoId = await cms.create(videoName);
 });
 
+// The proxy / config swap of the running test, so afterEach can undo it even when the test
+// body is cut short (timeout, thrown assertion) before its own finally has run.
+let active = null; // { orig, backup, proxy }
+test.afterEach(async () => {
+  if (!active) return;
+  const { orig, backup, proxy } = active;
+  active = null;
+  try { if (await restoreConfig(orig)) fs.unlinkSync(backup); else console.log(`connector config NOT restored; recover from ${backup}`); } catch (e) { console.log(`afterEach config restore: ${e.message}`); }
+  try { await proxy.stop(); } catch (e) { /* already stopped */ }
+});
+
 test.afterAll(async () => {
   // Runs on failure too. Only ever deletes the video this file created, and only after the
   // server-side name is re-read (delIfThrowaway), not on the strength of a local variable.
@@ -62,7 +73,12 @@ test.afterAll(async () => {
 // (buildMainVideoList) then hides #tdMeta, so the next panel control is "not visible".
 // Rows on screen are marked before each search; only an unmarked row, i.e. one this
 // search rendered, is clicked.
+// ⚠️ The poll budget (PANEL_WAIT_MS) is added to THIS test's timeout. A 120s poll inside the
+// default 60s test timeout let the test body outlive its own timeout and carry on into the
+// proxy / config-write steps after Playwright had already torn the test down.
+const PANEL_WAIT_MS = 120_000;
 async function openThrowawayPanel(page) {
+  test.setTimeout(test.info().timeout + PANEL_WAIT_MS);
   await openAdmin(page);
   const row = page.locator('#tbData tr:not([data-e2e-stale])', { hasText: videoName });
   await expect.poll(async () => {
@@ -77,7 +93,7 @@ async function openThrowawayPanel(page) {
       await row.first().waitFor({ state: 'visible', timeout: 8_000 });
     } catch (e) { /* not indexed yet, search again */ }
     return row.count();
-  }, { timeout: 120_000, intervals: [2_000], message: `${videoName} never appeared in the admin video list` }).toBe(1);
+  }, { timeout: PANEL_WAIT_MS, intervals: [2_000], message: `${videoName} never appeared in the admin video list` }).toBe(1);
   await row.click();
   await expect(page.locator('#tdMeta')).toBeVisible();
   await expect(page.locator('#divMeta\\.id')).toHaveText(videoId);
@@ -116,6 +132,7 @@ test('row 10/36: Save Labels shows an error, not "Labels saved", when the CMS PA
   const orig = await readConfig();
   const backup = backupConfig(orig, 'bgs-1600-metadata');
   const proxy = await new LoggingProxy({ deny: [/^cms\.api\.brightcove\.com$/] }).start();
+  active = { orig, backup, proxy };
   let restored = false;
   try {
     await setProxy(orig, proxy.address);
@@ -134,6 +151,7 @@ test('row 10/36: Save Labels shows an error, not "Labels saved", when the CMS PA
     restored = await restoreConfig(orig);
     await proxy.stop();
     if (restored) fs.unlinkSync(backup);
+    active = null; // handled here; afterEach only acts when this finally never ran
   }
   expect(restored, `connector config was NOT restored; recover from ${backup}`).toBe(true);
 });

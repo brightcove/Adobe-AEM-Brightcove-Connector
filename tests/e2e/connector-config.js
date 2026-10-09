@@ -7,7 +7,7 @@
 // write here sends every property, and every check compares by value.
 const fs = require('fs');
 const path = require('path');
-const { AEM_BASE, AEM_USER, AEM_PASS } = require('./target');
+const { AEM_BASE, AEM_USER, AEM_PASS, assertLocalOrOptIn } = require('./target');
 
 const FACTORY = 'com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl';
 const BASIC = 'Basic ' + Buffer.from(`${AEM_USER}:${AEM_PASS}`).toString('base64');
@@ -25,6 +25,7 @@ async function readConfig() {
 }
 
 async function writeConfig(pid, props) {
+  assertLocalOrOptIn('write the connector OSGi config'); // every write (setProxy, restoreConfig) funnels through here
   const names = Object.keys(props);
   const body = new URLSearchParams({ apply: 'true', action: 'ajaxConfigManager', propertylist: names.join(',') });
   for (const k of names) (Array.isArray(props[k]) ? props[k] : [props[k]]).forEach((x) => body.append(k, x));
@@ -57,6 +58,7 @@ async function restoreConfig(orig) {
 // the gitignored parity run folder (tests/parity/.gitignore: runs/), never os.tmpdir(). The
 // caller deletes it once the restore verifies; its CONTENTS are never logged, only the path.
 function backupConfig(orig, tag) {
+  assertLocalOrOptIn('back up and rewrite the connector OSGi config');
   const dir = path.join(__dirname, '..', 'parity', 'runs', 'config-backup');
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const file = path.join(dir, `${tag}-${new URL(AEM_BASE).port || 80}.json`);

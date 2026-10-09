@@ -7,6 +7,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const guards = require('../lib/guards');
 
 async function fetchPlaylistList(page, accountId) {
   const url = `/bin/brightcove/api.js?account_id=${accountId}&a=search_playlists&callback=cb&query=&limit=100&start=0`;
@@ -21,9 +22,13 @@ async function fetchPlaylistList(page, accountId) {
 }
 
 (async () => {
-  const AEM_BASE = process.argv[2] || 'http://localhost:4502';
-  const STATE_PATH = process.argv[3];
-  const OUT_DIR = process.argv[4];
+  // Guards (../lib/guards.js): loopback AEM only (--allow-remote to override), and only a
+  // playlist named e2e-throwaway-* is renamed. Usage: node <probe> <AEM_BASE> <state.json> <out dir> [--allow-remote]
+  const { positional, allowRemote } = guards.cli();
+  const AEM_BASE = positional[0] || 'http://localhost:4502';
+  const STATE_PATH = positional[1];
+  const OUT_DIR = positional[2];
+  guards.assertLocalTarget(AEM_BASE, { allowRemote });
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ baseURL: AEM_BASE, storageState: STATE_PATH });
@@ -43,9 +48,12 @@ async function fetchPlaylistList(page, accountId) {
     await page.locator('#allPlaylists').click();
     await page.waitForSelector('#tbData tr .edit-playlist', { timeout: 20000 });
 
-    const $btn = page.locator('#tbData tr .edit-playlist').first();
+    // Only a throwaway-named playlist is renamed (never "the first playlist").
+    const $btn = page.locator('#tbData tr .edit-playlist', { hasText: guards.THROWAWAY_PREFIX }).first();
+    if ((await $btn.count()) === 0) throw new guards.GuardError(`no playlist named ${guards.THROWAWAY_PREFIX}* in the first page of the list: create a throwaway playlist first`);
     const originalName = (await $btn.innerText()).trim();
     const playlistId = await $btn.getAttribute('data-playlist-id');
+    guards.assertMutable('playlist', { id: playlistId, name: originalName });
     result.playlistId = playlistId;
     result.originalName = originalName;
 
@@ -89,7 +97,8 @@ async function fetchPlaylistList(page, accountId) {
     result.nameAfterRestoreByApi = restoreEntry ? restoreEntry.name : null;
     result.restoreConfirmedByApi = restoreEntry && restoreEntry.name === originalName;
   } catch (err) {
-    result.error = String(err && err.stack || err);
+    if (err instanceof guards.GuardError) result.refused = err.message;
+    else result.error = String(err && err.stack || err);
   }
 
   result.consoleErrors = consoleErrors;
@@ -97,4 +106,10 @@ async function fetchPlaylistList(page, accountId) {
   fs.writeFileSync(path.join(OUT_DIR, 'row18-playlist-mutation-result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
-})().catch((err) => { console.error(err); process.exit(1); });
+  if (result.refused) console.error(`GUARD: ${result.refused}`);
+  const known = (v) => (typeof v === 'boolean' ? v : (v ? true : null));
+  guards.finish(result.refused || result.error ? [{ name: result.refused ? 'guard refused: nothing mutated' : `probe error: ${String(result.error).split('\n')[0]}`, ok: result.error ? false : null }] : [
+    { name: 'rename persisted (playlist list re-read)', ok: known(result.renameConfirmedByApi) },
+    { name: 'rename reverted (playlist list re-read)', ok: known(result.restoreConfirmedByApi) },
+  ]);
+})().catch(guards.fatal);

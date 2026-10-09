@@ -10,8 +10,11 @@
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
+const guards = require('../lib/guards');
 
 const BASE = 'http://localhost:4602';
+const { allowRemote } = guards.cli();
+const checks = []; // PASS / FAIL / NOT MEASURED verdict inputs, see guards.finish
 const AUTH_STATE = path.join(__dirname, '../../../e2e/.auth/state-localhost-4602.json');
 const OUT_DIR = path.join(__dirname, '../../runs/2026-09-17/onprem-6.0.12/matrix');
 
@@ -24,6 +27,9 @@ async function getVideo(page, acct, id) {
 }
 
 async function main() {
+  // Guards (../lib/guards.js): loopback AEM only, and only e2e-throwaway-* objects are mutated.
+  // Targets come from PARITY_VIDEO_ID_LABELS, PARITY_VIDEO_ID_FOLDER and PARITY_FOLDER_NAME.
+  guards.assertLocalTarget(BASE, { allowRemote });
   const browser = await chromium.launch();
   const context = await browser.newContext({ storageState: AUTH_STATE, baseURL: BASE });
   const page = await context.newPage();
@@ -36,21 +42,30 @@ async function main() {
   const acctRes = await page.request.get('/bin/brightcove/accounts');
   const ACCOUNT_ID = (await acctRes.json()).accounts[0].value;
 
+  // Preflight: refuse BEFORE the first mutation if any target is not a throwaway.
+  const LABEL_VIDEO = await getVideo(page, ACCOUNT_ID, process.env.PARITY_VIDEO_ID_LABELS);
+  const FOLDER_VIDEO = await getVideo(page, ACCOUNT_ID, process.env.PARITY_VIDEO_ID_FOLDER);
+  const FOLDER_NAME = process.env.PARITY_FOLDER_NAME;
+  if (!LABEL_VIDEO || !FOLDER_VIDEO) throw new guards.GuardError('PARITY_VIDEO_ID_LABELS / PARITY_VIDEO_ID_FOLDER did not resolve to a video in the first 100 results');
+  guards.assertMutable('video', LABEL_VIDEO);
+  guards.assertMutable('video', FOLDER_VIDEO);
+  guards.assertMutable('folder', { name: FOLDER_NAME });
+
   await page.goto('/brightcove/admin.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#tbData tr', { timeout: 20000 });
   await page.waitForTimeout(500);
 
   // ================= Row 13: label apply + remove =================
   {
-    const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_LABELS || (() => { throw new Error('set PARITY_VIDEO_ID_LABELS to a video with no labels'); })(); // "42min - sync", confirmed labels: [] before this run
+    const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_LABELS || (() => { throw new Error('set PARITY_VIDEO_ID_LABELS to a video with no labels'); })();
     const LABEL = '/test2/'; // pre-existing label, not a new one
 
     const before = await getVideo(page, ACCOUNT_ID, TARGET_VIDEO_ID);
 
-    await page.fill('#search', '42min');
+    await page.fill('#search', LABEL_VIDEO.name);
     await page.click('#searchDiv #searchBut');
     await page.waitForTimeout(1200);
-    await page.locator('#tbData tr', { hasText: '42min - sync' }).first().click();
+    await page.locator('#tbData tr', { hasText: LABEL_VIDEO.name }).first().click();
     await page.waitForTimeout(500);
     await page.click('a:has-text("Edit")');
     await page.waitForTimeout(400);
@@ -85,10 +100,10 @@ async function main() {
     let removeAttempted = false;
     if (appliedCorrectly) {
       removeAttempted = true;
-      await page.fill('#search', '42min');
+      await page.fill('#search', LABEL_VIDEO.name);
       await page.click('#searchDiv #searchBut');
       await page.waitForTimeout(1200);
-      await page.locator('#tbData tr', { hasText: '42min - sync' }).first().click();
+      await page.locator('#tbData tr', { hasText: LABEL_VIDEO.name }).first().click();
       await page.waitForTimeout(500);
       await page.click('a:has-text("Edit")');
       await page.waitForTimeout(400);
@@ -115,22 +130,23 @@ async function main() {
       labelsAfterRemove: afterRemove.labels || [],
       revertedCorrectly: removeAttempted ? (JSON.stringify(afterRemove.labels || []) === JSON.stringify(before.labels || [])) : null
     });
+    checks.push({ name: 'row 13: label applied (video record re-read)', ok: appliedCorrectly });
+    checks.push({ name: 'row 13: label removed, labels back to baseline', ok: removeAttempted ? JSON.stringify(afterRemove.labels || []) === JSON.stringify(before.labels || []) : null });
     flushErrors('row13-console.json');
   }
 
   // ================= Row 15: move video to folder + back =================
   {
-    const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_FOLDER || (() => { throw new Error('set PARITY_VIDEO_ID_FOLDER to a video with folder_id null'); })(); // "708-CJK-sidecar-test-...", confirmed folder_id null
-    const FOLDER_ID = '69c3f2f537c42788644a8d6c'; // "aem_test_folder"
+    const TARGET_VIDEO_ID = process.env.PARITY_VIDEO_ID_FOLDER || (() => { throw new Error('set PARITY_VIDEO_ID_FOLDER to a video with folder_id null'); })();
 
     const before = await getVideo(page, ACCOUNT_ID, TARGET_VIDEO_ID);
 
     await page.click('#allVideos');
     await page.waitForSelector('#tbData tr', { timeout: 20000 });
-    await page.fill('#search', '708-CJK');
+    await page.fill('#search', FOLDER_VIDEO.name);
     await page.click('#searchDiv #searchBut');
     await page.waitForTimeout(1200);
-    const row = page.locator('#tbData tr', { hasText: '708-CJK-sidecar-test' }).first();
+    const row = page.locator('#tbData tr', { hasText: FOLDER_VIDEO.name }).first();
     await row.click(); // opens detail panel + triggers brc:checked
     await page.waitForTimeout(400);
     await row.locator('input[type=checkbox]').check();
@@ -140,7 +156,7 @@ async function main() {
     await page.click('#btn_MoveVideoToFolder');
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(OUT_DIR, 'row15-folder-menu-open.png'), fullPage: true });
-    await page.click('.folder-selector .menu-options li:has-text("aem_test_folder")');
+    await page.click(`.folder-selector .menu-options li:has-text("${FOLDER_NAME}")`);
     await page.waitForTimeout(1200);
 
     const afterMove = await getVideo(page, ACCOUNT_ID, TARGET_VIDEO_ID);
@@ -149,10 +165,10 @@ async function main() {
     // move back to none
     await page.click('#allVideos');
     await page.waitForSelector('#tbData tr', { timeout: 20000 });
-    await page.fill('#search', '708-CJK');
+    await page.fill('#search', FOLDER_VIDEO.name);
     await page.click('#searchDiv #searchBut');
     await page.waitForTimeout(1200);
-    const row2 = page.locator('#tbData tr', { hasText: '708-CJK-sidecar-test' }).first();
+    const row2 = page.locator('#tbData tr', { hasText: FOLDER_VIDEO.name }).first();
     await row2.click();
     await page.waitForTimeout(400);
     await row2.locator('input[type=checkbox]').check();
@@ -168,14 +184,16 @@ async function main() {
 
     writeJSON('row15-folder-mutation.json', {
       targetVideoId: TARGET_VIDEO_ID,
-      folderId: FOLDER_ID,
+      folderName: FOLDER_NAME,
       butDivVisibleBeforeMove: butDivVisible,
       folderIdBefore: before.folder_id,
       folderIdAfterMove: afterMove.folder_id,
       folderIdAfterRevert: afterRevert.folder_id,
-      movedCorrectly: afterMove.folder_id === FOLDER_ID,
+      movedCorrectly: !!afterMove.folder_id && afterMove.folder_id !== before.folder_id,
       revertedCorrectly: afterRevert.folder_id === before.folder_id
     });
+    checks.push({ name: 'row 15: video moved into folder (video record re-read)', ok: !!afterMove.folder_id && afterMove.folder_id !== before.folder_id });
+    checks.push({ name: 'row 15: video moved back, folder restored', ok: afterRevert.folder_id === before.folder_id });
     flushErrors('row15-console.json');
   }
 
@@ -224,6 +242,7 @@ async function main() {
   await context.close();
   await browser.close();
   console.log('mutation pass complete');
+  guards.finish(checks);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch(guards.fatal);
