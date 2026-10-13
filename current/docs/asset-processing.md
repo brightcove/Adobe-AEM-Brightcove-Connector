@@ -81,12 +81,16 @@ service user on AEMaaCS, none on 6.5); and the asset reaches `processed`.
   a `/conf/global/settings/workflow/launcher/config/<name>` copy set to `enabled=false`, and delete the
   copies afterwards. With them disabled the SDK has no Asset Compute behind the PROCESS command, so the
   probe reports the last check NOT MEASURED there by design.
-- ⚠️ The end state "processed by Asset Compute" can only be measured on a real AEMaaCS environment.
-  Check there as well that the connector's own `brc_thumbnail.png` / `brc_poster.png` renditions
-  survive processing (not measured; the watchdog's later run would affect them the same way).
-- On a stock SDK (launchers on) the launcher has usually not marked the asset yet when the connector
-  checks, so a PROCESS command is sent too; the SDK leaves that job in "processing" forever. Dev-only
-  noise; AEMaaCS has no such launcher.
+- ⚠️ The end state "processed by Asset Compute" can only be measured on a real AEMaaCS environment
+  (an RDE is enough): run the probe with `--aemaacs --allow-remote`, a Developer Console token in
+  `AEM_TOKEN` and the author log captured to `--log-file` (usage in the probe header).
+- The probe gives its throwaway video remote poster/thumbnail images (this repo's placeholder JPEG),
+  so the import adds the connector's `brc_poster.png` / `brc_thumbnail.png` renditions and check 5
+  can show whether processing keeps them. Kept on the stock SDK and on 6.5.
+- On a stock SDK the request check accepts 0 or 1 requests: the SDK's launcher and the requester race,
+  and the requester stands down once the asset reads `processing`.
+- On a stock SDK (launchers on), when the launcher has not marked the asset yet, a PROCESS command is
+  sent too; the SDK leaves that job in "processing" forever. Dev-only noise; AEMaaCS has no such launcher.
 - The probe counts the connector's per-asset "Requested processing for <path>" line in
   `/logs/brightcove.log` and AEM's accepted `PROCESS` commands from the service user (`AsyncJobInitializer`,
   which does not name the asset) in `/logs/error.log`. Appender names need the leading slash; a wrong
