@@ -309,7 +309,8 @@ print('yes' if lines[0] == '1' and rows and rows[0][2] == 'Active' else 'no')
 
   active=$(echo "$bundle_report" | tail -n +2 | head -n1)
   echo "   brightcove.core: $active"
-  echo "$active" | grep -q "$ver_local" || fail "$platform: deployed bundle is not $ver_local (got: $active) — clientlib/bundle cache served stale code."
+  # OSGi writes a Maven qualifier with a dot (7.4.1-SNAPSHOT -> 7.4.1.SNAPSHOT): accept either form.
+  echo "$active" | grep -qF -e "$ver_local" -e "${ver_local/-/.}" || fail "$platform: deployed bundle is not $ver_local (got: $active) — clientlib/bundle cache served stale code."
   echo "$active" | grep -qi Active || fail "$platform: brightcove.core is not Active (got: $active)."
 
   # 3b. No DS component anywhere may be in "failed activation".
