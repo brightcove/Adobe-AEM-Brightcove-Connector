@@ -41,6 +41,9 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
+import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetProcessingRequester;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.commons.mime.MimeTypeService;
@@ -85,6 +88,11 @@ public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle 
     @Reference
     ResourceResolverFactory resourceResolverFactory;
 
+    // Optional and greedy: only the cloud build ships an implementation (BGS-1747).
+    // Context: current/docs/asset-processing.md
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
+    AssetProcessingRequester processingRequester;
+
     public int getMaxThreadNum() {
         return this.maxThreads;
     }
@@ -98,7 +106,7 @@ public class AssetIntegratorCronBundleImpl implements AssetIntegratorCronBundle 
             String schedulingExpression = config.scheduler_expression();
             log.info(jobName1 + " is scheduled with the following CRON: " + schedulingExpression);
             boolean canRunConcurrently = false;
-            AssetPropertyIntegratorRunnable assetPropertyIntegratorRunnable = new AssetPropertyIntegratorRunnable(mType, resourceResolverFactory, config.maxThreads());
+            AssetPropertyIntegratorRunnable assetPropertyIntegratorRunnable = new AssetPropertyIntegratorRunnable(mType, resourceResolverFactory, config.maxThreads(), processingRequester);
             final Runnable job1 = assetPropertyIntegratorRunnable;
             final ScheduleOptions options = scheduler.EXPR(schedulingExpression).name(jobName1).canRunConcurrently(canRunConcurrently);
             this.scheduler.schedule(job1, options);

@@ -43,6 +43,9 @@ import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
 import com.day.cq.commons.jcr.JcrUtil;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
+import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetProcessingRequester;
 import org.osgi.service.component.propertytypes.ServiceDescription;
 import javax.servlet.Servlet;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -92,6 +95,11 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
 
     @Reference
     private transient AssetIntegratorCronBundle assetIntegratorCronBundle;
+
+    // Optional and greedy: only the cloud build ships an implementation (BGS-1747).
+    // Context: current/docs/asset-processing.md
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
+    private transient AssetProcessingRequester processingRequester;
 
     @Override
     protected void doPost(final SlingHttpServletRequest req, final SlingHttpServletResponse resp) throws ServletException, IOException {
@@ -197,7 +205,7 @@ public class AssetPropertyIntegrator extends SlingAllMethodsServlet {
                     for (int i = 0; i < itemsArr.size(); i++) {
                         final ObjectNode innerObj = (ObjectNode) itemsArr.get(i);
 
-                        Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
+                        Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil, processingRequester);
                         Future<String> future = executor.submit(callable);
                         //add Future to the list, we can get return value using Future
                         list.add(future);

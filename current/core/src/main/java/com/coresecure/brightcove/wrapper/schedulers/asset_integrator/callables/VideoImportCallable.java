@@ -42,6 +42,10 @@ import com.coresecure.brightcove.wrapper.utils.HttpServices;
 import com.coresecure.brightcove.wrapper.utils.ImageUtil;
 import com.day.cq.dam.api.Asset;
 import com.day.cq.dam.api.AssetManager;
+import com.day.cq.dam.api.DamConstants;
+import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetProcessingRequester;
+import org.apache.jackrabbit.JcrConstants;
+import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
@@ -83,7 +87,12 @@ public class VideoImportCallable implements Callable<String> {
     private ServiceUtil serviceUtil;
     private ResourceResolverFactory resourceResolverFactory;
     private ResourceResolver resourceResolver = null;
+    private AssetProcessingRequester processingRequester;
     public VideoImportCallable(ObjectNode innerObj, String confPath, String requestedServiceAccount, ResourceResolverFactory resourceResolverFactory, MimeTypeService mType, ServiceUtil serviceUtil){
+        this(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil, null);
+    }
+    public VideoImportCallable(ObjectNode innerObj, String confPath, String requestedServiceAccount, ResourceResolverFactory resourceResolverFactory, MimeTypeService mType, ServiceUtil serviceUtil, AssetProcessingRequester processingRequester){
+        this.processingRequester = processingRequester;
         this.innerObj = innerObj;
         this.confPath = confPath;
         this.requestedServiceAccount = requestedServiceAccount;
@@ -193,6 +202,7 @@ public class VideoImportCallable implements Callable<String> {
 
             //CREATE ASSET - NEEDS BINARY OF THUMBNAIL IN ORDER TO SET IT FOR THE NEW ASSET
             newAsset = assetManager.createAsset(localpath, in, mType.getMimeType(brightcove_filename), true);
+            if (newAsset != null) setFormatIfAbsent(newAsset.getPath(), mType.getMimeType(brightcove_filename));
 
 
         }
@@ -213,6 +223,22 @@ public class VideoImportCallable implements Callable<String> {
         //SAVE CHANGES
         resourceResolver.commit();
         return newAsset;
+    }
+
+    /**
+     * dc:format is what the Assets side panel's video filter matches, and on AEM as a Cloud Service only
+     * asset processing writes it. Setting it here lists the asset at once even before (or without) processing.
+     * Context: current/docs/asset-processing.md
+     */
+    private void setFormatIfAbsent(String assetPath, String mimeType) {
+        if (assetPath == null || mimeType == null) return;
+        Resource metadata = resourceResolver.getResource(assetPath + "/" + JcrConstants.JCR_CONTENT + "/" + DamConstants.METADATA_FOLDER);
+        ModifiableValueMap props = metadata == null ? null : metadata.adaptTo(ModifiableValueMap.class);
+        if (props == null) {
+            LOGGER.warn("Asset {} has no writable metadata node; {} not set", assetPath, DamConstants.DC_FORMAT);
+            return;
+        }
+        if (!props.containsKey(DamConstants.DC_FORMAT)) props.put(DamConstants.DC_FORMAT, mimeType);
     }
 
     /**
@@ -337,7 +363,11 @@ public class VideoImportCallable implements Callable<String> {
             newAsset = getAsset(oldpath, localpath, id);
             if (newAsset == null) {
                 newAsset = createAsset(localpath,id,brightcove_filename);
-                if (newAsset != null) serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
+                if (newAsset != null) {
+                    serviceUtil.updateAsset(newAsset, innerObj, resourceResolver, requestedServiceAccount);
+                    // After the last write: processing must see the committed asset and metadata.
+                    if (processingRequester != null) processingRequester.requestProcessing(resourceResolver, newAsset.getPath());
+                }
             } else {
                 //START CASE - ASSET HAS BEEN FOUND LOCALLY - CAN BE UPDATED
                 LOGGER.trace("ASSET FOUND - UPDATING");
