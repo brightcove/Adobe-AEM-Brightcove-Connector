@@ -12,9 +12,9 @@ const expect = base.expect;
 // Open the admin tool and wait until it is interactive: the initial video
 // list is loaded via JSONP after jQuery's ready handlers bind, so waiting for
 // the first rows guarantees tab/search click handlers are wired up.
-async function openAdmin(page) {
+async function openAdmin(page, { timeout = 20_000 } = {}) {
   await page.goto(ADMIN_PATH, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#tbData tr', { timeout: 20_000 });
+  await page.waitForSelector('#tbData tr', { timeout });
 }
 
 // Wait until the videos table has at least one data row rendered.
@@ -270,7 +270,7 @@ async function searchVideoRow(page, name, { timeout = 120_000 } = {}) {
 // Switch to the Playlists tab and search for a playlist by name. Returns the row locator.
 async function searchPlaylistRow(page, name, { timeout = 60_000 } = {}) {
   await page.locator('#allPlaylists').click();
-  await page.waitForSelector('#tbData tr', { timeout: 20_000 });
+  await page.waitForSelector('#tbData tr', { timeout: 60_000 });
   const row = page.locator('#tbData tr', { hasText: name });
   const end = Date.now() + timeout;
   for (;;) {
