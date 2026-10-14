@@ -131,6 +131,22 @@ Each spec's header records the trigger it drives, read from the code.
 - `fixtures/tiny-2s.mp4` is the 17 KB source video for the ingest cases (ffmpeg
   testsrc + sine, metadata stripped).
 
+## Live mutation specs
+
+`admin-folder-mutation`, `admin-playlist-mutation` and `admin-variant-mutation` drive the real UI
+(no route mocks) through journeys that change the Video Cloud account, and assert the persisted
+state twice: an independent CMS read (`cms.js`), then a reload of the page. They need the Video Cloud
+credentials of the account AEM is configured with (`BRIGHTCOVE_ACCOUNT_ID` / `_CLIENT_ID` /
+`_CLIENT_SECRET`) and skip as NOT MEASURED without them.
+
+- Fixtures are `e2e-throwaway-<kind>-<epoch ms>-<n>` (`fixtures.throwawayName`), removed in `afterAll`
+  even on failure. `liveCms()` also sweeps day-old leftovers of aborted runs (`cms.sweepThrowaways`,
+  `dam.sweepThrowawayNodes`). Every delete re-reads the object and checks the prefix first.
+- `cms.countThrowaways()` reports what is still in the account; it should be all zeros after a run.
+- The admin tool has no delete-video action, so none is covered. Pinned gaps are `test.fixme` with a
+  `// DEFECT:` comment: removing a video from a folder (no UI path) and deleting the last variant
+  (not persisted to the DAM asset).
+
 ## Pre-QA gate
 
 `pre-qa-gate.sh` runs version-bump, build+install, deployed-bundle, and
