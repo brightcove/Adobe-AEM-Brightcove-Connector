@@ -20,7 +20,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.4.0</version>
+        <version>7.4.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>brightcove.core</artifactId>
@@ -178,6 +178,15 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
             <artifactId>junit-addons</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Test-only: the platform API jars ship Sling's request Builders without their impl classes, so
+             AssetProcessingRequesterImplTest needs the real Sling API (2.25+ has the builder). Stays after
+             the platform API, which still wins for every class it does carry. -->
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.api</artifactId>
+            <version>2.25.4</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.wcm</groupId>
             <artifactId>io.wcm.testing.aem-mock.junit5</artifactId>
@@ -249,6 +258,26 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
                     <scope>test</scope>
                 </dependency>
             </dependencies>
+            <!-- ⚠️ BGS-1747: the asset-processing requester is cloud-only. On 6.5 the DAM Update Asset
+                 launcher already processes imported assets, so the -prem bundle must not carry it (a
+                 second PROCESS run), and it uses the Sling request-builder API that the 6.5.0 floor
+                 jar lacks. Callers hold an OPTIONAL reference. Context: ../docs/asset-processing.md -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/asset_integrator/impl/AssetProcessingRequesterImpl.java</exclude>
+                            </excludes>
+                            <testExcludes>
+                                <testExclude>**/asset_integrator/impl/AssetProcessingRequesterImplTest.java</testExclude>
+                            </testExcludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

@@ -35,6 +35,7 @@ package com.coresecure.brightcove.wrapper.schedulers.asset_integrator.runnables;
 
 //*Imports*//
 
+import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.AssetProcessingRequester;
 import com.coresecure.brightcove.wrapper.schedulers.asset_integrator.callables.VideoImportCallable;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
@@ -72,9 +73,15 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
     MimeTypeService mType;
     ResourceResolverFactory resourceResolverFactory;
     Integer maxThreadNum;
+    AssetProcessingRequester processingRequester;
 
 
     public AssetPropertyIntegratorRunnable(MimeTypeService mType, ResourceResolverFactory resourceResolverFactory , int maxThreadNum){
+        this(mType, resourceResolverFactory, maxThreadNum, null);
+    }
+
+    public AssetPropertyIntegratorRunnable(MimeTypeService mType, ResourceResolverFactory resourceResolverFactory , int maxThreadNum, AssetProcessingRequester processingRequester){
+        this.processingRequester = processingRequester;
         this.mType = mType;
         this.resourceResolverFactory = resourceResolverFactory;
         this.maxThreadNum = maxThreadNum;
@@ -187,7 +194,7 @@ public class AssetPropertyIntegratorRunnable implements Runnable {
                 for (int i = 0; i < itemsArr.size(); i++) {
                     final ObjectNode innerObj = (ObjectNode) itemsArr.get(i);
 
-                    Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil);
+                    Callable<String> callable = new VideoImportCallable(innerObj, confPath, requestedServiceAccount, resourceResolverFactory, mType, serviceUtil, processingRequester);
                     Future<String> future = executor.submit(callable);
                     //add Future to the list, we can get return value using Future
                     list.add(future);

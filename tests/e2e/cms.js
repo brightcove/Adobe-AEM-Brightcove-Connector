@@ -54,6 +54,14 @@ async function cmsClient() {
       if (res.status !== 201 || !res.json || !res.json.id) throw new Error(`create video failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
       return String(res.json.id);
     },
+    // Attach remote poster + thumbnail images (CMS "remote assets"), so the video has images.poster/
+    // images.thumbnail like a real one. `url` must be reachable by whoever later fetches it.
+    async addRemoteImages(id, url) {
+      for (const kind of ['poster', 'thumbnail']) {
+        const res = await call('POST', 'cms.api.brightcove.com', `${base}/${id}/assets/${kind}`, { headers: await auth(), body: JSON.stringify({ remote_url: url }) });
+        if (res.status !== 201) throw new Error(`add remote ${kind} failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+      }
+    },
     async get(id) {
       const res = await call('GET', 'cms.api.brightcove.com', `${base}/${id}`, { headers: await auth() });
       if (res.status !== 200) throw new Error(`get video failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);

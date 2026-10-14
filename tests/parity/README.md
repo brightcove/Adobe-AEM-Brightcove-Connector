@@ -30,3 +30,9 @@ NOT MEASURED check of the on-prem 6.0.x -> 7.x in-place upgrade (plain Node 18+,
 Playwright). `snapshot` on the 6.0.x install, `check` after installing the -prem package;
 exits non-zero unless every check passes. Header has the usage; results in
 `current/docs/onprem-upgrade-6.0-to-7.md`.
+
+`probes/cloud/bgs1747-asset-processing-probe.js` (plain Node 18+, Video Cloud credentials from
+the environment, `lib/guards.js`): creates an `e2e-throwaway-*` video, runs a dataload, and checks
+that the imported asset is listed by the side panel's finder query and is sent for processing
+(AEMaaCS) or not (6.5). Works against either line; the SDK set-up that makes it behave like
+AEMaaCS is in `current/docs/asset-processing.md`.
