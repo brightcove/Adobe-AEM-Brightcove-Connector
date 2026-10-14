@@ -1,6 +1,7 @@
 // Shared fixtures/helpers for the Brightcove Admin tool e2e tests.
 const base = require('@playwright/test');
 const { AEM_BASE } = require('./target');
+const { creds, cmsClient } = require('./cms');
 
 const ADMIN_PATH = '/brightcove/admin.html';
 const CONNECTOR_FACTORY = 'com.coresecure.brightcove.wrapper.sling.ConfigurationServiceImpl';
@@ -11,9 +12,9 @@ const expect = base.expect;
 // Open the admin tool and wait until it is interactive: the initial video
 // list is loaded via JSONP after jQuery's ready handlers bind, so waiting for
 // the first rows guarantees tab/search click handlers are wired up.
-async function openAdmin(page) {
+async function openAdmin(page, { timeout = 20_000 } = {}) {
   await page.goto(ADMIN_PATH, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#tbData tr', { timeout: 20_000 });
+  await page.waitForSelector('#tbData tr', { timeout });
 }
 
 // Wait until the videos table has at least one data row rendered.
@@ -224,8 +225,69 @@ async function editorScrollTop(page) {
   });
 }
 
+// ---- Live mutation specs ------------------------------------------------------
+
+// Run-scoped throwaway name: unique per process so concurrent runs and leftovers never collide,
+// and always under the prefix every guarded delete and the sweep key on.
+function throwawayName(kind) {
+  return `e2e-throwaway-${kind}-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
+}
+
+// beforeAll helper for the live specs. Skips (NOT MEASURED) without credentials, refuses when the
+// credentials belong to a different account than the AEM under test (the admin tool could not see
+// what the spec creates, and the spec must never write to an account other than the one under
+// test), sweeps day-old leftovers of aborted runs, and returns the CMS client.
+async function liveCms(request) {
+  test.skip(!creds(), 'NOT MEASURED: BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set, so no throwaway fixtures can be created or re-read');
+  const cms = await cmsClient();
+  const aemAccount = await resolveAccountId(request);
+  if (cms.accountId !== aemAccount) {
+    throw new Error('the credentials in the environment belong to a different account than the one configured in AEM; refusing to mutate through the admin tool');
+  }
+  const swept = await cms.sweepThrowaways();
+  if (swept.videos + swept.playlists + swept.folders) console.log(`INFO: swept leftover throwaways older than a day: ${JSON.stringify(swept)}`);
+  return cms;
+}
+
+// The row of a video in the admin list, found the way a user does: type its name into the search
+// box and press Search. CMS search is eventually consistent, so a video created seconds ago can be
+// absent; the search is repeated until the row shows up. Returns the row locator.
+async function searchVideoRow(page, name, { timeout = 120_000 } = {}) {
+  const row = page.locator('#tbData tr', { hasText: name });
+  const end = Date.now() + timeout;
+  for (;;) {
+    await page.locator('#search').fill(name);
+    await page.locator('#searchBut').click();
+    try {
+      await row.first().waitFor({ state: 'visible', timeout: 6_000 });
+      return row.first();
+    } catch (e) {
+      if (Date.now() > end) throw new Error(`video "${name}" never appeared in the admin search (${timeout} ms)`);
+    }
+  }
+}
+
+// Switch to the Playlists tab and search for a playlist by name. Returns the row locator.
+async function searchPlaylistRow(page, name, { timeout = 60_000 } = {}) {
+  await page.locator('#allPlaylists').click();
+  await page.waitForSelector('#tbData tr', { timeout: 60_000 });
+  const row = page.locator('#tbData tr', { hasText: name });
+  const end = Date.now() + timeout;
+  for (;;) {
+    await page.locator('#search_pl').fill(name);
+    await page.locator('#searchBut_pl').click();
+    try {
+      await row.first().waitFor({ state: 'visible', timeout: 6_000 });
+      return row.first();
+    } catch (e) {
+      if (Date.now() > end) throw new Error(`playlist "${name}" never appeared in the admin search (${timeout} ms)`);
+    }
+  }
+}
+
 module.exports = {
   test, expect, ADMIN_PATH, openAdmin, waitForVideoRows,
   resolveAccountId, brightcoveAssetsRoot, firstBrightcoveAsset,
+  throwawayName, liveCms, searchVideoRow, searchPlaylistRow,
   mediaHostReachable, parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
 };
