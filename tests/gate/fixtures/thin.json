@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "verdict": "NOT_MEASURED",
+  "mode": "full",
+  "git": {
+    "sha": "thin2222"
+  },
+  "connector_version": "7.4.1",
+  "platforms": [
+    "cloud"
+  ],
+  "stages": [
+    {
+      "platform": "cloud",
+      "stage": "unit",
+      "verdict": "NOT_MEASURED",
+      "reason": ""
+    },
+    {
+      "platform": "cloud",
+      "stage": "e2e",
+      "verdict": "NOT_MEASURED",
+      "reason": ""
+    }
+  ],
+  "tests": [
+    {
+      "id": "e2e:cloud:a.spec.js > goes red",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "skipped",
+      "reason": "NOT MEASURED: credentials not set"
+    }
+  ]
+}
