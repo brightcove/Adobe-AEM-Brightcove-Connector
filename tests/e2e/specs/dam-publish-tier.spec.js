@@ -433,6 +433,7 @@ test('move: moving an asset between DAM folders then re-activating moves the vid
 // the folder only follows on the next activation. Context:
 // current/docs/dam-sync-on-activation.md "A DAM move alone does not move the video".
 // Run red once as `test` 2026-10-07 (matrix row 44); keep as fixme until a move handler exists.
+// LIMITATION: documented behaviour (no move handler), not a defect pin; keep as fixme until a move handler exists.
 test.fixme('move alone (no re-activation) moves the video to the destination folder', async ({ request }) => {
   const a = await newFolder('mvaloneA');
   const b = await newFolder('mvaloneB');
@@ -465,6 +466,7 @@ test.fixme('move alone (no re-activation) moves the video to the destination fol
 // Cloud folder even after re-activation. Re-run red 2026-10-07 on a CLEAN root (after
 // the poisoned-root repair), log showing the account-root branch taken: the poisoned
 // root was not the cause. Context: current/docs/dam-sync-on-activation.md (matrix row 44).
+// DEFECT: FolderSyncUtil.syncFolder returns early at the account root, so the video keeps its old Video Cloud folder.
 test.fixme('moving an asset back to the account root and re-activating takes the video out of its folder', async ({ request }) => {
   const a = await newFolder('mvrootA');
   await dam.createDamFolder(request, a.path);

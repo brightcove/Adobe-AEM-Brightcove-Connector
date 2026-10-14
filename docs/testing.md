@@ -44,7 +44,7 @@ tests/e2e/pre-qa-gate.sh --platform both --json /tmp/gate-both.json
 tests/e2e/pre-qa-gate.sh --dry-run --platform cloud                               # print the plan, run nothing
 ```
 
-`--help` lists every flag (`--aem-cloud`, `--aem-onprem`, `--base`, `--allow-no-live`, `--baseline`, `--lock-timeout`). Without `--platform` the full gate probes both default URLs and gates whichever answer; `--unit-only` defaults to both. The test-run needs Java 11 for the AEM build (`JAVA_HOME`); the unit reason line records the JVM the tests actually ran on.
+`--help` lists every flag (`--aem-cloud`, `--aem-onprem`, `--base`, `--allow-no-live`, `--baseline`, `--lock-timeout`). Without `--platform` the full gate probes both default URLs and gates whichever answer; `--unit-only` defaults to both. The build and the default unit run always use a JDK 11 (`JAVA_HOME_11_X64`, an ambient 11, or macOS `java_home -v 11`) whatever the ambient `JAVA_HOME`, as CI's default job does, so `--java21` is a distinct check; each unit stage's reason line records the JVM it ran on. The test-run needs Java 11 for the AEM build (`JAVA_HOME`); the unit reason line records the JVM the tests actually ran on.
 
 ## Which stages for which change
 
@@ -90,13 +90,13 @@ Detects a regression a new build introduced by running the same specs against th
 A known defect gets a test that encodes the CORRECT behaviour and is switched off with a labelled reason, so it shows in every run and flips on when fixed.
 
 - Unit: `@Disabled("DEFECT: <what is wrong, one line>")` on a test asserting the correct behaviour. The gate counts these as `defect_pins.unit_disabled_defect`.
-- Playwright: `test.fixme(...)` with a `// DEFECT: <what is wrong>` comment on the line above or just inside it. The gate counts fixme tests as `e2e_fixme_total` and those with `DEFECT` nearby as `e2e_fixme_defect`. Existing fixmes without the label count in the total only.
+- Playwright: `test.fixme(...)` with a `// DEFECT: <what is wrong>` comment on the line above or just inside it. The gate counts fixme tests as `e2e_fixme_total` and those with `DEFECT` nearby as `e2e_fixme_defect`. Convention: `// DEFECT:` marks a defect pin (counted in `e2e_fixme_defect`); `// LIMITATION:` marks a fixme that documents intended or accepted behaviour, not a pending fix (counted in `e2e_fixme_limitation`). The label is the contiguous `//` comment block directly above `test.fixme`, or the same line. An unlabelled fixme counts in the total only, so label every new one.
 
 Fixing the defect means removing the `@Disabled` or `fixme` in the same change; compare then shows the pin count drop. Never delete or loosen a pin to get green.
 
 ## Feature to test map
 
-Unit tests are under `current/core/src/test/java/com/coresecure/brightcove/wrapper/`, e2e specs under `tests/e2e/specs/`. "Pending live-mutation specs" marks rows whose live admin-UI coverage is being added on a separate branch; update the row after it merges.
+Unit tests are under `current/core/src/test/java/com/coresecure/brightcove/wrapper/`, e2e specs under `tests/e2e/specs/`.
 
 | Feature | Unit | E2E |
 |---|---|---|
@@ -104,13 +104,13 @@ Unit tests are under `current/core/src/test/java/com/coresecure/brightcove/wrapp
 | Multi-account | none | `bcon-178-account-switch-confirm`; `bcon-178-account-switch-live` (needs a second account configured, else NOT_MEASURED) |
 | Video list and search | `sling/ServiceUtilGetListFirstPageFilterTest`, `ServiceUtilSearchVideoMissingNodeGuardTest`; `objects/VideoNullSafetyTest` | `smoke`, `bcon-183-190-sort-columns`, `bcon-179-181-layout`, `bcon-admin-regressions` (BCON-191 count; search fixme pins) |
 | Upload (images, ingest) | `utils/S3UploadUtilTest` (2 DEFECT pins); `webservices/BrcApiUploadImageHttpsGuardTest` | `bcon-184-image-url-inline`, `bgs-1600-metadata-persistence` (poster/thumbnail ingest). Video file upload: not covered |
-| Delete | `webservices/BrcApiActionDispatchTest` (delete_video, DEFECT pin); `workflow/BrightcoveDeleteAssetWorkflowStepTest` (DEFECT pin) | `dam-workflows` (delete-asset workflow). Admin-UI delete: pending live-mutation specs |
+| Delete | `webservices/BrcApiActionDispatchTest` (delete_video, DEFECT pin); `workflow/BrightcoveDeleteAssetWorkflowStepTest` (DEFECT pin) | `dam-workflows` (delete-asset workflow). Delete video: the admin tool has no delete-video action, so there is no UI path to test |
 | Labels | `api/CmsApiUpdateLabelsTest`, `webservices/BrcApiUpdateLabelsTest` | `bcon-182-create-label`, `bcon-label-persistence`, `bgs-1600-metadata-persistence` |
 | Posters and thumbnails | `webservices/BrcImageApiProxyTest`, `BrcApiUploadImageHttpsGuardTest`; `utils/FailingImageReader` (fixture) | `bcon-184-image-url-inline`, `bgs-1600-metadata-persistence` (row 11) |
 | Text tracks | `webservices/BrcApiActionDispatchTest` (remove_text_track, DEFECT pin) | `bcon-186-text-track-upload-feedback`, `bcon-187-text-tracks-section` |
-| Folders | `utils/FolderSyncUtilTest`, `FolderSyncUtilNestedSubfolderTest`, `FolderSyncUtilPoisonedRootTest`; `webservices/BrcReplicationHandlerFolderSyncTest`; `listeners/BrightcovePublishListenerFolderSyncTest`; `workflow/BrightcoveSyncAssetWorkflowStepFolderSyncTest` | `dam-publish-tier` (DAM subfolder to Video Cloud folder; move fixmes), `bcon-admin-regressions` (move-to-folder fixme). Admin-UI folder CRUD: pending live-mutation specs |
-| Playlists | `objects/PlaylistNullSafetyTest`; `webservices/BrcApiActionDispatchTest` (update_playlist, DEFECT pin) | `bcon-172-playlist-search`, `bcon-174-playlist-edit`, `bcon-admin-regressions` (BCON-147, BCON-172). Playlist create/delete: pending live-mutation specs |
-| Variants | none | `bcon-176-177-variant-dialog` (dialog validation only). Variant CRUD: pending live-mutation specs |
+| Folders | `utils/FolderSyncUtilTest`, `FolderSyncUtilNestedSubfolderTest`, `FolderSyncUtilPoisonedRootTest`; `webservices/BrcReplicationHandlerFolderSyncTest`; `listeners/BrightcovePublishListenerFolderSyncTest`; `workflow/BrightcoveSyncAssetWorkflowStepFolderSyncTest` | `dam-publish-tier` (DAM subfolder to Video Cloud folder; move fixmes), `bcon-admin-regressions` (move-to-folder fixme), `admin-folder-mutation` (live create/rename/move; DEFECT fixme: no UI path to remove a video from its folder) |
+| Playlists | `objects/PlaylistNullSafetyTest`; `webservices/BrcApiActionDispatchTest` (update_playlist, DEFECT pin) | `bcon-172-playlist-search`, `bcon-174-playlist-edit`, `bcon-admin-regressions` (BCON-147, BCON-172). `admin-playlist-mutation` (live create/edit/delete; DEFECT fixme: removing a video sends two `update_playlist` requests, one racing to a 500) |
+| Variants | none | `bcon-176-177-variant-dialog` (dialog validation only). `admin-variant-mutation` (live variant CRUD; DEFECT fixme: deleting the last variant is not persisted to the DAM asset) |
 | Player, playlist, experience components | none | `sites-editor-components` (placement, dialogs against the live account, BGS-1690 refresh), `bcon-pml-dialog-layout` (dialog layout) |
 | Asset finder | `schedulers/asset_integrator/impl/AssetProcessingRequesterImplTest` | `sites-editor-components` (Assets rail "Brightcove Videos" source) |
 | DAM import scheduler | `schedulers/asset_integrator/**` (cron bundle, `VideoImportCallable*`, `AssetPropertyIntegratorRunnableTest`); `webservices/AssetPropertyIntegratorTest`; `sling/ServiceUtilDamOnlyDefaultTest`, `ServiceUtilTagIsolationTest`, `ServiceUtilReferenceIdTest` | `bgs-1600-no-dam-tag`, `bgs-1600-metadata-persistence` |
@@ -123,6 +123,7 @@ A feature with "none" in a column is not verified by that layer. Say NOT_MEASURE
 
 ## Keeping the kit honest
 
+- A fresh clone or worktree has no Playwright install: `cd tests/e2e && npm ci && node_modules/.bin/playwright install chromium`. The gate uses `tests/e2e/node_modules/.bin/playwright` in its own tree and never reaches into another checkout.
 - Specs are discovered, not listed: add a file under `tests/e2e/specs/` and the gate, the JSON and the compare pick it up.
 - A spec that cannot measure something must `test.skip(cond, 'NOT MEASURED: <why>')`, never pass vacuously.
 - App-agnostic helpers belong in `tests/e2e/fixtures.js` and friends or `tests/gate/`; extend them rather than writing a one-off probe.

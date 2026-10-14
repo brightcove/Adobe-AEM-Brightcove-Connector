@@ -78,8 +78,18 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # shellcheck source=../gate/lib.sh
 . "$ROOT/tests/gate/lib.sh"
 AUTH="${AEM_AUTH:-admin:admin}"
-# AEM bundles need Java 11; find it portably (override with JAVA_HOME).
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 11 2>/dev/null || true)}"
+# AEM bundles need Java 11, and CI's default unit job runs on it, so the build and the default
+# unit run use a JDK 11 regardless of the ambient JAVA_HOME (an ambient 21 would make the
+# "default" run and --java21 the same JVM). Search order: JAVA_HOME_11_X64 (CI), the ambient
+# JAVA_HOME when it is 11, macOS java_home -v 11. None found: keep the ambient JAVA_HOME and say
+# so; the unit reason line records the JVM the tests really ran on.
+java11_home() {
+  [ -n "${JAVA_HOME_11_X64:-}" ] && [ -x "$JAVA_HOME_11_X64/bin/java" ] && { echo "$JAVA_HOME_11_X64"; return; }
+  if [ -n "${JAVA_HOME:-}" ] && grep -q 'JAVA_VERSION="11\.' "$JAVA_HOME/release" 2>/dev/null; then echo "$JAVA_HOME"; return; fi
+  /usr/libexec/java_home -v 11 2>/dev/null || true
+}
+JAVA11="$(java11_home)"
+if [ -n "$JAVA11" ]; then export JAVA_HOME="$JAVA11"; else echo "⚠️ no JDK 11 found; using ambient JAVA_HOME=${JAVA_HOME:-unset}" >&2; fi
 PW="$ROOT/tests/e2e/node_modules/.bin/playwright"   # NOT npx (broken in the nvm/Node-22 env)
 
 # ---- result bookkeeping: every stage lands in $WORK/stages.tsv, summarized by tests/gate/summarize.js ----

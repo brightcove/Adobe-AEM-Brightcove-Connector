@@ -138,6 +138,7 @@ test.describe('sync database (BCON-148, BCON-185, BCON-192)', () => {
     ['a well-formed JSON 200', { status: 200, contentType: 'application/json', body: '{"status":"ok"}' }],
   ];
   for (const [label, response] of responses) {
+    // DEFECT: syncDB() re-parses an already parsed dataload response, so every sync ends in an uncaught exception (3b item 2).
     test.fixme(`${label} from dataload does not throw`, async ({ page }) => {
       await openAdmin(page);
       const errors = [];
@@ -200,6 +201,7 @@ test.describe('filter panel and move-to-folder (BCON-121/128/131/141/142/146)', 
 
   // §3b item 3: there is no way to take a video OUT of a folder; the modal
   // lists real folders only. Flip to `test` when a "no folder" choice ships.
+  // DEFECT: the move-to-folder modal has no way to take a video out of its folder (3b item 3).
   test.fixme('the move-to-folder modal offers a way to remove the video from its folder', async ({ page }) => {
     await openAdmin(page);
     await page.locator('#tbData tr input[type="checkbox"]').first().check();
@@ -213,6 +215,7 @@ test.describe('filter panel and move-to-folder (BCON-121/128/131/141/142/146)', 
 
 // §3b item 5: get_videos_with_label without `start` is a server 500 with an
 // empty body (NumberFormatException in the param parsing). API-level pin.
+// DEFECT: get_videos_with_label without start answers a 500 with an empty body (3b item 5).
 test.fixme('§3b-5: get_videos_with_label without start is not a 500', async ({ request }) => {
   const acct = await resolveAccountId(request);
   const res = await request.get(`/bin/brightcove/api.js?account_id=${acct}&a=get_videos_with_label&labels=/e2e/&limit=1&callback=cb`);
@@ -223,6 +226,7 @@ test.fixme('§3b-5: get_videos_with_label without start is not a 500', async ({ 
 // nothing for some of those (a digit-led word such as `+42min`) although the bare term matches,
 // so typing a word of a video's name offers no suggestion. Read-only: compares the connector's
 // search_videos with a bare-term CMS search for the words of the first 20 video names.
+// DEFECT: search_videos sends every term as a required +term, so words the CMS finds are not found (3b item 11).
 test.fixme('§3b-11: every name word the CMS finds is also found by search_videos', async ({ request }) => {
   const { creds, cmsClient } = require('../cms');
   test.skip(!creds(), 'NOT MEASURED: BRIGHTCOVE_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET not set, so there is no independent CMS search to compare with');
@@ -243,6 +247,7 @@ test.fixme('§3b-11: every name word the CMS finds is also found by search_video
 // §3b item 12: an account the user may not use (or that does not exist) is answered HTTP 200
 // with an EMPTY body, in .js and .jsx alike: executeRequest records the 403 in a result it never
 // writes. The video autocomplete then reads "no suggestions", the admin list an unparsable reply.
+// DEFECT: search_videos for an unusable account answers HTTP 200 with an empty body (3b item 12).
 test.fixme('§3b-12: search_videos for an unusable account is an error, not an empty 200', async ({ request }) => {
   for (const ext of ['js', 'jsx']) {
     const res = await request.get(`/bin/brightcove/api.${ext}?account_id=0&a=search_videos&query=a&start=0&limit=1&callback=cb`);

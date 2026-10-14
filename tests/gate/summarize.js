@@ -133,9 +133,12 @@ function parseE2e(file, platform) {
         if (reason) o.reason = reason;
         if (t.status === 'flaky') o.flaky = true;
         if (outcome === 'fixme') {
+          // The label is the contiguous // comment block directly above test.fixme, or the same line.
           const L = lines(spec.file); const ln = (spec.line || 1) - 1;
-          const win = L.slice(Math.max(0, ln - 6), ln + 2).join('\n') + title;
-          if (/DEFECT/.test(win)) o.defect = true;
+          const block = [L[ln] || ''];
+          for (let k = ln - 1; k >= 0 && /^\s*\/\//.test(L[k]); k--) block.push(L[k]);
+          if (/\/\/\s*DEFECT:/.test(block.join('\n'))) o.defect = true;
+          else if (/\/\/\s*LIMITATION:/.test(block.join('\n'))) o.limitation = true;
         }
         tests.push(o);
       }
@@ -232,6 +235,7 @@ const defectPins = {
   unit_disabled_defect: distinct(allTests.filter((t) => t.kind === 'unit' && t.defect)),
   e2e_fixme_total: distinct(sumPins('e2e', 'fixme')),
   e2e_fixme_defect: distinct(allTests.filter((t) => t.kind === 'e2e' && t.outcome === 'fixme' && t.defect)),
+  e2e_fixme_limitation: distinct(allTests.filter((t) => t.kind === 'e2e' && t.outcome === 'fixme' && t.limitation)),
 };
 
 const summary = {
