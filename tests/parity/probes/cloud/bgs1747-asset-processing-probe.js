@@ -162,6 +162,7 @@ async function logLines(appender) {
     checks.push({ name: `connector import created a DAM asset for the throwaway video (dataload HTTP ${evidence.dataloadHttp})`, ok: assetPath ? true : (evidence.dataloadHttp === 200 ? false : null) });
     if (!assetPath) return;
     evidence.assetSeenAfterMs = Date.now() - t0;
+    evidence.assetPath = assetPath; // e.g. to reprocess a --keep asset by hand
 
     const renditionsBefore = await connectorRenditions(assetPath);
     evidence.connectorRenditionsBefore = renditionsBefore;
