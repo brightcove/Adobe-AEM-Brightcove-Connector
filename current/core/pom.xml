@@ -89,6 +89,13 @@ Bundle-ClassPath: .,jcodec-0.2.1.jar,jcodec-javase-0.2.1.jar
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <!-- jcodec and jaad ride inside the bundle as embedded jars in target/classes
+                                 (Include-Resource above); JaCoCo scans nested jars, so keep them out of the report by skipping the jars. -->
+                            <excludes>
+                                <exclude>*.jar</exclude>
+                            </excludes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
