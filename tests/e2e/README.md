@@ -133,12 +133,16 @@ Each spec's header records the trigger it drives, read from the code.
 
 ## Pre-QA gate
 
-`pre-qa-gate.sh` runs version-bump, build+install, deployed-bundle, and
+`pre-qa-gate.sh` runs a unit stage (`mvn -pl core test`, `--unit-only` to run just that, no AEM),
+version-bump, build+install, deployed-bundle, and
 content-package checks, then this suite, before a ticket goes to Ready for QA.
 It gates cloud (`:4502`), on-prem (`:4602`), or both, and defaults to probing
 both instances. The JSON report is `tests/parity/runs/<date>/gate-<platform>-<port>-<version>.json`,
 so runs against different instances do not overwrite each other. See `./pre-qa-gate.sh --help`; details in
-`ONPREM-PARITY-PLAN.md` §3 Phase 1.
+`ONPREM-PARITY-PLAN.md` §3 Phase 1. `--json <path>` writes a machine-readable PASS / FAIL /
+NOT_MEASURED result per stage and per test; `tests/gate/compare.js` diffs two of them for a
+regression check, and `tests/gate/deploy-release.sh` installs a baseline release. Stages,
+verdicts and the comparison loop: `docs/testing.md`.
 
 **Live specs.** The specs that create throwaway videos need the Video Cloud credentials
 (`BRIGHTCOVE_ACCOUNT_ID`, `BRIGHTCOVE_CLIENT_ID`, `BRIGHTCOVE_CLIENT_SECRET`) in the
