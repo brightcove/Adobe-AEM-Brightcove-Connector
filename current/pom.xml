@@ -252,6 +252,12 @@ Bundle-DocURL:
                         <useSystemClassLoader>false</useSystemClassLoader>
                     </configuration>
                 </plugin>
+                <!-- JaCoCo coverage, report only (no thresholds). 0.8.11+ needed for the Java 21 forked test run. -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.12</version>
+                </plugin>
                 <!-- Maven Failsafe Plugin -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
