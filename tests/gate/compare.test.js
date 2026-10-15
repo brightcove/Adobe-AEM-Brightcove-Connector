@@ -64,4 +64,31 @@ t('CLI exit codes: 1 regression, 0 clean, 3 not measured, 2 bad input', () => {
   assert.strictEqual(run('baseline.json').status, 2);
 });
 
+const multi = () => compare(['multi-b1', 'multi-b2'].map(fx), ['multi-c1', 'multi-c2'].map(fx));
+const mcls = (r) => Object.fromEntries(r.rows.filter((x) => x.kind === 'e2e').map((x) => [x.id.split(' > ').pop(), x.class]));
+
+t('2+2 runs: REGRESSION needs every baseline run passing and every candidate run failing', () => {
+  assert.deepStrictEqual(mcls(multi()), {
+    'goes red': 'REGRESSION', 'flaky candidate': 'FLAKY', 'flaky baseline': 'FLAKY',
+    'one bad run is not a regression': 'FLAKY', fixed: 'FIXED', 'still failing': 'STILL_FAILING', same: 'SAME',
+  });
+  assert.strictEqual(multi().result, 'REGRESSION');
+});
+
+t('a unit stage waived on the baseline is one "not compared" count, not per-test NOT_MEASURED rows', () => {
+  const r = multi();
+  assert.strictEqual(r.notCompared.unit, 1);
+  assert.ok(!r.rows.some((x) => x.kind === 'unit' && x.class === 'NOT_MEASURED'));
+  assert.ok(r.coverage.every((v) => v.verdict === 'NOT_COMPARED'));
+  const out = spawnSync(process.execPath, [path.join(__dirname, 'compare.js'), '--baseline', ...['multi-b1', 'multi-b2'].map((n) => path.join(__dirname, 'fixtures', `${n}.json`)), '--candidate', ...['multi-c1', 'multi-c2'].map((n) => path.join(__dirname, 'fixtures', `${n}.json`))], { encoding: 'utf8' });
+  assert.strictEqual(out.status, 1);
+  assert.ok(/not compared \(stage waived: unit\): 1 tests/.test(out.stdout), out.stdout);
+});
+
+t('flaky tests alone never produce a regression', () => {
+  const r = compare(['multi-b1', 'multi-b2'].map(fx), ['multi-b1', 'multi-b2'].map(fx));
+  assert.notStrictEqual(r.result, 'REGRESSION');
+  assert.strictEqual(r.counts.FLAKY, 1);
+});
+
 console.log(`\n${n} passed`);

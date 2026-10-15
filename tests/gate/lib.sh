@@ -5,9 +5,13 @@
 #
 # macOS bash 3.2 compatible: no associative arrays, no ${var,,}.
 
-# gate_bundle_wait <aem-url> <user:pass> [max-seconds]
+# gate_bundle_wait <aem-url> <user:pass> [max-seconds] [expected-version]
 #   Polls /system/console/bundles.json until exactly one brightcove.core bundle is
-#   present AND Active, or the wait runs out. Sets BUNDLE_REPORT (first line: count or
+#   present AND Active (and, when expected-version is given, at that version), or the
+#   wait runs out. Without the version, a same-symbolic-name swap settles on the OLD
+#   bundle while it is still Active and the later check fails as "stale code" (observed:
+#   the new version appeared 20-60s after the old one went, ids 696 -> 697 -> 699), so
+#   every caller that knows what it just installed must pass the version. Sets BUNDLE_REPORT (first line: count or
 #   UNREACHABLE; then one "id version state" line per bundle) and BUNDLE_WAITED (seconds).
 #
 #   ⚠️ The JCR installer swaps bundles asynchronously after the package manager
@@ -15,7 +19,7 @@
 #   for several seconds, and a single read there reported "no brightcove.core bundle
 #   installed" (2026-09-17), so this polls instead of reading once.
 gate_bundle_wait() {
-  _url="$1"; _auth="$2"; _max="${3:-120}"
+  _url="$1"; _auth="$2"; _max="${3:-120}"; _want="${4:-}"
   BUNDLE_WAITED=0
   BUNDLE_REPORT=""
   while :; do
@@ -39,11 +43,15 @@ for b in bundles:
 ")
     _settled=$(echo "$BUNDLE_REPORT" | python3 -c "
 import sys
+want = sys.argv[1]
 lines = sys.stdin.read().splitlines()
 if not lines or lines[0] == 'UNREACHABLE': print('no'); sys.exit(0)
 rows = [l.split() for l in lines[1:] if l.strip()]
-print('yes' if lines[0] == '1' and rows and rows[0][2] == 'Active' else 'no')
-")
+ok = lines[0] == '1' and rows and rows[0][2] == 'Active'
+# OSGi writes a Maven qualifier with a dot (7.4.1-SNAPSHOT -> 7.4.1.SNAPSHOT): accept either form.
+if ok and want and want not in rows[0][1] and want.replace('-', '.', 1) not in rows[0][1]: ok = False
+print('yes' if ok else 'no')
+" "$_want")
     [ "$_settled" = "yes" ] && break
     [ "$BUNDLE_WAITED" -ge "$_max" ] && break
     sleep 5; BUNDLE_WAITED=$((BUNDLE_WAITED + 5))

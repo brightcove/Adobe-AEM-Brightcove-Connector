@@ -24,8 +24,8 @@
 #                                   version-bump check. Default: $PARITY_BASE_REF
 #                                   if set, else origin/cloud-master. (The base
 #                                   branch is renamed to `main` in Phase 5.)
-#   --aem-cloud <url>               Cloud AEM instance. Default http://localhost:4502
-#   --aem-onprem <url>              On-prem AEM instance. Default http://localhost:4602
+#   --aem-cloud <url>               Cloud AEM instance. Default $BRC_GATE_AEM_CLOUD, else http://localhost:4502
+#   --aem-onprem <url>              On-prem AEM instance. Default $BRC_GATE_AEM_ONPREM, else http://localhost:4602
 #   --skip-build                   Skip the mvn build+install step (assume the
 #                                   instance(s) already run the code to gate).
 #   --allow-no-live                Permit a run WITHOUT the Video Cloud credentials
@@ -134,8 +134,10 @@ usage() {
 # ---- argument parsing (POSIX-ish; macOS bash 3.2 compatible: no assoc arrays) ----
 PLATFORM_ARG=""
 BASE_REF="${PARITY_BASE_REF:-origin/cloud-master}"
-AEM_CLOUD_URL="http://localhost:4502"
-AEM_ONPREM_URL="http://localhost:4602"
+# Defaults are the conventional ports; BRC_GATE_AEM_CLOUD / BRC_GATE_AEM_ONPREM override them (the
+# --aem-* flags override those). A local on-prem bed on another port (e.g. 6.5 LTS) is set once there.
+AEM_CLOUD_URL="${BRC_GATE_AEM_CLOUD:-http://localhost:4502}"
+AEM_ONPREM_URL="${BRC_GATE_AEM_ONPREM:-http://localhost:4602}"
 SKIP_BUILD=0
 DRY_RUN=0
 UNIT_ONLY=0
@@ -172,7 +174,10 @@ while [ $# -gt 0 ]; do
       SKIP_BUILD=1; shift ;;
     --baseline)
       [ $# -ge 2 ] || fail "--baseline requires a version"
-      BASELINE_VER="$2"; SKIP_BUILD=1; shift 2 ;;
+      BASELINE_VER="$2"; SKIP_BUILD=1; shift 2
+      case "$BASELINE_VER" in
+        [0-6].*) fail "--baseline $BASELINE_VER is pre-7.x: that line ships a different bundle (com.coresecure.brightcove.cq5.brightcove-services) and is not a supported baseline. Use the 6.0.12 column of tests/parity/matrix.md." ;;
+      esac ;;
     --allow-no-live)
       ALLOW_NO_LIVE=1; shift ;;
     --dry-run)
@@ -236,10 +241,10 @@ else
     PLATFORMS="both"
   elif [ "$cloud_up" = "1" ]; then
     PLATFORMS="cloud"
-    echo "   (on-prem $AEM_ONPREM_URL not reachable; gating cloud only)"
+    echo "   (on-prem $AEM_ONPREM_URL not reachable; gating cloud only. If your on-prem bed is on another port, pass --aem-onprem <url> or set BRC_GATE_AEM_ONPREM)"
   elif [ "$onprem_up" = "1" ]; then
     PLATFORMS="onprem"
-    echo "   (cloud $AEM_CLOUD_URL not reachable; gating on-prem only)"
+    echo "   (cloud $AEM_CLOUD_URL not reachable; gating on-prem only. If your cloud bed is on another port, pass --aem-cloud <url> or set BRC_GATE_AEM_CLOUD)"
   else
     fail "no AEM instance reachable at $AEM_CLOUD_URL or $AEM_ONPREM_URL — start one or pass --platform with --aem-cloud/--aem-onprem"
   fi
@@ -454,7 +459,7 @@ run_platform() {
   #    The wait/judge logic is shared with tests/gate/deploy-release.sh (tests/gate/lib.sh).
   step "3/4 [$platform] deployed bundle"
   CUR_STAGE=deployed_bundle
-  gate_bundle_wait "$url" "$AUTH" "${BUNDLE_WAIT_SECS:-120}"
+  gate_bundle_wait "$url" "$AUTH" "${BUNDLE_WAIT_SECS:-120}" "$EXPECT_VER"
   [ "$BUNDLE_WAITED" -gt 0 ] && echo "   (waited ${BUNDLE_WAITED}s for the installer to settle)"
   gate_bundle_check "$EXPECT_VER" "$platform" "$url" || true
   echo "   brightcove.core bundle count: ${BUNDLE_COUNT:-0}"

@@ -60,6 +60,11 @@ case "$TAG" in
 esac
 [ -n "$EXPECT" ] || { EXPECT="${TAG%-cloud}"; EXPECT="${EXPECT%-prem}"; }
 
+# Pre-7.x on-prem releases (6.0.x) ship bundle com.coresecure.brightcove.cq5.brightcove-services,
+# not brightcove.core, and would run side by side with a 7.x install. Not a usable baseline.
+case "$EXPECT" in
+  [0-6].*) fail "release $TAG is pre-7.x: it ships a different bundle (com.coresecure.brightcove.cq5.brightcove-services) that would run beside brightcove.core, and the gate cannot compare it. On-prem 6.0.x baselines are not supported; use the 6.0.12 column of tests/parity/matrix.md." ;;
+esac
 command -v gh >/dev/null || fail "gh CLI not found"
 assets=$(gh release view "$TAG" --repo "$REPO" --json assets -q '.assets[].name') \
   || fail "cannot read release $TAG in $REPO"
@@ -98,7 +103,7 @@ resp=$(curl -s -u "$AUTH" -F "file=@$WORK/$ASSET" -F force=true -F install=true 
 echo "$resp" | grep -q 'status code="200"' || fail "package manager did not answer 200: $(echo "$resp" | tr '\n' ' ' | cut -c1-300)"
 
 BUNDLE_WAIT_SECS="${BUNDLE_WAIT_SECS:-180}"
-gate_bundle_wait "$URL" "$AUTH" "$BUNDLE_WAIT_SECS"
+gate_bundle_wait "$URL" "$AUTH" "$BUNDLE_WAIT_SECS" "$EXPECT"
 [ "$BUNDLE_WAITED" -gt 0 ] && echo "(waited ${BUNDLE_WAITED}s for the installer to settle)"
 if ! gate_bundle_check "$EXPECT" "$PLATFORM" "$URL"; then
   fail "$BUNDLE_ERR"
