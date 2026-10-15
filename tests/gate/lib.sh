@@ -5,6 +5,14 @@
 #
 # macOS bash 3.2 compatible: no associative arrays, no ${var,,}.
 
+# gate_version_matches <expected> <deployed>
+#   Exact comparison after normalising the first '-' to '.' on both sides: OSGi writes a
+#   Maven qualifier with a dot (7.4.1-SNAPSHOT -> 7.4.1.SNAPSHOT). A substring match let
+#   7.4.1 accept 7.4.10 and 7.4.1.SNAPSHOT.
+gate_version_matches() {
+  [ "${1/-/.}" = "${2/-/.}" ]
+}
+
 # gate_bundle_wait <aem-url> <user:pass> [max-seconds] [expected-version]
 #   Polls /system/console/bundles.json until exactly one brightcove.core bundle is
 #   present AND Active (and, when expected-version is given, at that version), or the
@@ -41,17 +49,15 @@ print(len(bundles))
 for b in bundles:
     print(b.get('id'), b.get('version'), b.get('state'))
 ")
-    _settled=$(echo "$BUNDLE_REPORT" | python3 -c "
-import sys
-want = sys.argv[1]
-lines = sys.stdin.read().splitlines()
-if not lines or lines[0] == 'UNREACHABLE': print('no'); sys.exit(0)
-rows = [l.split() for l in lines[1:] if l.strip()]
-ok = lines[0] == '1' and rows and rows[0][2] == 'Active'
-# OSGi writes a Maven qualifier with a dot (7.4.1-SNAPSHOT -> 7.4.1.SNAPSHOT): accept either form.
-if ok and want and want not in rows[0][1] and want.replace('-', '.', 1) not in rows[0][1]: ok = False
-print('yes' if ok else 'no')
-" "$_want")
+    _settled=no
+    _cnt=$(echo "$BUNDLE_REPORT" | head -n1)
+    if [ "$_cnt" = "1" ]; then
+      _row=$(echo "$BUNDLE_REPORT" | sed -n 2p)
+      _rv=$(echo "$_row" | awk '{print $2}'); _rs=$(echo "$_row" | awk '{print $3}')
+      if [ "$_rs" = "Active" ] && { [ -z "$_want" ] || gate_version_matches "$_want" "$_rv"; }; then
+        _settled=yes
+      fi
+    fi
     [ "$_settled" = "yes" ] && break
     [ "$BUNDLE_WAITED" -ge "$_max" ] && break
     sleep 5; BUNDLE_WAITED=$((BUNDLE_WAITED + 5))
@@ -81,8 +87,7 @@ gate_bundle_check() {
   if [ "${BUNDLE_COUNT:-0}" -gt 1 ]; then
     BUNDLE_ERR="$_label: $BUNDLE_COUNT brightcove.core bundles present (duplicate-bundle trap — uninstall the stale one and refreshPackages)"; return 1
   fi
-  # OSGi writes a Maven qualifier with a dot (7.4.1-SNAPSHOT -> 7.4.1.SNAPSHOT): accept either form.
-  if ! echo "$BUNDLE_ACTIVE" | grep -qF -e "$_want" -e "${_want/-/.}"; then
+  if ! gate_version_matches "$_want" "$BUNDLE_VERSION"; then
     BUNDLE_ERR="$_label: deployed bundle is not $_want (got: $BUNDLE_ACTIVE) — clientlib/bundle cache served stale code."; return 1
   fi
   if ! echo "$BUNDLE_ACTIVE" | grep -qi Active; then
@@ -133,6 +138,18 @@ gate_lock_dir_for() {
   echo "${TMPDIR:-/tmp}/bcon-gate-locks/$_key.lock"
 }
 
+# gate_lock_is_stale <lock-dir>: 0 when the holder pid is dead, or the owner file never appeared.
+gate_lock_is_stale() {
+  _sp=$(cat "$1/pid" 2>/dev/null || true)
+  if [ -n "$_sp" ]; then
+    kill -0 "$_sp" 2>/dev/null && return 1
+    return 0
+  fi
+  # mkdir done but owner file not yet written: give the writer a moment, then call it stale.
+  _sage=$(( $(date +%s) - $(stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || date +%s) ))
+  [ "$_sage" -gt 10 ]
+}
+
 # gate_lock_acquire <aem-url> <timeout-secs> <command-description>
 #   Returns 0 holding the lock, 1 on timeout (GATE_LOCK_ERR set).
 gate_lock_acquire() {
@@ -153,17 +170,25 @@ gate_lock_acquire() {
     _since=$(cat "$_dir/started" 2>/dev/null || true)
     _holder=$(cat "$_dir/cmd" 2>/dev/null || true)
     _stale=0
-    if [ -n "$_pid" ]; then
-      kill -0 "$_pid" 2>/dev/null || _stale=1
-    else
-      # mkdir done but owner file not yet written: give the writer a moment, then call it stale.
-      _age=$(( $(date +%s) - $(stat -f %m "$_dir" 2>/dev/null || stat -c %Y "$_dir" 2>/dev/null || date +%s) ))
-      [ "$_age" -gt 10 ] && _stale=1
-    fi
+    gate_lock_is_stale "$_dir" && _stale=1
     if [ "$_stale" = "1" ]; then
-      echo "   reclaiming stale bed lock for $_url (holder pid ${_pid:-?} is gone)"
-      _tomb="$_dir.stale.$$"
-      mv "$_dir" "$_tomb" 2>/dev/null && rm -rf "$_tomb"
+      [ -n "${GATE_LOCK_TEST_DELAY:-}" ] && sleep "$GATE_LOCK_TEST_DELAY"   # test seam: widen the race window
+      # Serialise reclaim: without the mutex two waiters both see "stale", the first
+      # reclaims and acquires, and the second then moves the FRESH lock aside.
+      _rmx="$_dir.reclaim"
+      if mkdir "$_rmx" 2>/dev/null; then
+        # Re-check under the mutex: the holder may already have been replaced.
+        if [ -d "$_dir" ] && gate_lock_is_stale "$_dir"; then
+          echo "   reclaiming stale bed lock for $_url (holder pid ${_pid:-?} is gone)"
+          rm -rf "$_dir"
+        fi
+        rmdir "$_rmx" 2>/dev/null || true
+      else
+        # A crashed reclaimer would wedge the mutex: clear one older than 30s.
+        _mage=$(( $(date +%s) - $(stat -f %m "$_rmx" 2>/dev/null || stat -c %Y "$_rmx" 2>/dev/null || date +%s) ))
+        [ "$_mage" -gt 30 ] && rmdir "$_rmx" 2>/dev/null || true
+        sleep "${GATE_LOCK_POLL:-5}"
+      fi
       continue
     fi
     _now=$(date +%s)
@@ -177,7 +202,7 @@ gate_lock_acquire() {
       GATE_LOCK_ERR="timed out after $((_now - _start))s waiting for the bed lock on $_url held by pid $_pid (${_holder:-?})"
       return 1
     fi
-    sleep 5
+    sleep "${GATE_LOCK_POLL:-5}"
   done
 }
 
