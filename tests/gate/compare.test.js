@@ -91,4 +91,23 @@ t('flaky tests alone never produce a regression', () => {
   assert.strictEqual(r.counts.FLAKY, 1);
 });
 
+t('lost coverage: passed in every baseline run but skipped or removed in the candidate is NOT_MEASURED, not NO_REGRESSION', () => {
+  const r = compare(fx('lost-base'), fx('lost-cand'));
+  assert.strictEqual(r.result, 'NOT_MEASURED');
+  assert.deepStrictEqual(r.lostCoverage.map((l) => `${l.class} ${l.id.split(' > ').pop()}`).sort(), ['NOT_MEASURED skipped now', 'REMOVED deleted now']);
+  assert.ok(!r.lostCoverage.some((l) => /new and skipped|failing both/.test(l.id)), 'absent-on-baseline and already-failing tests are not lost');
+  const ack = compare(fx('lost-base'), fx('lost-cand'), { allowLostCoverage: true });
+  assert.strictEqual(ack.result, 'NO_REGRESSION');
+  assert.strictEqual(ack.lostCoverage.length, 2);
+  const cli = (...a) => spawnSync(process.execPath, [path.join(__dirname, 'compare.js'), ...a.map((x) => (x.endsWith('.json') ? path.join(__dirname, 'fixtures', x) : x))], { encoding: 'utf8' });
+  const o = cli('lost-base.json', 'lost-cand.json');
+  assert.strictEqual(o.status, 3);
+  assert.ok(/lost coverage: 2/.test(o.stdout), o.stdout);
+  assert.strictEqual(cli('--allow-lost-coverage', 'lost-base.json', 'lost-cand.json').status, 0);
+});
+
+t('lost coverage never masks a regression', () => {
+  assert.strictEqual(compare(fx('baseline'), fx('candidate'), {}).result, 'REGRESSION');
+});
+
 console.log(`\n${n} passed`);

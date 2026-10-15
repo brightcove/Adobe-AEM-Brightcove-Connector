@@ -3,7 +3,7 @@
 // Plain Node, no dependencies. Self-test: node tests/gate/compare.test.js
 // Context: docs/testing.md ("Comparing against a baseline release").
 //
-//   node tests/gate/compare.js [--json <out>] [-v] <baseline.json> <candidate.json>
+//   node tests/gate/compare.js [--json <out>] [-v] [--allow-lost-coverage] <baseline.json> <candidate.json>
 //   node tests/gate/compare.js [--json <out>] [-v] --baseline <a.json> [b.json ...] --candidate <c.json> [d.json ...]
 //
 // Several runs per side (the 2+2 rule) separate a regression from a flake: REGRESSION needs the
@@ -29,9 +29,16 @@
 // absent) is NEW_TEST or NOT_MEASURED, never a pass or a regression. A baseline taken
 // without unit or e2e measuring makes every such test NOT_MEASURED, not NEW_TEST.
 //
+// Lost coverage: a test that passed in EVERY baseline run but is NOT_MEASURED or REMOVED in the
+// candidate (skipped, fixme'd, deleted, or its stage not measured) is no longer proving anything,
+// so "no regression" cannot be claimed. It is listed as "lost coverage: N" and the result is
+// NOT_MEASURED unless --allow-lost-coverage acknowledges it. A REGRESSION still wins. Tests
+// absent on the baseline side were never covered, so they are not "lost".
+//
 // Result and exit code:
 //   REGRESSION      exit 1   at least one REGRESSION
-//   NOT_MEASURED    exit 3   nothing was measured on both sides, so "no regression" is unproven
+//   NOT_MEASURED    exit 3   nothing was measured on both sides, so "no regression" is unproven,
+//                            OR lost coverage (below) and --allow-lost-coverage was not passed
 //   NO_REGRESSION   exit 0
 //   usage / unreadable input: exit 2
 'use strict';
@@ -128,7 +135,7 @@ function comparePins(B, C) {
 }
 
 // compare(baseline, candidate): each a gate summary or an array of them (several runs of one side).
-function compare(b, c) {
+function compare(b, c, opts = {}) {
   const B = Array.isArray(b) ? b : [b]; const C = Array.isArray(c) ? c : [c];
   const rows = classify(B, C);
   const counts = {};
@@ -136,10 +143,12 @@ function compare(b, c) {
   const comparable = rows.filter((r) => ['REGRESSION', 'FIXED', 'STILL_FAILING', 'SAME'].includes(r.class)).length;
   const notCompared = {};
   for (const r of rows) if (r.class === 'NOT_COMPARED') notCompared[r.waivedKind] = (notCompared[r.waivedKind] || 0) + 1;
+  const lostCoverage = rows.filter((r) => ['NOT_MEASURED', 'REMOVED'].includes(r.class) && r.baseline.split('/').every((x) => x === 'passed'));
   let result = 'NO_REGRESSION';
   if (counts.REGRESSION) result = 'REGRESSION';
   else if (!comparable) result = 'NOT_MEASURED';
-  return { result, runs: { baseline: B.length, candidate: C.length }, counts, notCompared, comparable, rows, coverage: compareCoverage(B, C), pins: comparePins(B, C) };
+  else if (lostCoverage.length && !opts.allowLostCoverage) result = 'NOT_MEASURED';
+  return { result, lostCoverage: lostCoverage.map((r) => ({ id: r.id, class: r.class, baseline: r.baseline, candidate: r.candidate, ...(r.reason ? { reason: r.reason } : {}) })), lostCoverageAllowed: !!(opts.allowLostCoverage && lostCoverage.length), runs: { baseline: B.length, candidate: C.length }, counts, notCompared, comparable, rows, coverage: compareCoverage(B, C), pins: comparePins(B, C) };
 }
 
 function print(r, B, C, verbose) {
@@ -170,18 +179,25 @@ function print(r, B, C, verbose) {
   for (const p of r.pins) {
     console.log(`pins ${p.pin}: ${p.notCompared ? 'not compared (stage waived: unit)' : p.delta == null ? `NOT_MEASURED (baseline ${p.baseline}, candidate ${p.candidate})` : `${p.baseline} -> ${p.candidate} (${p.delta >= 0 ? '+' : ''}${p.delta})`}`);
   }
+  if (r.lostCoverage.length) {
+    console.log(`lost coverage: ${r.lostCoverage.length}${r.lostCoverageAllowed ? ' (acknowledged with --allow-lost-coverage)' : ''}`);
+    for (const l of r.lostCoverage) console.log(`  ${l.class} ${l.id}  [base ${l.baseline}, cand ${l.candidate}]${l.reason ? `  ${l.reason}` : ''}`);
+  }
+  const lostOnly = r.result === 'NOT_MEASURED' && r.comparable > 0;
   const msg = { REGRESSION: `REGRESSION (${r.counts.REGRESSION} test(s) passed in every baseline run and failed in every candidate run)`,
-    NOT_MEASURED: 'NOT_MEASURED (no test was measured on both sides, so "no regression" is unproven)',
-    NO_REGRESSION: `NO_REGRESSION (${r.comparable} test(s) compared${r.counts.FLAKY ? `, ${r.counts.FLAKY} flaky and not counted either way` : ''})` }[r.result];
+    NOT_MEASURED: lostOnly ? `NOT_MEASURED (lost coverage: ${r.lostCoverage.length} test(s) passed in every baseline run and are not measured in the candidate; pass --allow-lost-coverage to acknowledge)`
+      : 'NOT_MEASURED (no test was measured on both sides, so "no regression" is unproven)',
+    NO_REGRESSION: `NO_REGRESSION (${r.comparable} test(s) compared${r.counts.FLAKY ? `, ${r.counts.FLAKY} flaky and not counted either way` : ''}${r.lostCoverageAllowed ? `, ${r.lostCoverage.length} lost coverage acknowledged` : ''})` }[r.result];
   console.log(`\nRESULT: ${msg}`);
 }
 
 function main(argv) {
-  let out = ''; let verbose = false; const pos = []; const bf = []; const cf = []; let into = pos;
+  let out = ''; let verbose = false; let allowLost = false; const pos = []; const bf = []; const cf = []; let into = pos;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') out = argv[++i];
     else if (a === '-v') verbose = true;
+    else if (a === '--allow-lost-coverage') allowLost = true;
     else if (a === '--baseline') into = bf;
     else if (a === '--candidate') into = cf;
     else into.push(a);
@@ -189,7 +205,7 @@ function main(argv) {
   let bfiles = bf; let cfiles = cf;
   if (!bf.length && !cf.length && pos.length === 2) { bfiles = [pos[0]]; cfiles = [pos[1]]; }
   else if (!bf.length || !cf.length || pos.length) {
-    console.error('usage: compare.js [--json <out>] [-v] <baseline.json> <candidate.json>\n       compare.js [--json <out>] [-v] --baseline <a.json> [b.json ...] --candidate <c.json> [d.json ...]');
+    console.error('usage: compare.js [--json <out>] [-v] [--allow-lost-coverage] <baseline.json> <candidate.json>\n       compare.js [--json <out>] [-v] --baseline <a.json> [b.json ...] --candidate <c.json> [d.json ...]');
     return 2;
   }
   let B; let C;
@@ -197,7 +213,7 @@ function main(argv) {
     B = bfiles.map((f) => JSON.parse(fs.readFileSync(f, 'utf8')));
     C = cfiles.map((f) => JSON.parse(fs.readFileSync(f, 'utf8')));
   } catch (e) { console.error(`cannot read input: ${e.message}`); return 2; }
-  const r = compare(B, C);
+  const r = compare(B, C, { allowLostCoverage: allowLost });
   print(r, B, C, verbose);
   if (out) fs.writeFileSync(out, JSON.stringify(r, null, 2) + '\n');
   return r.result === 'REGRESSION' ? 1 : r.result === 'NOT_MEASURED' ? 3 : 0;

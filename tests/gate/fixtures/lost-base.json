@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "mode": "full",
+  "git": {
+    "sha": "lostb"
+  },
+  "connector_version": "x",
+  "platforms": [
+    "cloud"
+  ],
+  "stages": [
+    {
+      "platform": "cloud",
+      "stage": "unit",
+      "verdict": "PASS",
+      "reason": ""
+    },
+    {
+      "platform": "cloud",
+      "stage": "e2e",
+      "verdict": "PASS",
+      "reason": ""
+    }
+  ],
+  "tests": [
+    {
+      "id": "e2e:cloud:l.spec.js > kept",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:l.spec.js > skipped now",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:l.spec.js > deleted now",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:l.spec.js > failing both",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "failed"
+    }
+  ]
+}
