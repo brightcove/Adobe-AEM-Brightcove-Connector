@@ -132,6 +132,7 @@ function parseE2e(file, platform) {
         const o = { id, kind: 'e2e', platform, outcome, file: spec.file, title };
         if (reason) o.reason = reason;
         if (t.status === 'flaky') o.flaky = true;
+        if (ann.some((a) => a.type === 'live')) o.live = true; // markLive() in tests/e2e/fixtures.js
         if (outcome === 'fixme') {
           // The label is the contiguous // comment block directly above test.fixme, or the same line.
           const L = lines(spec.file); const ln = (spec.line || 1) - 1;
@@ -186,6 +187,20 @@ function resolve(row) {
     else if (stage === 'unit_java21' && !/^21\./.test(u.jvm || '')) { st.verdict = 'FAIL'; st.reason = `tests ran on JVM ${u.jvm || 'unknown'}, not Java 21`; }
     else if (!c.passed) { st.verdict = 'NOT_MEASURED'; st.reason = 'no test passed (all skipped or none ran)'; }
     else { st.verdict = 'PASS'; st.reason = `${c.passed} passed, ${c.skipped} skipped${jvmNote}`; }
+  } else if (stage === 'e2e_live') {
+    // Derived from the Playwright results, never from the credentials merely being set: those
+    // make the live specs ELIGIBLE to run, not proof that one did (a missing publish tier, an
+    // unreachable media host or a failed fixture still skip them).
+    const live = allTests.filter((t) => t.kind === 'e2e' && t.platform === platform && t.live);
+    const n = (o) => live.filter((t) => t.outcome === o).length;
+    if (!e2eSummary[platform]) { st.verdict = 'NOT_MEASURED'; st.reason = 'no Playwright JSON report, so no live spec result'; }
+    else if (!live.length) { st.verdict = 'NOT_MEASURED'; st.reason = 'no credential-dependent (live) spec is in the report'; }
+    else if (n('failed')) { st.verdict = 'FAIL'; st.reason = `${n('failed')} of ${live.length} live tests failed`; }
+    else if (n('passed')) { st.verdict = 'PASS'; st.reason = `${n('passed')} live tests passed, ${n('skipped')} skipped, ${n('fixme')} fixme`; }
+    else {
+      const why = (live.find((t) => t.reason) || {}).reason || 'all skipped';
+      st.verdict = 'NOT_MEASURED'; st.reason = `no live test passed (${live.length} skipped or fixme): ${why}`.slice(0, 300);
+    }
   } else if (stage === 'e2e') {
     const rf = e2eReports[platform];
     const es = e2eSummary[platform];

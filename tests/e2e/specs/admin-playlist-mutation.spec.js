@@ -10,7 +10,8 @@
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. It creates two throwaway videos and one throwaway playlist (e2e-throwaway- prefix) and
 // removes them in afterAll; it never touches any other object.
-const { test, expect, openAdmin: openAdminFast, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow, searchPlaylistRow } = require('../fixtures');
+const { test, markLive, expect, openAdmin: openAdminFast, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow, searchPlaylistRow } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 
 // The admin page and its first list load slowly when the AEM is busy; a 20 s default is too tight here.
 const openAdmin = (page) => openAdminFast(page, { timeout: 60_000 });

@@ -9,7 +9,8 @@
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. It creates one throwaway video and one throwaway folder (e2e-throwaway- prefix) and
 // removes both in afterAll; it never touches any other object.
-const { test, expect, openAdmin, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow } = require('../fixtures');
+const { test, markLive, expect, openAdmin, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 
 test.describe.configure({ mode: 'serial' });
 

@@ -105,7 +105,9 @@ PLATFORM_LIST=""; ver_local=""
 record() { printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "${5:-}" >> "$WORK/stages.tsv"; }
 
 # Build the summary (also prints the verdict table). Returns summarize.js's exit code.
+SUMMARY_WRITTEN=0
 finish() {
+  SUMMARY_WRITTEN=1
   _out="$WORK/summary.json"; [ -z "$JSON_OUT" ] || _out="$JSON_OUT"
   sha=$(git -C "$ROOT" rev-parse --short=12 HEAD 2>/dev/null || echo "")
   branch=$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
@@ -119,9 +121,11 @@ finish() {
 step() { echo; echo "── $1"; }
 fail() {
   echo "❌ PRE-QA GATE FAILED: $1" >&2
-  # A failure inside a stage is recorded against it, so --json still says which stage and why.
-  if [ -n "$CUR_STAGE" ] && [ -n "$PLATFORM_LIST" ]; then
-    record "$CUR_PLATFORM" "$CUR_STAGE" FAIL "$(printf '%s' "$1" | tr '\n\t' '  ' | cut -c1-400)"
+  # A failure is recorded against its stage, or against "setup" when it happens outside any stage
+  # (bad arguments, no AEM, no JDK), so --json always says which stage failed and why and a stale
+  # PASS file can never survive. Skipped when finish already wrote the summary (unit/e2e failures).
+  if [ "$SUMMARY_WRITTEN" = "0" ]; then
+    record "${CUR_PLATFORM:-setup}" "${CUR_STAGE:-setup}" FAIL "$(printf '%s' "$1" | tr '\n\t' '  ' | cut -c1-400)"
     finish >&2 || true
   fi
   exit 1
@@ -162,7 +166,7 @@ while [ $# -gt 0 ]; do
       AEM_ONPREM_URL="$2"; shift 2 ;;
     --json)
       [ $# -ge 2 ] || fail "--json requires a path"
-      JSON_OUT="$2"; shift 2 ;;
+      JSON_OUT="$2"; rm -f "$JSON_OUT"; shift 2 ;;   # never leave a previous run's verdict behind
     --lock-timeout)
       [ $# -ge 2 ] || fail "--lock-timeout requires seconds"
       LOCK_TIMEOUT="$2"; shift 2 ;;
@@ -196,6 +200,7 @@ case "$PLATFORM_ARG" in
 esac
 # A relative --json path must survive the later cd into current/ and tests/e2e.
 case "$JSON_OUT" in ""|/*) : ;; *) JSON_OUT="$PWD/$JSON_OUT" ;; esac
+[ -z "$JSON_OUT" ] || rm -f "$JSON_OUT"   # a stale PASS file must not survive an early exit
 
 # ---- live (credential-dependent) specs ----
 # Presence only: the values are never printed. Missing creds make every live spec skip,
@@ -342,7 +347,7 @@ fi
 run_unit() {
   platform="$1"; stage="$2"; extra="$3"; dest="$4"
   CUR_PLATFORM="$platform"; CUR_STAGE=""   # a unit FAIL is judged from the artifacts, not recorded by fail()
-  [ -n "$JAVA_HOME" ] || fail "no Java 11 (set JAVA_HOME)"
+  [ -n "${JAVA_HOME:-}" ] || fail "no Java 11 (set JAVA_HOME)"
   uflag=$(unit_profile_for "$platform")
   step "unit [$platform] ${extra:+(java21) }mvn ${uflag:+$uflag }-pl core clean test"
   rc=0
@@ -446,7 +451,7 @@ run_platform() {
     echo "   skipped (--skip-build)"
     record "$platform" build NOT_MEASURED "skipped (--skip-build); deployed_bundle still proves which version runs" waived
   else
-    [ -n "$JAVA_HOME" ] || fail "no Java 11 (set JAVA_HOME)"
+    [ -n "${JAVA_HOME:-}" ] || fail "no Java 11 (set JAVA_HOME)"
     ( cd "$ROOT/current" && mvn clean install -PautoInstallPackage $mflag -Daem.port="$port" -q ) \
       || fail "mvn build/install ($platform)"
     record "$platform" build PASS "mvn clean install -PautoInstallPackage"
@@ -537,12 +542,23 @@ run_platform() {
   ( cd "$ROOT/tests/e2e" && AEM_BASE="$url" PLAYWRIGHT_JSON_OUTPUT_NAME="$out_json" "$PW" test --project=chromium --reporter=list,json ) || rc=$?
   record "$platform" e2e PENDING "exit=$rc"
   if [ "$LIVE_MEASURED" = "1" ]; then
-    record "$platform" e2e_live PASS "credentials present; specs that self-report NOT MEASURED are listed per test in the JSON"
+    # Credentials only make the live specs eligible; summarize.js derives the verdict from the
+    # live-tagged (markLive) test results in the Playwright report.
+    record "$platform" e2e_live PENDING "credentials present"
   else
     record "$platform" e2e_live NOT_MEASURED "missing: $MISSING_LIVE; every credential-dependent spec skipped"
   fi
   echo "   e2e report: $out_json"
-  [ "$rc" = "0" ] || { finish || true; fail "e2e specs ($platform); report: $out_json"; }
+  if [ "$rc" != "0" ]; then
+    # A baseline run is expected to have failing specs (older code): record it and measure the next
+    # platform. The final exit code still reflects the failed stage, and the JSON covers every platform.
+    if [ -n "$BASELINE_VER" ]; then
+      echo "   e2e exited $rc on $platform (expected for an older baseline); continuing"
+      return 0
+    fi
+    finish || true
+    fail "e2e specs ($platform); report: $out_json"
+  fi
 }
 
 for p in $PLATFORM_LIST; do

@@ -19,7 +19,8 @@
 //     a=update_video endpoint and its dead ExtJS metaEdit() dialog were deleted.
 //   - Labels (Save Labels) and the poster/thumbnail URL are the UI saves that
 //     exist. Save Labels is the live UI path through executePatch.
-const { test, expect, openAdmin, resolveAccountId, mediaHostReachable } = require('../fixtures');
+const { test, markLive, expect, openAdmin, resolveAccountId, mediaHostReachable } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 const { AEM_USER, AEM_PASS } = require('../target');
 const { creds, cmsClient } = require('../cms');
 const { readConfig, setProxy, restoreConfig, backupConfig } = require('../connector-config');

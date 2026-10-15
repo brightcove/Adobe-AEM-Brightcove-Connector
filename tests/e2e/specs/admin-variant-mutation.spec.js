@@ -12,7 +12,8 @@
 // Needs the Video Cloud credentials of the account the AEM under test is configured with
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. Removes the video and the DAM folder (e2e-throwaway- prefix) in afterAll.
-const { test, expect, throwawayName, expectNoThrowawaysLeft, liveCms, resolveAccountId } = require('../fixtures');
+const { test, markLive, expect, throwawayName, expectNoThrowawaysLeft, liveCms, resolveAccountId } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 const dam = require('../dam');
 
 test.describe.configure({ mode: 'serial' });

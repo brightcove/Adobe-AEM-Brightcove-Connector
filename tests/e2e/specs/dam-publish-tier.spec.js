@@ -59,7 +59,8 @@
 // account folder, Video Cloud videos and folders. afterAll removes them on failure
 // too. Every Video Cloud assertion is a fresh CMS GET (tests/e2e/cms.js), never a
 // toast or a servlet response.
-const { test, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
+const { test, markLive, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 const { creds, cmsClient } = require('../cms');
 const dam = require('../dam');
 

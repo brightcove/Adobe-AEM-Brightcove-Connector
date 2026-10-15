@@ -236,6 +236,14 @@ function throwawayName(kind) {
   return name;
 }
 
+// Marks every test in the calling spec file as credential-dependent ("live"): call once at file scope
+// in a spec whose beforeAll needs the BRIGHTCOVE_* credentials. The annotation reaches the Playwright
+// JSON report, where tests/gate/summarize.js derives the gate's e2e_live verdict from it: PASS only
+// when a live test actually passed, never from the mere presence of the variables.
+function markLive(testObj = test) {
+  testObj.beforeEach(async ({}, testInfo) => { testInfo.annotations.push({ type: 'live', description: 'credential-dependent' }); });
+}
+
 // afterAll helper, call it AFTER the spec's own deletes: asserts nothing this process created through
 // throwawayName is still in the account (the "left nothing behind" check). Names the process
 // handed out and never used are simply not found, so they do not count.
@@ -299,6 +307,6 @@ async function searchPlaylistRow(page, name, { timeout = 60_000 } = {}) {
 module.exports = {
   test, expect, ADMIN_PATH, openAdmin, waitForVideoRows,
   resolveAccountId, brightcoveAssetsRoot, firstBrightcoveAsset,
-  throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow, searchPlaylistRow,
+  throwawayName, expectNoThrowawaysLeft, markLive, liveCms, searchVideoRow, searchPlaylistRow,
   mediaHostReachable, parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
 };
