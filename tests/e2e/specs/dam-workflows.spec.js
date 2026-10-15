@@ -22,7 +22,8 @@
 // Writes only e2e-throwaway-* objects and removes them in afterAll, on failure too.
 // The delete case only ever points the step at a video this file created, and checks
 // that before starting the workflow.
-const { test, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
+const { test, markLive, expect, resolveAccountId, brightcoveAssetsRoot } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 const { creds, cmsClient } = require('../cms');
 const dam = require('../dam');
 

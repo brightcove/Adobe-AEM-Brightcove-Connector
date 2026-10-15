@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "verdict": "FAIL",
+  "mode": "full",
+  "git": {
+    "sha": "base0000"
+  },
+  "connector_version": "7.2.3",
+  "platforms": [
+    "cloud"
+  ],
+  "stages": [
+    {
+      "platform": "cloud",
+      "stage": "unit",
+      "verdict": "PASS",
+      "reason": ""
+    },
+    {
+      "platform": "cloud",
+      "stage": "e2e",
+      "verdict": "FAIL",
+      "reason": ""
+    }
+  ],
+  "coverage": {
+    "cloud": {
+      "line_pct": 30.0,
+      "branch_pct": 28.0
+    }
+  },
+  "defect_pins": {
+    "unit_disabled_defect": 6,
+    "e2e_fixme_total": 5,
+    "e2e_fixme_defect": 0
+  },
+  "tests": [
+    {
+      "id": "unit:cloud:A#same",
+      "kind": "unit",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > goes red",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > was broken, now fixed",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "failed",
+      "reason": "boom"
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > broken both",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "failed",
+      "reason": "boom"
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > feature absent on baseline",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "skipped",
+      "reason": "NOT MEASURED: no such panel"
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > pinned",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "fixme",
+      "defect": true
+    },
+    {
+      "id": "e2e:cloud:a.spec.js > deleted later",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    }
+  ]
+}

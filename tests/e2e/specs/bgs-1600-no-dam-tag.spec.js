@@ -18,7 +18,8 @@
 // /bin/brightcove/dataload servlet, the same one the admin Sync button posts to.
 // Both videos and any DAM asset they produced are removed in afterAll, even on
 // failure. Media source: BRC_E2E_VIDEO_URL (default: a 1 MB CC0 clip).
-const { test, expect, resolveAccountId, brightcoveAssetsRoot, slingPost, mediaHostReachable } = require('../fixtures');
+const { test, markLive, expect, resolveAccountId, brightcoveAssetsRoot, slingPost, mediaHostReachable } = require('../fixtures');
+markLive(test); // credential-dependent: counts toward the gate's e2e_live verdict
 const { creds, cmsClient } = require('../cms');
 
 const VIDEO_URL = process.env.BRC_E2E_VIDEO_URL || 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';

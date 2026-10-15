@@ -210,6 +210,24 @@ async function deleteNode(request, nodePath) {
   if (res.status() >= 300 && res.status() !== 404) console.warn(`[dam] delete ${nodePath}: HTTP ${res.status()}`);
 }
 
+// Deletes throwaway children of `parentPath` whose name embeds a creation time (fixtures.throwawayName:
+// e2e-throwaway-<kind>-<epoch ms>-<n>) older than `maxAgeMs` (default one day), so a run killed
+// before its afterAll does not leave DAM folders behind. Returns the number removed.
+async function sweepThrowawayNodes(request, parentPath, maxAgeMs = 24 * 3600 * 1000) {
+  // ⚠️ Not `<parent>.1.json`: a large parent such as /content/dam answers 400. QueryBuilder finds
+  // the folders createDamFolder made (sling:OrderedFolder) by name instead.
+  const res = await request.get(`/bin/querybuilder.json?path=${encodeURIComponent(parentPath)}&type=sling:OrderedFolder&nodename=${PREFIX}*&p.limit=-1&p.hits=selective&p.properties=jcr:path`);
+  if (!res.ok()) throw new Error(`querybuilder HTTP ${res.status()}`);
+  let removed = 0;
+  for (const hit of (await res.json()).hits || []) {
+    const name = path.posix.basename(hit['jcr:path']);
+    if (!name.startsWith(PREFIX)) continue; // do not rely on the nodename predicate alone
+    const m = /-(\d{13})-\d+/.exec(name);
+    if (m && Date.now() - Number(m[1]) > maxAgeMs) { await deleteNode(request, hit['jcr:path']); removed++; }
+  }
+  return removed;
+}
+
 // ---- Replication ----------------------------------------------------------------
 
 // Activate one path through the classic Replicator (all enabled agents). Returns the
@@ -330,7 +348,7 @@ module.exports = {
   tracker,
   PREFIX, FIXTURE_MP4, AEM_PUBLISH_URL, stamp, sleep, pollUntil,
   component, runModes, logLines,
-  json, createDamFolder, uploadAsset, assetNode, metadata, setMetadata, touch, setProps, moveNode, deleteNode,
+  json, createDamFolder, uploadAsset, assetNode, metadata, setMetadata, touch, setProps, moveNode, deleteNode, sweepThrowawayNodes,
   activate, enabledAgents,
   publishContext, waitOnPublish, deleteOnPublish,
   runWorkflow,

@@ -69,6 +69,7 @@ test('upload shows loading state then success toast and re-renders without page 
 // language field's async BCP-47 validation (brcUI.js `prop('disabled', !(langOk && sourceOk))`)
 // can resolve after the click and re-enable it. Passes in isolation, fails in the suite where
 // the validation lands later. Flip fixme -> test when the product guards the in-flight state.
+// DEFECT: async language validation can re-enable the Upload button while the request is in flight (3b item 7).
 test.fixme('upload keeps the Upload button disabled while the request is in flight', async ({ page }) => {
   await openUploadModalForFirstVideo(page);
   await page.route(/api\.js$/, async (route) => {

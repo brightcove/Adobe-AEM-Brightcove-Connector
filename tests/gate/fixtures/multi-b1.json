@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "mode": "full",
+  "git": {
+    "sha": "mb1"
+  },
+  "connector_version": "x",
+  "platforms": [
+    "cloud"
+  ],
+  "stages": [
+    {
+      "platform": "cloud",
+      "stage": "unit",
+      "verdict": "NOT_MEASURED",
+      "reason": "baseline run",
+      "waived": true
+    },
+    {
+      "platform": "cloud",
+      "stage": "e2e",
+      "verdict": "FAIL",
+      "reason": ""
+    }
+  ],
+  "tests": [
+    {
+      "id": "e2e:cloud:m.spec.js > goes red",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > flaky candidate",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > flaky baseline",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > one bad run is not a regression",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > fixed",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "failed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > still failing",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "failed"
+    },
+    {
+      "id": "e2e:cloud:m.spec.js > same",
+      "kind": "e2e",
+      "platform": "cloud",
+      "outcome": "passed"
+    }
+  ]
+}
