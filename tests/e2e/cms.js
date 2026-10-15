@@ -185,13 +185,15 @@ async function cmsClient() {
     },
     // Every playlist in the account (the list endpoint, paged; not a search, so no index lag).
     async allPlaylists() {
+      // Capped like searchAll, but throws at the cap: a silently truncated list would undercount leftovers.
       const out = [];
-      for (let offset = 0; ; offset += 100) {
+      for (let offset = 0; offset < 100 * 100; offset += 100) {
         const res = await call('GET', 'cms.api.brightcove.com', `/v1/accounts/${c.account}/playlists?limit=100&offset=${offset}&sort=name`, { headers: await auth() });
         if (res.status !== 200 || !Array.isArray(res.json)) throw new Error(`list playlists failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
         out.push(...res.json);
         if (res.json.length < 100) return out;
       }
+      throw new Error(`list playlists: more than ${out.length} playlists, paging cap reached`);
     },
     // Playlist lookup by exact name. null when absent.
     async findPlaylistByName(name) {
