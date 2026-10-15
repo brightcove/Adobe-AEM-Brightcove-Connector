@@ -10,7 +10,7 @@
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. It creates two throwaway videos and one throwaway playlist (e2e-throwaway- prefix) and
 // removes them in afterAll; it never touches any other object.
-const { test, expect, openAdmin: openAdminFast, throwawayName, liveCms, searchVideoRow, searchPlaylistRow } = require('../fixtures');
+const { test, expect, openAdmin: openAdminFast, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow, searchPlaylistRow } = require('../fixtures');
 
 // The admin page and its first list load slowly when the AEM is busy; a 20 s default is too tight here.
 const openAdmin = (page) => openAdminFast(page, { timeout: 60_000 });
@@ -44,6 +44,7 @@ test.afterAll(async () => {
   }
   for (const id of [...ids, ...extraPlaylists]) await cms.delPlaylistIfThrowaway(id);
   for (const id of [videoA && videoA.id, videoB && videoB.id, ...extraVideos]) if (id) await cms.delIfThrowaway(id);
+  await expectNoThrowawaysLeft(cms);
 });
 
 const videoIdsOf = async () => ((await cms.tryGetPlaylist(playlistId)) || {}).video_ids || [];

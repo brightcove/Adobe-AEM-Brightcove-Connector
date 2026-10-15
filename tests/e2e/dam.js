@@ -221,6 +221,7 @@ async function sweepThrowawayNodes(request, parentPath, maxAgeMs = 24 * 3600 * 1
   let removed = 0;
   for (const hit of (await res.json()).hits || []) {
     const name = path.posix.basename(hit['jcr:path']);
+    if (!name.startsWith(PREFIX)) continue; // do not rely on the nodename predicate alone
     const m = /-(\d{13})-\d+/.exec(name);
     if (m && Date.now() - Number(m[1]) > maxAgeMs) { await deleteNode(request, hit['jcr:path']); removed++; }
   }

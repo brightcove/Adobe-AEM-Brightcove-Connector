@@ -142,7 +142,7 @@ credentials of the account AEM is configured with (`BRIGHTCOVE_ACCOUNT_ID` / `_C
 - Fixtures are `e2e-throwaway-<kind>-<epoch ms>-<n>` (`fixtures.throwawayName`), removed in `afterAll`
   even on failure. `liveCms()` also sweeps day-old leftovers of aborted runs (`cms.sweepThrowaways`,
   `dam.sweepThrowawayNodes`). Every delete re-reads the object and checks the prefix first.
-- `cms.countThrowaways()` reports what is still in the account; it should be all zeros after a run.
+- `cms.countThrowaways(names)` reports what is still in the account. The three admin-*-mutation specs assert it is all zeros for the names the run created (`expectNoThrowawaysLeft` in their afterAll), so a leak fails the spec.
 - The admin tool has no delete-video action, so none is covered. Pinned gaps are `test.fixme` with a
   `// DEFECT:` comment: removing a video from a folder (no UI path) and deleting the last variant
   (not persisted to the DAM asset).

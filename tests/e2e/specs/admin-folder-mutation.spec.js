@@ -9,7 +9,7 @@
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. It creates one throwaway video and one throwaway folder (e2e-throwaway- prefix) and
 // removes both in afterAll; it never touches any other object.
-const { test, expect, openAdmin, throwawayName, liveCms, searchVideoRow } = require('../fixtures');
+const { test, expect, openAdmin, throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow } = require('../fixtures');
 
 test.describe.configure({ mode: 'serial' });
 
@@ -29,6 +29,7 @@ test.afterAll(async () => {
   if (!cms) return;
   if (video) await cms.delIfThrowaway(video.id);
   if (folder) await cms.delFolderIfThrowaway(folder);
+  await expectNoThrowawaysLeft(cms);
 });
 
 async function moveVideoIntoFolderViaUi(page) {

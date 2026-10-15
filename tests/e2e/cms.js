@@ -76,6 +76,18 @@ async function cmsClient() {
       if (res.status !== 200 || !Array.isArray(res.json)) throw new Error(`search videos failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
       return res.json;
     },
+    // Every video matching `q`, paged (search() returns one page of 50). Used by the sweep and the
+    // leftover count, which must see past the first page. Capped so a bad query cannot loop forever.
+    async searchAll(q) {
+      const out = [];
+      for (let offset = 0; offset < 100 * 100; offset += 100) {
+        const res = await call('GET', 'cms.api.brightcove.com', `${base}?q=${encodeURIComponent(q)}&limit=100&offset=${offset}`, { headers: await auth() });
+        if (res.status !== 200 || !Array.isArray(res.json)) throw new Error(`search videos failed (HTTP ${res.status}): ${res.text.slice(0, 200)}`);
+        out.push(...res.json);
+        if (res.json.length < 100) break;
+      }
+      return out;
+    },
     // Dynamic Ingest of a public media URL, so the video can become state ACTIVE.
     async ingest(id, url) {
       const body = JSON.stringify({ master: { url }, capture_images: true });
@@ -206,7 +218,7 @@ async function cmsClient() {
     async sweepThrowaways(maxAgeMs = 24 * 3600 * 1000) {
       const old = (o) => Date.now() - Date.parse(o.created_at) > maxAgeMs;
       const out = { videos: 0, playlists: 0, folders: 0 };
-      for (const v of await this.search(THROWAWAY_PREFIX.replace(/-$/, ''))) {
+      for (const v of await this.searchAll(THROWAWAY_PREFIX.replace(/-$/, ''))) {
         if (String(v.name).startsWith(THROWAWAY_PREFIX) && old(v) && await this.delIfThrowaway(v.id)) out.videos++;
       }
       for (const p of await this.allPlaylists()) {
@@ -220,15 +232,17 @@ async function cmsClient() {
     // Throwaway objects still in the account: the post-run "left nothing behind" check. Video
     // search hits are re-read directly, because the index keeps listing a deleted video for a
     // long while (measured: days); only a hit that still resolves counts.
-    async countThrowaways() {
+    // `names` (optional array of exact names) narrows the count to what one run created.
+    async countThrowaways(names) {
+      const mine = (o) => String(o.name).startsWith(THROWAWAY_PREFIX) && (!names || names.includes(o.name));
       let videos = 0;
-      for (const v of await this.search(THROWAWAY_PREFIX.replace(/-$/, ''))) {
-        if (String(v.name).startsWith(THROWAWAY_PREFIX) && await this.tryGet(v.id)) videos++;
+      for (const v of await this.searchAll(THROWAWAY_PREFIX.replace(/-$/, ''))) {
+        if (mine(v) && await this.tryGet(v.id)) videos++;
       }
       return {
         videos,
-        playlists: (await this.allPlaylists()).filter((p) => String(p.name).startsWith(THROWAWAY_PREFIX)).length,
-        folders: (await this.folders()).filter((f) => String(f.name).startsWith(THROWAWAY_PREFIX)).length,
+        playlists: (await this.allPlaylists()).filter(mine).length,
+        folders: (await this.folders()).filter(mine).length,
       };
     },
     // Re-reads the video and deletes it only when its CURRENT name carries the

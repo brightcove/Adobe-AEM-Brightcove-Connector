@@ -12,7 +12,7 @@
 // Needs the Video Cloud credentials of the account the AEM under test is configured with
 // (BRIGHTCOVE_ACCOUNT_ID / _CLIENT_ID / _CLIENT_SECRET). Without them the file skips as NOT
 // MEASURED. Removes the video and the DAM folder (e2e-throwaway- prefix) in afterAll.
-const { test, expect, throwawayName, liveCms, resolveAccountId } = require('../fixtures');
+const { test, expect, throwawayName, expectNoThrowawaysLeft, liveCms, resolveAccountId } = require('../fixtures');
 const dam = require('../dam');
 
 test.describe.configure({ mode: 'serial' });
@@ -47,6 +47,7 @@ test.afterAll(async ({ request }) => {
   if (!cms) return;
   if (video) await cms.delIfThrowaway(video.id);
   if (folderPath) await dam.deleteNode(request, folderPath);
+  await expectNoThrowawaysLeft(cms);
 });
 
 async function openEditor(page) {
@@ -87,6 +88,9 @@ test('add a variant', async ({ page }) => {
   // 2. After a refresh the editor lists it, and its edit dialog carries the saved values.
   await openEditor(page);
   await expect(badge(page)).toHaveCount(1);
+  await badge(page).locator('.brc-edit-variant-btn').click();
+  await expect(page.locator('#brc-variant-name')).toHaveValue('Nom original');
+  await expect(page.locator('#brc-variant-description')).toHaveValue('Description originale');
 });
 
 test('update a variant', async ({ page }) => {

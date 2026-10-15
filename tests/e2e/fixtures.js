@@ -229,8 +229,19 @@ async function editorScrollTop(page) {
 
 // Run-scoped throwaway name: unique per process so concurrent runs and leftovers never collide,
 // and always under the prefix every guarded delete and the sweep key on.
+const createdNames = [];
 function throwawayName(kind) {
-  return `e2e-throwaway-${kind}-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
+  const name = `e2e-throwaway-${kind}-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
+  createdNames.push(name);
+  return name;
+}
+
+// afterAll helper, call it AFTER the spec's own deletes: asserts nothing this process created through
+// throwawayName is still in the account (the "left nothing behind" check). Names the process
+// handed out and never used are simply not found, so they do not count.
+async function expectNoThrowawaysLeft(cms) {
+  const left = await cms.countThrowaways(createdNames);
+  expect(left, `throwaway fixtures left behind in the account: ${JSON.stringify(left)}`).toEqual({ videos: 0, playlists: 0, folders: 0 });
 }
 
 // beforeAll helper for the live specs. Skips (NOT MEASURED) without credentials, refuses when the
@@ -288,6 +299,6 @@ async function searchPlaylistRow(page, name, { timeout = 60_000 } = {}) {
 module.exports = {
   test, expect, ADMIN_PATH, openAdmin, waitForVideoRows,
   resolveAccountId, brightcoveAssetsRoot, firstBrightcoveAsset,
-  throwawayName, liveCms, searchVideoRow, searchPlaylistRow,
+  throwawayName, expectNoThrowawaysLeft, liveCms, searchVideoRow, searchPlaylistRow,
   mediaHostReachable, parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
 };
