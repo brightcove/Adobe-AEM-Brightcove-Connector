@@ -128,6 +128,36 @@ async function firstVideos(request, limit = 3) {
   return items;
 }
 
+// Up to `limit` videos the given player can actually play, as { id, name }. firstVideos()
+// returns whatever sorts first, which can be a DELETED throwaway (Playback API 404), a
+// remote video pointing at an expired stream (MEDIA_ERR_SRC_NOT_SUPPORTED), or a DRM-only
+// video (MEDIA_ERR_ENCRYPTED: Playwright's Chrome has no Widevine): fine for a dialog
+// picker, wrong for a page that renders players. DRM is not visible in the CMS fields, so
+// each candidate is checked against the Playback API with the player's public policy key,
+// i.e. the same response the player gets. Throws when none qualify.
+async function playableVideos(request, limit = 2, player = 'default', scan = 100) {
+  const acct = await resolveAccountId(request);
+  const res = await request.get(
+    `/bin/brightcove/api.js?account_id=${acct}&a=search_videos&query=&limit=${scan}&start=0&sort=&callback=cb`);
+  if (!res.ok()) throw new Error(`search_videos failed (HTTP ${res.status()})`);
+  const body = parseJsonp(await res.text());
+  const candidates = (body.items || [])
+    .filter((v) => v.state === 'ACTIVE' && v.complete === true && v.delivery_type === 'dynamic_origin' && v.duration > 0);
+  const cfg = await request.get(`https://players.brightcove.net/${acct}/${player}_default/config.json`);
+  if (!cfg.ok()) throw new Error(`player config for ${acct}/${player} failed (HTTP ${cfg.status()})`);
+  const policyKey = ((await cfg.json()).video_cloud || {}).policy_key;
+  if (!policyKey) throw new Error(`player ${acct}/${player} has no policy_key: cannot check playability`);
+  const out = [];
+  for (const v of candidates) {
+    if (out.length >= limit) break;
+    const pb = await request.get(`https://edge.api.brightcove.com/playback/v1/accounts/${acct}/videos/${v.id}`, { headers: { 'BCOV-Policy': policyKey } });
+    if (!pb.ok()) continue;
+    if (((await pb.json()).sources || []).some((s) => !s.key_systems)) out.push({ id: String(v.id), name: v.name });
+  }
+  if (!out.length) throw new Error(`none of the first ${scan} videos has a clear (non-DRM) source in the Playback API: nothing playable to render`);
+  return out;
+}
+
 
 // Sling POST from the API request context. Two filters sit in front of a
 // cookie-authenticated POST that a basic-auth curl never meets (measured
@@ -313,5 +343,5 @@ module.exports = {
   test, expect, ADMIN_PATH, openAdmin, waitForVideoRows,
   resolveAccountId, brightcoveAssetsRoot, firstBrightcoveAsset,
   throwawayName, expectNoThrowawaysLeft, markLive, liveCms, searchVideoRow, searchPlaylistRow,
-  mediaHostReachable, parseJsonp, firstVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
+  mediaHostReachable, parseJsonp, firstVideos, playableVideos, slingPost, createSitesTestPage, deletePage, editorScrollTop,
 };

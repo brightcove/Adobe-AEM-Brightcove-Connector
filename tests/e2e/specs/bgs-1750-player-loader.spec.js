@@ -18,7 +18,7 @@
 // .brightcove-container before any page script runs, because video.js rewrites
 // the tag's attributes once it initialises.
 const {
-  test, expect, resolveAccountId, firstVideos, createSitesTestPage, deletePage, mediaHostReachable,
+  test, expect, resolveAccountId, playableVideos, createSitesTestPage, deletePage, mediaHostReachable,
 } = require('../fixtures');
 
 // Media and player surfaces need real Chrome: bundled chromium under-initialises the media stack.
@@ -32,7 +32,7 @@ let PAGE_PATH;
 test.beforeAll(async ({ request }) => {
   test.skip(!(await mediaHostReachable('https://players.brightcove.net/')), 'NOT MEASURED: players.brightcove.net is unreachable, so no player loader can run');
   const account = await resolveAccountId(request);
-  const videos = await firstVideos(request, 2);
+  const videos = await playableVideos(request, 2);
   const second = videos[1] || videos[0];
   PAGE_PATH = await createSitesTestPage(request, RUN, [
     ['brightcove_player_a', PLAYER_RT, { account, videoPlayer: videos[0].id }],
@@ -89,6 +89,7 @@ async function waitForPlayers(page, ids) {
     if (!p) return `${id}: no player`;
     if (p.isDisposed()) return `${id}: disposed`;
     if (!document.documentElement.contains(p.el())) return `${id}: detached`;
+    if (p.error()) return `${id}: player error ${p.error().code}`;
     return p.isReady_ ? 'ok' : `${id}: not ready`;
   }), ids), { timeout: 45_000, message: 'players did not all become live and ready' }).toEqual(ids.map(() => 'ok'));
 }
