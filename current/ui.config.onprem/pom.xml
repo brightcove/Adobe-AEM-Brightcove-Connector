@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.coresecure</groupId>
         <artifactId>brightcove</artifactId>
-        <version>7.4.1</version>
+        <version>7.4.2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <!-- On-prem-only OSGi config. Built and embedded only under -Daem.platform=onprem
