@@ -158,7 +158,9 @@ const SITES_POLICY = `/conf/${SITES_SITE}/settings/wcm/policies/wcm/foundation/c
 // even when every component is an unconfigured 50px placeholder.
 const FILLER = 'Filler so the page is taller than the viewport and the second player sits below the fold. '.repeat(60);
 
-async function createSitesTestPage(request, name) {
+// `components`, when given, replaces the default component list: an array of
+// [node, resourceType, properties] placed in that order in the page's parsys.
+async function createSitesTestPage(request, name, components) {
   for (const p of [SITES_TEMPLATE, SITES_POLICY]) {
     const r = await request.get(`${p}.json`);
     if (!r.ok()) {
@@ -177,7 +179,7 @@ async function createSitesTestPage(request, name) {
     for (const [k, v] of Object.entries(extra)) out[`${rg}/${node}/${k}`] = v;
     return out;
   };
-  const form = {
+  const pageForm = {
     'jcr:primaryType': 'cq:Page',
     'jcr:content/jcr:primaryType': 'cq:PageContent',
     'jcr:content/jcr:title': `e2e Brightcove components (${name})`,
@@ -187,6 +189,9 @@ async function createSitesTestPage(request, name) {
     'jcr:content/root/sling:resourceType': 'wcm/foundation/components/responsivegrid',
     [`${rg}/jcr:primaryType`]: 'nt:unstructured',
     [`${rg}/sling:resourceType`]: 'wcm/foundation/components/responsivegrid',
+  };
+  const form = components ? Object.assign(pageForm, ...components.map(([n, rt, extra]) => comp(n, rt, extra))) : {
+    ...pageForm,
     ...comp('filler_a', 'wcm/foundation/components/text', { text: FILLER }),
     ...comp('brightcove_player_top', 'brightcove/components/content/brightcoveplayer'),
     ...comp('filler_b', 'wcm/foundation/components/text', { text: FILLER }),
