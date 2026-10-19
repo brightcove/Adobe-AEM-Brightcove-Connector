@@ -19,6 +19,10 @@ Asserts, per docs/dam-sync-on-activation.md:
   both     BrightcovePublishListener stays OFF: its metatype default for isEnabled is
            false and no embedded package ships an OSGi config for its PID (so on-prem
            does not handle each activation twice, agent + listener)
+  both     the embedded brightcove.ui.content filters /content/dam/brightcove_assets/jcr:content
+           with mode merge_properties (cloud) or merge (on-prem), and the on-prem zip uses
+           merge_properties nowhere: FileVault 3.2.8 on 6.5 SPs rejects it at install
+           (docs/core-folder-sync.md "Default folder properties")
   both     no WCM Core Components inside: no embedded core.wcm.components.* artifact, no
            Core Components pom.xml (scanners read those), nothing under /apps/core
            (docs/core-components-not-embedded.md)
@@ -234,6 +238,30 @@ def no_core_components(packages):
     check(not hits, f"no WCM Core Components embedded {hits[:5] or ''}")
 
 
+DAM_FOLDER = "/content/dam/brightcove_assets/jcr:content"
+
+
+def filters(z):
+    """{root: mode} from a package's META-INF/vault/filter.xml (mode None when unset)."""
+    if "META-INF/vault/filter.xml" not in z.namelist():
+        return {}
+    return {f.get("root"): f.get("mode") for f in ET.fromstring(z.read("META-INF/vault/filter.xml")).iter("filter")}
+
+
+def dam_folder_mode(packages, on_prem):
+    """The default DAM folder's filter mode is per platform (FileVault 3.2.8 has no merge_properties)."""
+    want = "merge" if on_prem else "merge_properties"
+    hits = [(p, z) for p, z in packages if re.search(r"(^|/)brightcove\.ui\.content-[^/!]*\.zip!$", p)]
+    check(len(hits) == 1, f"exactly one embedded brightcove.ui.content package ({[p for p, _ in hits]})")
+    if not hits:
+        return
+    got = filters(hits[0][1]).get(DAM_FOLDER, "<no filter>")
+    check(got == want, f"{DAM_FOLDER} filter mode is {want} (got {got})")
+    if on_prem:
+        bad = [(p or "<top>", r) for p, z in packages for r, m in filters(z).items() if m == "merge_properties"]
+        check(not bad, f"no on-prem package filter uses merge_properties {bad or ''}")
+
+
 def main(paths):
     if not paths:
         print(__doc__)
@@ -243,6 +271,7 @@ def main(paths):
         packages = list(walk(zipfile.ZipFile(path)))
         listener_off(packages)
         no_core_components(packages)
+        dam_folder_mode(packages, path.endswith("-prem.zip"))
         scripts, bad = all_aces(packages)
         check(len(scripts) > 0, "at least one embedded repoinit script was found (NOT MEASURED otherwise)")
         common(scripts, bad)
