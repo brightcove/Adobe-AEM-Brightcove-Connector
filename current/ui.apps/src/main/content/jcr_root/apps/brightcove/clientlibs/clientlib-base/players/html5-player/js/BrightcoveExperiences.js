@@ -34,16 +34,66 @@
 document.addEventListener("DOMContentLoaded", (event) => {
   createPlayers();
 });
+
+// BGS-1750: page-level registry of injected player loaders, keyed by loader src,
+// so each index.min.js is added at most once per page however many containers
+// share it and however often createPlayers() runs (the BGS-1690 observer below
+// calls it on every inserted container). Entry: { loaded, pending: {playerID: build} }.
+// ⚠️ Kept on window, not in a closure or on createPlayers: if this clientlib is
+// evaluated again (a REFRESH_SELF fragment carrying its <script>), createPlayers
+// is redefined and a registry stored on it would reset and re-inject every loader.
+// The property name must differ from every global function name in this file: a
+// top-level function declaration IS a window property.
+function brcPlayerLoaders() {
+    return window.brcPlayerLoaderRegistry || (window.brcPlayerLoaderRegistry = {});
+}
+
+// The live player registered under playerID, or null. ⚠️ Uses the non-creating
+// videojs.getPlayers() lookup: videojs(id) CREATES a player when an element with
+// that id exists. videojs is undefined until the first loader has run.
+function brcLivePlayer(playerID) {
+    try {
+        if (typeof videojs === "undefined" || typeof videojs.getPlayers !== "function") return null;
+        var player = videojs.getPlayers()[playerID];
+        return (player && !player.isDisposed()) ? player : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// True when the container already holds this live player, attached to the document,
+// for the same video/account/player/embed. video.js copies the <video> tag's
+// attributes onto the player element, so they compare directly.
+function brcPlayerIsCurrent(player, container) {
+    var el = player.el();
+    if (!el || !container.contains(el) || !document.documentElement.contains(el)) return false;
+    var keys = ["data-video-id", "data-account", "data-player", "data-embed"];
+    for (var k = 0; k < keys.length; k++) {
+        if (el.getAttribute(keys[k]) !== container.getAttribute(keys[k])) return false;
+    }
+    return true;
+}
+
 function createPlayers(root) {
     var scope = root || document;
+    var loaders = brcPlayerLoaders();
     var all = scope.getElementsByClassName("brightcove-container");
     for (var i = 0, max = all.length; i < max; i++) {
         var selected_element = all[i];
         var playerID= selected_element.getAttribute("data-playerid");
-        try {
-            videojs(playerID).dispose();
-        } catch (e) {
+        // Idempotency guard: a re-run (observer pass over a sibling insert, SPA or
+        // slider re-render) must not dispose and rebuild a healthy player, which
+        // tears down its MediaSource mid-use. Anything else falls through to rebuild.
+        var existing = brcLivePlayer(playerID);
+        if (existing && brcPlayerIsCurrent(existing, selected_element)) {
+            continue;
+        }
+        if (existing) {
+            try {
+                existing.dispose();
+            } catch (e) {
 
+            }
         }
         var dataAccount= selected_element.getAttribute("data-account");
         var dataPlayer= selected_element.getAttribute("data-player");
@@ -52,11 +102,13 @@ function createPlayers(root) {
         var dataWidth= (selected_element.hasAttribute("data-width") ? selected_element.getAttribute("data-width") : '')
         var dataHeight= (selected_element.hasAttribute("data-height") ? selected_element.getAttribute("data-height") : '');
         var dataUsage = selected_element.getAttribute("data-usage");
-        var s = document.createElement('script');
-        s.src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
-        s.onload = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element) {
+        var src = "//players.brightcove.net/" + dataAccount + "/" + dataPlayer + "_"+dataEmbed+"/index.min.js";
+        var buildPlayer = (function(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,dataUsage,selected_element) {
             return function() {
-                var playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls width=\"' + dataWidth + '\" height=\"' + dataHeight + '\"></video>';
+                // Only emit width/height when the author set them: no width="" or
+                // width="null" on the tag (BGS-1750).
+                var sizeAttrs = (dataWidth ? ' width=\"' + dataWidth + '\"' : '') + (dataHeight ? ' height=\"' + dataHeight + '\"' : '');
+                var playerHTML = '<video id=\"' + playerID + '\" data-video-id=\"' + dataVideoId + '\"  data-account=\"' + dataAccount + '\" data-player=\"' + dataPlayer + '\" data-embed=\"' + dataEmbed + '\" data-usage=\"' + dataUsage + '\" class=\"video-js\" controls' + sizeAttrs + '></video>';
                 selected_element.innerHTML = playerHTML;
                 bc(document.getElementById(playerID));
                 videojs(playerID).ready(function () {
@@ -106,8 +158,40 @@ function createPlayers(root) {
                     }
                 });
             };
-        }(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,selected_element));
-        document.body.appendChild(s);
+        }(playerID,dataVideoId,dataAccount,dataPlayer,dataEmbed,dataWidth,dataHeight,dataUsage,selected_element));
+
+        var loader = loaders[src];
+        if (loader && loader.loaded) {
+            buildPlayer();
+        } else if (loader) {
+            // Loader in flight: keyed by playerID so a re-run replaces this
+            // container's pending build instead of stacking a second one.
+            loader.pending[playerID] = buildPlayer;
+        } else {
+            loader = loaders[src] = { loaded: false, pending: {} };
+            loader.pending[playerID] = buildPlayer;
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = (function(ld) {
+                return function() {
+                    ld.loaded = true;
+                    var pending = ld.pending;
+                    ld.pending = {};
+                    for (var id in pending) {
+                        if (pending.hasOwnProperty(id)) pending[id]();
+                    }
+                };
+            }(loader));
+            s.onerror = (function(failedSrc, el) {
+                return function() {
+                    // Drop the entry and the dead tag so a later pass re-injects;
+                    // otherwise every container for this src queues forever.
+                    delete loaders[failedSrc];
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                };
+            }(src, s));
+            document.body.appendChild(s);
+        }
     }
 }
 
@@ -117,8 +201,15 @@ function createPlayers(root) {
 // Watch the document for inserted/replaced .brightcove-container nodes and
 // re-init just the affected subtree. Works for insert / edit / copy / paste
 // regardless of which AEM editor event fires.
+// Builds only touch nodes inside the container (<video>, the video.js wrapper)
+// and append loader <script>s to <body>; none is or holds a container, so a
+// build never re-triggers this observer.
 (function () {
     if (typeof MutationObserver === "undefined") return;
+    // BGS-1750: one observer per page. A REFRESH_SELF fragment carries this
+    // clientlib's <script>; each evaluation would otherwise add another observer.
+    if (window.brcPlayerObserver) return;
+    window.brcPlayerObserver = true;
 
     var pendingRoots = [];
     var scheduled = false;
