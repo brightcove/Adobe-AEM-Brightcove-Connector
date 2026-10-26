@@ -6,6 +6,13 @@ re-verified by installing the real `brightcove_connector.ui.apps` 6.0.12 package
 new build and upgrading again to 7.3.8. Two bullets below were WRONG before that second pass
 and are corrected: the workflow-model names and the legacy clientlib paths.
 
+**Do not uninstall 6.0.x first.** Install the 7.x package directly over it. Uninstalling the
+6.0.x package deletes the content that package owns (the `brightcove://` replication agent node
+and the connector service user), which the 7.x package otherwise carries over. The 7.x package
+removes the 6.0.x bundle itself.
+
+Supported combinations: `compatibility.md`.
+
 ## What the 7.x package does for you
 
 - **Removes the 6.0.x bundle and its runmode configs.** The package owns `/apps/brightcove/install`
@@ -152,3 +159,10 @@ Also measured on this bed:
   `/home/groups` and `/home/users` only) behaves the same, so the old `dam-sync-on-activation.md`
   claim that `everyone` can never authorize was wrong; see that doc for the mechanism.
 
+## Starting from 6.0.2 or 6.0.3
+
+The measured upgrades above started from 6.0.12. 6.0.2 and 6.0.3 have the same configuration
+class (`ConfigurationServiceImpl` is unchanged from 6.0.3 to 6.0.12), the same service user, the
+same root grant and the same package layout, so the notes above apply. One difference: 6.0.3
+ships no Brightcove workflow models, so the workflow-model notes do not apply. Not measured as a
+starting version.

@@ -7,8 +7,9 @@ This project integrates the **[Brightcove Video Cloud](http://docs.brightcove.co
  - **AEM as a Cloud Service** — the `*-cloud` artifact
  - **AEM 6.5 LTS** on-premise — the `*-prem` artifact
 
-**AEM 6.5 and 6.5 LTS: WCM Core Components (page v3 and container v1) must already be installed
-on the instance.** The connector's player and iframe page components and its `/conf/brightcove`
+**On-premise: WCM Core Components (page v3 and container v1) must already be installed
+on the instance** (AEM 6.5 LTS, and classic AEM 6.5 service packs, which need 7.4.3-prem or later;
+see `docs/compatibility.md`). The connector's player and iframe page components and its `/conf/brightcove`
 templates inherit from them, and it does not ship them (`docs/core-components-not-embedded.md`).
 AEM as a Cloud Service always provides them.
 
@@ -16,8 +17,7 @@ Both artifacts are built from the same commit. AEM 6.2, 6.3 and 6.4 are no longe
 supported: 6.5 LTS is the on-premise migration target, and the shared code needs a
 Sling API and Jackson version that the earlier lines do not ship. Upgrading an
 existing on-premise install from the 6.0.x connector: `docs/onprem-upgrade-6.0-to-7.md`.
-The full compatibility matrix (connector x AEM x Java) is tracked in BGS-1671 and has
-not been published yet.
+The connector x AEM x Java compatibility matrix is in `docs/compatibility.md`.
 
 ## Features
 - Components for Authoring Videos and Playlists
