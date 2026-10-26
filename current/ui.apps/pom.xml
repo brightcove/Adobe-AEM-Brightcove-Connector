@@ -168,4 +168,58 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <!-- On-prem packages src/main/content/jcr_root plus src/main/onprem/jcr_root, merged into
+             target/onprem-jcr_root. It holds the /apps/cq/core/content ancestor definition:
+             ⚠️ without it a fresh classic 6.5 (FileVault 3.2.8) creates that node as nt:folder
+             and rejects ui.apps with OakConstraint0025. Cloud leaves it out: there the node is a
+             known root (ui.apps.structure) and the validator asks for the file to be removed.
+             FileVault's <excludes> cannot drop an ancestor .content.xml, hence the merge.
+             Context: ../docs/onprem-upgrade-6.0-to-7.md "Fresh install: /apps/cq ancestors". -->
+        <profile>
+            <id>onprem</id>
+            <activation>
+                <property>
+                    <name>aem.platform</name>
+                    <value>onprem</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>merge-onprem-jcr-root</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/onprem-jcr_root</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/main/content/jcr_root</directory>
+                                        </resource>
+                                        <resource>
+                                            <directory>src/main/onprem/jcr_root</directory>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.jackrabbit</groupId>
+                        <artifactId>filevault-package-maven-plugin</artifactId>
+                        <configuration>
+                            <jcrRootSourceDirectory>${project.build.directory}/onprem-jcr_root</jcrRootSourceDirectory>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
