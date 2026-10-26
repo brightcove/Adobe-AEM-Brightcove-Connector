@@ -55,6 +55,23 @@ and are corrected: the workflow-model names and the legacy clientlib paths.
 | `asset_integration_path` | `damIntegrationPath` |
 | `ingest_profile` | `defaultIngestProfile` |
 
+## Fresh install: /apps/cq ancestors
+
+⚠️ The on-prem `ui.apps` must keep `jcr_root/apps/cq/core/content/.content.xml`
+(`sling:OrderedFolder`, the same type as `/libs/cq/core/content`). It lives in
+`ui.apps/src/main/onprem/jcr_root`, merged in by the `onprem` profile of `ui.apps/pom.xml`; cloud
+leaves it out because there the node is a known root (`ui.apps.structure`) and the FileVault
+validator asks for the file to be removed (its `<excludes>` cannot drop an ancestor file).
+The filter owns only `/apps/cq/core/content/nav` (merge) and `.../nav/brightcove`; their ancestors are created by Vault when absent. FileVault 3.2.8
+(classic 6.5 GA and service packs) creates an untyped ancestor as `nt:folder`, which cannot hold
+the `nt:unstructured` `nav`, so a fresh classic 6.5 rejected `ui.apps` with `OakConstraint0025`
+and left it IGNORED (7.4.3; 6.0.x shipped the file, the cloud migration dropped it). 6.5 LTS and
+upgraded instances did not show it (newer Vault, or the path already existed). The file sets the
+type only when Vault creates the node; do NOT make `/apps/cq/core/content` a filter root, which
+would take ownership of customer overlays there. `/apps/cq` and `/apps/cq/core` may stay
+`nt:folder`: `sling:OrderedFolder` is an `nt:hierarchyNode`. Pinned by
+`scripts/check-dam-sync-packaging.py` (`apps_ancestors`: on-prem has it, cloud does not).
+
 ## What you must check yourself
 
 - `allowedGroups` must contain a group the connector users belong to. On a stock 6.5 `admin` is

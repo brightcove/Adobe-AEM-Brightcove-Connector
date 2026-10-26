@@ -23,6 +23,14 @@ Asserts, per docs/dam-sync-on-activation.md:
            with mode merge_properties (cloud) or merge (on-prem), and the on-prem zip uses
            merge_properties nowhere: FileVault 3.2.8 on 6.5 SPs rejects it at install
            (docs/core-folder-sync.md "Default folder properties")
+  on-prem  brightcove.ui.apps defines /apps/cq/core/content as sling:OrderedFolder, and every
+           directory it carries above a filter root with no .content.xml (which FileVault 3.2.8
+           creates as nt:folder) holds only nt:hierarchyNode children; otherwise a fresh classic
+           6.5 rejects ui.apps with OakConstraint0025 (docs/onprem-upgrade-6.0-to-7.md
+           "Fresh install: /apps/cq ancestors")
+  cloud    ui.apps carries no /apps/cq/core/content/.content.xml (a known root there; the
+           FileVault validator asks for it to be removed)
+  both     /apps/cq/core/content stays OUTSIDE the ui.apps filter
   both     no WCM Core Components inside: no embedded core.wcm.components.* artifact, no
            Core Components pom.xml (scanners read those), nothing under /apps/core
            (docs/core-components-not-embedded.md)
@@ -262,6 +270,50 @@ def dam_folder_mode(packages, on_prem):
         check(not bad, f"no on-prem package filter uses merge_properties {bad or ''}")
 
 
+# Types a FileVault-created nt:folder may hold (nt:folder allows nt:hierarchyNode children only).
+HIERARCHY_TYPES = {"nt:folder", "sling:Folder", "sling:OrderedFolder", "nt:file", "nt:linkedFile",
+                   "cq:Page", "dam:Asset", "cq:ClientLibraryFolder", "nt:hierarchyNode"}
+CQ_CONTENT = "jcr_root/apps/cq/core/content/.content.xml"
+
+
+def primary_type(z, entry):
+    return ET.fromstring(z.read(entry)).get(JCR + "primaryType")
+
+
+def apps_ancestors(packages, on_prem):
+    """Ancestors of ui.apps filter roots that the package creates must accept their children."""
+    hits = [(p, z) for p, z in packages if re.search(r"(^|/)brightcove\.ui\.apps-[^/!]*\.zip!$", p)]
+    check(len(hits) == 1, f"exactly one embedded brightcove.ui.apps package ({[p for p, _ in hits]})")
+    if not hits:
+        return
+    z = hits[0][1]
+    names = set(z.namelist())
+    roots = filters(z)
+    check("/apps/cq/core/content" not in roots,
+          "/apps/cq/core/content is not a filter root (an ancestor, so customer overlays there survive)")
+    if not on_prem:
+        check(CQ_CONTENT not in names, f"cloud ui.apps carries no {CQ_CONTENT}")
+        return
+    got = primary_type(z, CQ_CONTENT) if CQ_CONTENT in names else "<no .content.xml>"
+    check(got == "sling:OrderedFolder", f"ui.apps defines /apps/cq/core/content as sling:OrderedFolder (got {got})")
+    # every directory in the package that sits strictly above a filter root
+    dirs = {n.rsplit("/", 1)[0] for n in names if n.startswith("jcr_root/")}
+    dirs |= {d.rsplit("/", i)[0] for d in list(dirs) for i in range(1, d.count("/"))}
+    ancestors = sorted(d for d in dirs if d != "jcr_root"
+                       and any(r.startswith(d[len("jcr_root"):] + "/") for r in roots)
+                       and not under(d[len("jcr_root"):], roots))
+    bad = []
+    for d in ancestors:
+        if d + "/.content.xml" in names:
+            continue  # typed by the package; Vault uses that type when it creates the node
+        for c in sorted({n[len(d) + 1:].split("/", 1)[0] for n in names if n.startswith(d + "/")} - {".content.xml"}):
+            entry = f"{d}/{c}/.content.xml"
+            t = primary_type(z, entry) if entry in names else "nt:folder"
+            if t not in HIERARCHY_TYPES:
+                bad.append(f"{d[len('jcr_root'):]} (nt:folder) -> {c} ({t})")
+    check(not bad, f"no untyped ancestor holds a non-hierarchy child {bad or ''} (checked {len(ancestors)} ancestors)")
+
+
 def main(paths):
     if not paths:
         print(__doc__)
@@ -271,6 +323,7 @@ def main(paths):
         packages = list(walk(zipfile.ZipFile(path)))
         listener_off(packages)
         no_core_components(packages)
+        apps_ancestors(packages, path.endswith("-prem.zip"))
         dam_folder_mode(packages, path.endswith("-prem.zip"))
         scripts, bad = all_aces(packages)
         check(len(scripts) > 0, "at least one embedded repoinit script was found (NOT MEASURED otherwise)")
