@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- metadataSchema is what puts the "Brightcove" tab on every asset's metadata editor in this
+     folder. Nothing in the connector set it before; on the cloud test instance it had been
+     assigned by hand in the Assets UI (jcr:lastModifiedBy=admin), so a fresh install on either
+     platform showed the default video schema with no Brightcove tab (measured on AEM 6.5.0,
+     2026-09-17). ⚠️ Filter mode is per platform (filter.xml): cloud merge_properties writes each
+     property only if the folder lacks it; on-prem merge leaves an existing jcr:content untouched.
+     ⚠️ Keep this node in its OWN file (an aggregate root): FileVault honours "merge" only on an
+     aggregate root (JCRVLT-255), and the package validator fails the on-prem build otherwise.
+     Context: current/docs/core-folder-sync.md "Default folder properties". -->
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Brightcove Connector"
+    cq:conf="/conf/brightcove"
+    metadataSchema="/conf/global/settings/dam/adminui-extension/metadataschema/brightcove"/>
