@@ -127,33 +127,73 @@ ships three properties from `ui.content`: `jcr:title` "Brightcove Connector", `c
 `/conf/brightcove`, and `metadataSchema` (the Brightcove schema, which is what puts the
 "Brightcove" tab on the asset metadata editor in that folder).
 
-⚠️ Its filter mode is `merge_properties`: a property is written only when the node does not
-already have it, and an existing value is never changed. On AEMaaCS the package is installed on
-every pipeline deploy, so the mode decides what happens on every deploy, not just at upgrade.
+⚠️ Its filter mode differs per platform. `ui.content`'s filter is a template,
+`ui.content/src/main/vault-filter/filter.xml`, carrying `mode="${brightcove.damFolderFilterMode}"`;
+`ui.content/pom.xml` substitutes it into `target/vault-filter/filter.xml` and uses that copy as the
+`filterSource`. The value comes from the root pom: `merge_properties` by default (cloud), `merge` in
+the `onprem` profile. ⚠️ The template must not go back under `src/main/content/META-INF/vault/`:
+filevault plugin 1.3.6 fails the build when that file exists and a different `filterSource` is set.
 
-| Situation | Result |
-|---|---|
-| Fresh install, or the node is missing | All three written |
-| Existing folder without a schema (upgraded from 6.0.x / 7.2.x) | Missing `metadataSchema` and `cq:conf` added: the Brightcove tab appears |
-| Customer renamed the folder or chose their own schema | Kept |
-| Other properties on the node (e.g. `processingProfile`) | Untouched |
-| A customer's own `damIntegrationPath` folder | Not covered by this filter at all |
+⚠️ The node is serialized in its own file, `brightcove_assets/_jcr_content/.content.xml`, not inline
+in the folder's `.content.xml`. FileVault honours `merge` only on an aggregate root node
+(JCRVLT-255); inline, the package validator fails the on-prem build ("Non-empty Node ... is
+supposed to be imported with mode 'merge' but it is not the aggregator's root node"). The folder's
+own `.content.xml` only declares `sling:OrderedFolder` and is outside the filter. The onprem build
+still packages the same `ui.content` module (the `onprem` profile only ADDS `ui.content.onprem` and
+`ui.config.onprem`), which is why the switch has to live in that one module's filter rather than in
+an on-prem-only module.
+
+⚠️ On-prem must not use `merge_properties`: FileVault 3.2.8, which classic AEM 6.5 service packs
+ship, rejects it at install (`No enum constant org.apache.jackrabbit.vault.fs.api.ImportMode.MERGE_PROPERTIES`,
+HTTP 500 from the package manager), so `brightcove.ui.content` fails to install. The mode needs
+runtime FileVault 3.5.0 or later (JCRVLT-255). 6.5 LTS ships a newer FileVault and installs it,
+which is how the 7.4.0 change (PR #139) passed the 6.5 LTS gate and still broke a 6.5 SP install.
+
+On AEMaaCS the package is installed on every pipeline deploy, so the mode decides what happens on
+every deploy, not just at upgrade.
+
+| Situation | Cloud (`merge_properties`) | On-prem (`merge`) |
+|---|---|---|
+| Fresh install, or the `jcr:content` node is missing | All three written | All three written |
+| Existing folder without a schema (upgraded from 6.0.x / 7.2.x) | Missing `metadataSchema` and `cq:conf` added: the Brightcove tab appears | 🔴 Nothing added: no Brightcove tab until the schema is assigned (gap below) |
+| Customer renamed the folder or chose their own schema | Kept | Kept |
+| Other properties on the node (e.g. `processingProfile`) | Untouched | Untouched |
+| A customer's own `damIntegrationPath` folder | Not covered by this filter | Not covered by this filter |
+
+🔴 On-prem upgrade gap: an existing folder `jcr:content` that lacks `metadataSchema` keeps lacking
+it, because `merge` never touches an existing node. Workaround: assign the Brightcove schema to the
+folder in the Assets UI (folder properties, Metadata Schema), or delete the folder's `jcr:content`
+before upgrading if nothing on it is worth keeping. A repoinit `set properties on ... default ...`
+statement would set it only when absent, but it is not usable here: AEM 6.5.0 GA ships
+`org.apache.sling.repoinit.parser 1.2.2` (and `org.apache.sling.jcr.repoinit 1.1.8`), which has no
+`set properties` operation at all and rejects it with `RepoInitParsingException: Encountered "set"`
+(parsed offline against the 1.2.2 jar, 2026-10-19), and a parse error aborts the whole script
+(`repoinit.md`). Closing the gap would need code (e.g. a startup check in `brightcove.core`), not
+packaging.
 
 Alternatives that were shipped or considered:
 - `update` (7.4.0 pre-release): guaranteed the tab but reset a customer's title, `cq:conf` or
   schema on every install.
-- `merge`: kept customer values, but an existing folder never got the schema, so upgraded
-  instances had no Brightcove tab.
+- `merge` everywhere: keeps customer values, but on cloud an existing folder would never get the
+  schema. Kept on-prem only, where `merge_properties` is not installable.
+- `merge_properties` everywhere (7.4.0, 7.4.1): broke the on-prem install on 6.5 SPs.
+- Moving the filter entry into an on-prem-only and a cloud-only module: there is no cloud-only
+  content module, the node's content is in `ui.content`'s `.content.xml`, and two packages owning
+  the same root depend on install order. Rejected for the property substitution above.
 
 Build requirement: FileVault package plugin 1.1.6 (FileVault 3.4.8) rejects `merge_properties`
-at build time; the plugin is 1.3.6 (the AEM archetype's version). The instances apply the
+at build time; the plugin is 1.3.6 (the AEM archetype's version). The cloud instances apply the
 filter with their own FileVault (4.1.x on the AEMaaCS SDK, 3.8.0 on 6.5 LTS); both support it.
 
-Proved by `tests/parity/probes/dam-folder-filter-mode.sh <aem> <ui.content zip> <mode>`, which
-sets a customer value, installs, and asserts the result for all three situations above. It
-discriminates: the `update` build passes as `update` and fails as `merge_properties`. Run on the
-AEMaaCS SDK author and on 6.5 LTS author, plus a full 7.3.8 to 7.4.0 package upgrade on each
-with a customer title set beforehand (kept).
+Pinned by:
+- `scripts/check-dam-sync-packaging.py <cloud zip> <prem zip>`: the packaged filter of the
+  embedded `brightcove.ui.content` must say `merge_properties` in the cloud zip and `merge` in the
+  `-prem` zip, and no package in the `-prem` zip may use `merge_properties` anywhere.
+- `tests/parity/probes/dam-folder-filter-mode.sh <aem> <ui.content zip> <update|merge|merge_properties>`,
+  which sets a customer value, installs, and asserts the result for the situations above
+  (`merge` asserts the upgrade-gap row as it is: schema stays absent). It discriminates: the
+  `update` build passes as `update` and fails as `merge_properties`. Run on the AEMaaCS SDK author
+  and 6.5 LTS author for `merge_properties`, and on the 6.5.0 GA author for `merge`.
 
 ## How it is proved
 

@@ -21,7 +21,7 @@
     <groupId>com.coresecure</groupId>
     <artifactId>brightcove</artifactId>
     <packaging>pom</packaging>
-    <version>7.4.1</version>
+    <version>7.4.3</version>
     <description>Brightcove Connector</description>
 
     <modules>
@@ -75,6 +75,11 @@
              dependencyManagement would stop matching the plain uber-jar entries). -->
         <aem.uber.classifier></aem.uber.classifier>
         <aemanalyser.version>1.6.12</aemanalyser.version>
+        <!-- Filter mode of the default DAM folder's jcr:content, substituted into
+             ui.content's filter.xml. The onprem profile below sets "merge".
+             ⚠️ On-prem must not use merge_properties: FileVault 3.2.8 on 6.5 SPs rejects it.
+             Context: docs/core-folder-sync.md "Default folder properties". -->
+        <brightcove.damFolderFilterMode>merge_properties</brightcove.damFolderFilterMode>
         <componentGroupName>Brightcove Connector</componentGroupName>
     </properties>
 
@@ -464,6 +469,8 @@ Bundle-DocURL:
                 <aem.api.artifactId>uber-jar</aem.api.artifactId>
                 <aem.api.version>${aem.uber.version}</aem.api.version>
                 <aem.api.classifier>${aem.uber.classifier}</aem.api.classifier>
+                <!-- ⚠️ Not merge_properties: FileVault 3.2.8 on 6.5 SPs rejects it (JCRVLT-255). -->
+                <brightcove.damFolderFilterMode>merge</brightcove.damFolderFilterMode>
             </properties>
         </profile>
 

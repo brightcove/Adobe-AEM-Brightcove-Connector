@@ -4,15 +4,20 @@
     <filter root="/conf/global" mode="merge"/>
     <filter root="/content/brightcovetools" mode="update"/>
     <!-- Default DAM integration folder (repoinit creates it with portable grammar; title, cq:conf
-         and the Brightcove metadataSchema come from here). ⚠️ mode="merge_properties": each of the
-         three is written only when the folder does not already have it, and an existing value is
-         never changed. Not "merge" (an existing folder, e.g. upgraded from 6.0.x/7.2.x, would never
-         get metadataSchema, so no Brightcove tab) and not "update" (resets a customer's own title,
-         cq:conf or schema on every install, i.e. every AEMaaCS deploy). Other properties on the
-         node (e.g. processingProfile) are untouched in every mode. A customer's own
-         damIntegrationPath is a different folder and is untouched.
+         and the Brightcove metadataSchema come from here). The mode is a Maven property,
+         substituted per platform by ui.content/pom.xml:
+           cloud   merge_properties: each of the three is written only when the folder does not
+                   already have it, and an existing value is never changed.
+           on-prem merge: an existing jcr:content is left exactly as it is (customer values kept,
+                   but a folder that lacks metadataSchema does not get it); a missing node is
+                   created with all three.
+         ⚠️ On-prem must not use merge_properties: FileVault 3.2.8 on 6.5 SPs rejects it
+         ("No enum constant ImportMode.MERGE_PROPERTIES", JCRVLT-255), so the package fails to
+         install. Never "update" on either: it resets a customer's own title, cq:conf or schema
+         on every install (every AEMaaCS deploy). Other properties on the node (e.g.
+         processingProfile) are untouched in every mode.
          Context: current/docs/core-folder-sync.md "Default folder properties". -->
-    <filter root="/content/dam/brightcove_assets/jcr:content" mode="merge_properties"/>
+    <filter root="/content/dam/brightcove_assets/jcr:content" mode="${brightcove.damFolderFilterMode}"/>
     <filter root="/conf/global/settings/workflow/models/bc-sync-new-asset" mode="update"/>
     <filter root="/conf/global/settings/workflow/models/brightcove-delete-asset" mode="update"/>
     <filter root="/var/workflow" mode="merge"/>

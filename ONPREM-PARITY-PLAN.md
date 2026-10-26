@@ -797,7 +797,10 @@ the parity phases; they are listed so they are not silently folded into "parity"
    the connector set `metadataSchema` on `/content/dam/brightcove_assets`; on the cloud test
    instance it had been assigned by hand (`jcr:lastModifiedBy=admin`), and a fresh 6.5.0 showed
    the default video schema with no Brightcove tab. Fixed in this branch: `ui.content` ships the
-   folder's `jcr:content` (title, `cq:conf`, `metadataSchema`) in filter mode `update`.
+   folder's `jcr:content` (title, `cq:conf`, `metadataSchema`) in filter mode `update`. Later
+   changed (PR #139, 7.4.0) to `merge_properties`, and on-prem to `merge` because FileVault 3.2.8
+   on 6.5 SPs rejects `merge_properties` (JCRVLT-255); current state in
+   `current/docs/core-folder-sync.md` "Default folder properties".
 
 7. **Text-track upload button is re-enabled mid-upload.** The click handler disables
    `#uttUpload` and sets "Uploading…", but the language field's async BCP-47 validation
