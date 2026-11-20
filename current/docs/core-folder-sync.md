@@ -334,9 +334,17 @@ in a unit test even though a real Oak session runs it.
 
 Live, 2026-11-20, on the 7.4.3 artifact before the fix (`validation-2026-11-20/`): two
 same-named DAM parents produced one folder and the second video's `folder_id` was `null`, and
-an asset in the integration path root was ingested with `folder_id` null after two 409s. The
-post-fix behaviour is pinned by the unit tests above; re-running those two live scenarios on
-the fixed bundle is not done yet.
+an asset in the integration path root was ingested with `folder_id` null after two 409s.
+
+Live again on the fixed bundle, same day, with the 7.4.3 jar swapped back as the red control
+(`validation-2026-11-20/qa-folder-name-fix.md`, listener path only): the two same-named
+parents now share one Video Cloud folder and both videos carry its id; a case-only collision
+resolves to the existing folder; two concurrent activations produced one folder with both
+videos filed; an integration-path-root asset is ingested unfiled with the WARN and no create
+attempt; a stale `brc_folder_id` on either root is ignored and removed. The red control failed
+both of the first and fourth cases on 7.4.3, so the cases discriminate. Not measured live:
+the workflow-step and replication-agent callers (unit-tested only), and a collision against a
+Video Cloud folder list large enough to hit an undocumented cap.
 
 Live through the real replication agent, 2026-10-07, 6.5 LTS author with the on-prem
 `/home` read grant: an asset in a never-synced DAM subfolder got a Video Cloud folder
