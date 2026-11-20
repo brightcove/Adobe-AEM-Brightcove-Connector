@@ -1,10 +1,12 @@
 package com.coresecure.brightcove.wrapper.listeners;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +45,8 @@ class BrightcovePublishListenerFolderSyncTest {
 
     private static final String ROOT = "/content/dam/brightcove_assets/12345";
     private static final String ASSET = ROOT + "/root-level.mp4";
+    private static final String SUBFOLDER = ROOT + "/same";
+    private static final String SUBFOLDERED_ASSET = SUBFOLDER + "/clip.mp4";
 
     @AfterEach
     void tearDown() {
@@ -67,9 +71,45 @@ class BrightcovePublishListenerFolderSyncTest {
                 serviceUtil, new Video("root-level.mp4"), meta);
 
         verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         assertFalse(rr.getResource(ROOT).adaptTo(Node.class).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
                 "the stale brc_folder_id must be removed from the account root");
+    }
+
+    /**
+     * The measured customer-visible defect on this path: the Video Cloud folder name is
+     * taken, the create is refused, and 7.4.3 logged "BC: ACTIVATION SUCCESSFUL" while
+     * leaving the video at the account root. The video must be filed into the existing
+     * folder instead.
+     * Context: current/docs/core-folder-sync.md "Trap 5".
+     */
+    @Test
+    void collidingFolderNameFilesTheVideoInsteadOfLeavingItAtTheAccountRoot() throws Exception {
+        context.create().resource(SUBFOLDER, "jcr:primaryType", "sling:OrderedFolder");
+        context.create().asset(SUBFOLDERED_ASSET,
+                new ByteArrayInputStream(new byte[] {1, 2, 3, 4}), "video/mp4");
+        ResourceResolver rr = context.resourceResolver();
+        rr.commit();
+        FolderSyncUtilSeam.configureAccount("12345", "/content/dam/brightcove_assets");
+
+        ServiceUtil serviceUtil = mock(ServiceUtil.class);
+        when(serviceUtil.updateVideo(any(Video.class))).thenReturn(sent("999111"));
+        ObjectNode collision = JsonNodeFactory.instance.objectNode();
+        collision.put("error", "FOLDER_NAME_IN_USE");
+        collision.put("error_message", "Folder names must be unique (case-insensitive.)");
+        when(serviceUtil.createFolderResponse("same")).thenReturn(collision);
+        when(serviceUtil.findFolderIdByName("same")).thenReturn("bc-existing-folder");
+        ModifiableValueMap meta = rr.getResource(SUBFOLDERED_ASSET)
+                .getChild(Constants.ASSET_METADATA_PATH).adaptTo(ModifiableValueMap.class);
+
+        new BrightcovePublishListener().activateModified(
+                rr.getResource(SUBFOLDERED_ASSET).adaptTo(Asset.class), serviceUtil,
+                new Video("clip.mp4"), meta);
+
+        verify(serviceUtil, times(1)).moveVideoToFolder("bc-existing-folder", "999111");
+        assertEquals("bc-existing-folder", rr.getResource(SUBFOLDER).adaptTo(Node.class)
+                .getProperty(FolderSyncUtil.BRC_FOLDER_ID).getString(),
+                "the DAM folder must be marked as synced so later publishes skip the create");
     }
 
     private static ObjectNode sent(String videoId) {

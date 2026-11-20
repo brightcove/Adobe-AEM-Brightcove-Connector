@@ -77,7 +77,7 @@ class FolderSyncUtilPoisonedRootTest {
                 FolderSyncUtil.NO_RETRY_DELAY);
 
         verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         // The folder may hold a customer's videos: neither emptied nor deleted.
         verify(serviceUtil, never()).removeVideoFromFolder(anyString(), anyString());
         Node root = node(ROOT);
@@ -92,7 +92,7 @@ class FolderSyncUtilPoisonedRootTest {
                 FolderSyncUtil.NO_RETRY_DELAY);
 
         verify(serviceUtil, times(1)).moveVideoToFolder(REAL_ID, VIDEO_ID);
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         assertEquals(REAL_ID, node(SUBFOLDER).getProperty(FolderSyncUtil.BRC_FOLDER_ID).getString());
         assertTrue(node(ROOT).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
                 "a subfolder publish must not touch the root");
@@ -114,7 +114,7 @@ class FolderSyncUtilPoisonedRootTest {
         FolderSyncUtil.syncFolder(serviceUtil, VIDEO_ID, node(ROOT + "/root-level.mp4"),
                 FolderSyncUtil.NO_RETRY_DELAY);
 
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         // ...and keeps the move, which cannot create a folder (Trap 4, "three states").
         verify(serviceUtil, times(1)).moveVideoToFolder(STALE_ID, VIDEO_ID);
         assertTrue(node(ROOT).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
@@ -136,7 +136,7 @@ class FolderSyncUtilPoisonedRootTest {
         FolderSyncUtil.syncFolder(serviceUtil, VIDEO_ID, asset, FolderSyncUtil.NO_RETRY_DELAY);
 
         verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         assertTrue(root.hasProperty(FolderSyncUtil.BRC_FOLDER_ID), "the failed removal must be undone in the session");
         assertEquals(PropertyType.LONG, root.getProperty(FolderSyncUtil.BRC_FOLDER_ID).getType(),
                 "restored as " + PropertyType.nameFromValue(root.getProperty(FolderSyncUtil.BRC_FOLDER_ID).getType()));
