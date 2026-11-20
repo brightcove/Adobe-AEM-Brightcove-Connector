@@ -35,6 +35,8 @@ package com.coresecure.brightcove.wrapper.utils;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationGrabber;
 import com.coresecure.brightcove.wrapper.sling.ConfigurationService;
 import com.coresecure.brightcove.wrapper.sling.ServiceUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,10 @@ import javax.jcr.Node;
 import javax.jcr.Property;
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -49,7 +55,8 @@ import java.util.function.Supplier;
  * Keeps a DAM asset's Brightcove folder in step with the DAM folder it lives in.
  *
  * Context: current/docs/core-folder-sync.md (the three publish paths, why the
- * account-root guard exists, and what the retry is for).
+ * account-root guard exists, what the retry is for, and what happens when a Video
+ * Cloud folder name is already taken).
  *
  * <p>There are three code paths that push an asset to Brightcove and each has to do
  * this: {@code BrightcovePublishListener} (the DAM publish event),
@@ -110,16 +117,18 @@ public final class FolderSyncUtil {
             Node parentNode = assetNode.getParent();
             LOG.trace("CHECKING PARENT FOR BRC_FOLDER_ID: {}", parentNode.getPath());
 
-            // Already-synced subfolder: just move the video. ⚠️ An account root CAN carry
-            // brc_folder_id: the pre-guard bug wrote one pointing at a Video Cloud folder
-            // named after the account, and checking this branch first then filed every
-            // root-level video into that folder forever. The account root means "no
-            // folder", so a stored id there is ignored and removed (self-repair). Only
-            // TRUE does that: unknown keeps the move, which cannot create a folder.
-            // Context: current/docs/core-folder-sync.md "Trap 4"
+            // Already-synced subfolder: just move the video. ⚠️ A root CAN carry
+            // brc_folder_id: the pre-guard bug wrote one on the account root pointing at a
+            // Video Cloud folder named after the account, and the pre-collision code wrote
+            // one on the integration path root after creating a folder named after the path
+            // segment. Checking this branch first then filed every root-level video into
+            // that folder forever. A root means "no folder", so a stored id there is
+            // ignored and removed (self-repair). Only TRUE does that: unknown keeps the
+            // move, which cannot create a folder.
+            // Context: current/docs/core-folder-sync.md "Trap 4" and "Trap 6"
             if (parentNode.hasProperty(BRC_FOLDER_ID)) {
-                if (Boolean.TRUE.equals(isAccountRoot(parentNode))) {
-                    repairPoisonedAccountRoot(parentNode);
+                if (Boolean.TRUE.equals(isRootThatMeansNoFolder(parentNode))) {
+                    repairPoisonedRoot(parentNode);
                     return;
                 }
                 moveToKnownFolder(serviceUtil, parentNode, videoId);
@@ -131,24 +140,52 @@ public final class FolderSyncUtil {
             // configuration lookup that cannot answer is not the same as "this is not
             // the account root", and treating it as the latter is what creates a
             // spurious folder named after the account id.
-            Boolean accountRoot = isAccountRoot(parentNode);
-            if (accountRoot == null) {
-                LOG.warn("Cannot tell whether {} is an account root (configuration "
-                        + "unavailable); skipping Brightcove folder creation rather than "
-                        + "risking a folder named after the account", parentNode.getPath());
+            //
+            // Two kinds of folder mean "no Video Cloud folder". An account root
+            // (<integrationPath>/<accountId>) holds the videos of one account. The
+            // integration path root itself holds one folder per account, not customer
+            // folders: filing an asset that sits directly in it into a folder named after
+            // the path segment attaches it to something unrelated, and on an account that
+            // already has a folder of that name the create collides (measured 2026-11-20).
+            // Context: current/docs/core-folder-sync.md "Trap 1" and "Trap 6"
+            Boolean rootWithoutFolder = isRootThatMeansNoFolder(parentNode);
+            if (rootWithoutFolder == null) {
+                LOG.warn("Cannot tell whether {} is a root that takes no Video Cloud folder "
+                        + "(configuration unavailable); skipping Brightcove folder creation "
+                        + "rather than risking a folder named after the account or the "
+                        + "integration path segment", parentNode.getPath());
                 return;
             }
-            if (accountRoot) {
+            if (rootWithoutFolder) {
                 return;
             }
 
-            String folderId = serviceUtil.createFolder(parentNode.getName());
+            String folderName = parentNode.getName();
+            ObjectNode createResponse = serviceUtil.createFolderResponse(folderName);
+            String folderId = folderIdOf(createResponse);
+            if (isUsable(folderId)) {
+                recordFolderIdAndMove(serviceUtil, parentNode, videoId, folderId);
+                return;
+            }
+            String reason = failureReason(createResponse);
+
+            // ⚠️ A refused create is usually a name that is already taken, and a taken name
+            // means the folder EXISTS. Video Cloud's folder namespace is flat and unique
+            // case-insensitively, so two DAM folders called "clips" in different branches
+            // map to ONE Video Cloud folder. Filing the video into it is the honest
+            // outcome; leaving it unfiled (7.4.3 behaviour) hid the video while the
+            // activation still logged success.
+            // Context: current/docs/core-folder-sync.md "Trap 5"
+            folderId = reuseExistingFolder(serviceUtil, parentNode, folderName, reason);
             if (isUsable(folderId)) {
                 recordFolderIdAndMove(serviceUtil, parentNode, videoId, folderId);
                 return;
             }
 
-            LOG.error("*************************** No folder created ***************************");
+            LOG.error("No folder created for DAM folder {} (requested name '{}'): the create "
+                    + "returned no id ({}) and no Video Cloud folder in this account has that "
+                    + "name. The video stays at the account root.",
+                    parentNode.getPath(), folderName, reason);
             if (retryDelaySeconds > NO_RETRY_DELAY) {
                 TimeUnit.SECONDS.sleep(retryDelaySeconds);
             }
@@ -163,15 +200,71 @@ public final class FolderSyncUtil {
                 moveToKnownFolder(serviceUtil, parentNode, videoId);
                 return;
             }
-            folderId = serviceUtil.createFolder(parentNode.getName());
+            createResponse = serviceUtil.createFolderResponse(folderName);
+            folderId = folderIdOf(createResponse);
             if (isUsable(folderId)) {
                 recordFolderIdAndMove(serviceUtil, parentNode, videoId, folderId);
-            } else {
-                LOG.error("*************************** No folder created attempt 2 ***************************");
+                return;
             }
+            // Same collision, one retry later: a concurrent publish may have created the
+            // folder between the two creates, or a customer may have deleted it.
+            reason = failureReason(createResponse);
+            folderId = reuseExistingFolder(serviceUtil, parentNode, folderName, reason);
+            if (isUsable(folderId)) {
+                recordFolderIdAndMove(serviceUtil, parentNode, videoId, folderId);
+                return;
+            }
+            LOG.error("No folder created attempt 2 for DAM folder {} (requested name '{}'): "
+                    + "the retry returned no id ({}) and no Video Cloud folder in this account "
+                    + "has that name. The video stays at the account root.",
+                    parentNode.getPath(), folderName, reason);
         } catch (Exception e) {
             LOG.error("Error syncing folder", e);
         }
+    }
+
+    /**
+     * The Video Cloud folder the asset's DAM folder belongs in when the create was
+     * refused: a folder with that name already exists.
+     *
+     * @return the existing folder's id, or {@code ""} when there is none
+     */
+    private static String reuseExistingFolder(ServiceUtil serviceUtil, Node parentNode,
+                                              String folderName, String reason) throws Exception {
+        String folderId = serviceUtil.findFolderIdByName(folderName);
+        if (isUsable(folderId)) {
+            LOG.info("No Brightcove folder created for DAM folder {} (name '{}', create said: "
+                    + "'{}'), but a folder with that name already exists (id {}); filing the "
+                    + "video there", parentNode.getPath(), folderName, reason, folderId);
+        }
+        return folderId;
+    }
+
+    private static String folderIdOf(ObjectNode response) {
+        if (response == null) {
+            return "";
+        }
+        JsonNode id = response.get(Constants.ID);
+        return id == null || id.isNull() ? "" : id.asText();
+    }
+
+    /**
+     * Why a create produced no folder id. {@code utils/HttpServices.executePost} turns a
+     * non-201 into {@code {"error": <code>, "error_message": ...}} (the measured 409 is
+     * {@code FOLDER_NAME_IN_USE}), so the reason is available even though
+     * {@link ServiceUtil#createFolder(String)} drops it.
+     */
+    private static String failureReason(ObjectNode response) {
+        if (response == null || response.isEmpty()) {
+            return "empty response";
+        }
+        JsonNode code = response.has("error") ? response.get("error") : response.get(Constants.ERROR_CODE);
+        JsonNode message = response.get("error_message");
+        if (code == null && message == null) {
+            return "no error reported";
+        }
+        String text = code == null ? "unknown error" : code.asText();
+        return message == null || message.isNull() ? text : text + ": " + message.asText();
     }
 
     /**
@@ -189,6 +282,73 @@ public final class FolderSyncUtil {
      *         an OSGi container, so this is reachable and must not collapse into FALSE.
      */
     static Boolean isAccountRoot(Node parentNode) throws Exception {
+        ConfiguredRoots roots = configuredRoots();
+        if (roots == null) {
+            return null;
+        }
+        String path = parentNode.getPath();
+        if (roots.accountRoots.containsKey(path)) {
+            LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", path);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Whether this DAM folder means "no Video Cloud folder": an account root
+     * ({@code <integrationPath>/<accountId>}), or the integration path root itself
+     * ({@code <integrationPath>}), which holds one folder per account rather than videos
+     * the customer filed.
+     *
+     * <p>⚠️ The integration path root used to get a Video Cloud folder named after its last
+     * path segment. On an account that already has a folder of that name the create is
+     * refused ({@code 409 FOLDER_NAME_IN_USE}); filing the video into that same-named
+     * folder is no better, because that folder is not this asset's DAM folder. It means
+     * "no folder", like the account root. Context: current/docs/core-folder-sync.md
+     * "Trap 6".</p>
+     *
+     * @return TRUE / FALSE, or null when the configuration could not be read at all, the
+     *         same third state as {@link #isAccountRoot(Node)}
+     */
+    static Boolean isRootThatMeansNoFolder(Node parentNode) throws Exception {
+        ConfiguredRoots roots = configuredRoots();
+        if (roots == null) {
+            return null;
+        }
+        String path = parentNode.getPath();
+        if (roots.accountRoots.containsKey(path)) {
+            LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync", path);
+            return true;
+        }
+        if (roots.integrationPaths.contains(path)) {
+            LOG.warn("Asset is at the DAM integration path root ({}), which holds one folder per "
+                    + "account rather than customer folders; skipping Brightcove folder sync so the "
+                    + "video is not filed into an unrelated folder of the same name", path);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * The account roots and integration paths the guards ask about, read once from the
+     * configuration.
+     */
+    private static final class ConfiguredRoots {
+        /** {@code <integrationPath>/<accountId>} to account id, in configuration order. */
+        final Map<String, String> accountRoots = new LinkedHashMap<>();
+        /** The integration path roots themselves, trailing slash stripped. */
+        final List<String> integrationPaths = new ArrayList<>();
+    }
+
+    /**
+     * The configured roots, or null when the configuration cannot be read at all.
+     *
+     * <p>⚠️ null is the third state, not an empty set. {@code getConfigurationGrabber()}
+     * goes through {@code FrameworkUtil.getBundle()}, which yields nothing outside an OSGi
+     * container, so "no answer" is reachable and must not collapse into "no roots" (which
+     * would say "not a root" and license creating a spurious folder).</p>
+     */
+    private static ConfiguredRoots configuredRoots() {
         ConfigurationGrabber cg;
         try {
             cg = configurationSource.get();
@@ -199,30 +359,26 @@ public final class FolderSyncUtil {
         if (cg == null) {
             return null;
         }
+        ConfiguredRoots roots = new ConfiguredRoots();
         for (String accountId : cg.getAvailableServices()) {
             ConfigurationService cs = cg.getConfigurationService(accountId);
-            if (cs == null) {
+            if (cs == null || cs.getAssetIntegrationPath() == null) {
                 continue;
             }
             String integrationPath = cs.getAssetIntegrationPath();
-            if (integrationPath == null) {
-                continue;
-            }
             String normalized = integrationPath.endsWith("/")
                     ? integrationPath.substring(0, integrationPath.length() - 1)
                     : integrationPath;
-            if (parentNode.getPath().equals(normalized + "/" + accountId)) {
-                LOG.info("Asset is at account root level ({}), skipping Brightcove folder sync",
-                        parentNode.getPath());
-                return true;
-            }
+            roots.integrationPaths.add(normalized);
+            roots.accountRoots.put(normalized + "/" + accountId, accountId);
         }
-        return false;
+        return roots;
     }
 
     /**
-     * Drop a {@code brc_folder_id} stored on an account root. The Video Cloud folder it
-     * names is deliberately left alone: a customer may have filed videos in it.
+     * Drop a {@code brc_folder_id} stored on a root that means "no folder" (an account
+     * root, or the integration path root). The Video Cloud folder it names is deliberately
+     * left alone: a customer may have filed videos in it.
      *
      * <p>⚠️ If the remove cannot be saved (e.g. the service user may not write the
      * root), the stored value is put back before returning, because the caller commits
@@ -231,7 +387,7 @@ public final class FolderSyncUtil {
      * {@code refresh(false)}: it is session-wide (Trap 2). A failed repair still ignores
      * the id and is retried on the next activation.</p>
      */
-    private static void repairPoisonedAccountRoot(Node root) {
+    private static void repairPoisonedRoot(Node root) {
         String path = null;
         Property stale = null;
         Value staleValue = null;
@@ -245,8 +401,8 @@ public final class FolderSyncUtil {
             } else {
                 staleValue = stale.getValue();
             }
-            LOG.warn("Account root {} carries a stale brc_folder_id={} (written before the "
-                    + "account-root guard existed). Ignoring it, so the video stays out of any "
+            LOG.warn("Root {} carries a stale brc_folder_id={} (written before the guard for "
+                    + "this kind of root existed). Ignoring it, so the video stays out of any "
                     + "folder, and removing the property. The Video Cloud folder is NOT deleted.",
                     path, staleValue != null ? staleValue.getString() : java.util.Arrays.toString(staleValues));
             stale.remove();
@@ -340,27 +496,17 @@ public final class FolderSyncUtil {
      * it, or null when none matches or the configuration cannot be read.
      */
     static String accountIdByPath(String folderPath) {
-        ConfigurationGrabber cg;
-        try {
-            cg = configurationSource.get();
-        } catch (Exception | LinkageError e) {
-            LOG.debug("Configuration grabber unavailable", e);
+        if (folderPath == null) {
             return null;
         }
-        if (cg == null || folderPath == null) {
+        ConfiguredRoots roots = configuredRoots();
+        if (roots == null) {
             return null;
         }
-        for (String accountId : cg.getAvailableServices()) {
-            ConfigurationService cs = cg.getConfigurationService(accountId);
-            if (cs == null || cs.getAssetIntegrationPath() == null) {
-                continue;
-            }
-            String integrationPath = cs.getAssetIntegrationPath();
-            String root = (integrationPath.endsWith("/")
-                    ? integrationPath.substring(0, integrationPath.length() - 1)
-                    : integrationPath) + "/" + accountId;
-            if (folderPath.equals(root) || folderPath.startsWith(root + "/")) {
-                return accountId;
+        for (Map.Entry<String, String> root : roots.accountRoots.entrySet()) {
+            String rootPath = root.getKey();
+            if (folderPath.equals(rootPath) || folderPath.startsWith(rootPath + "/")) {
+                return root.getValue();
             }
         }
         return null;

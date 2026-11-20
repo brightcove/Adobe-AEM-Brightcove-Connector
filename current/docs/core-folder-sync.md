@@ -1,7 +1,7 @@
 # Brightcove folder sync on publish
 
 Why an asset's DAM folder becomes a Brightcove folder, which three code paths do it,
-and the two traps in the middle.
+and the traps in the middle.
 
 Read this before touching `FolderSyncUtil` or any of its three callers. If you change
 what it describes, update it in the same PR.
@@ -44,7 +44,8 @@ Both lack `brc_folder_id`. Without a guard, an asset sitting directly in
 `<damIntegrationPath>/<accountId>` makes the helper "sync" that folder, i.e. create a
 Brightcove folder **named after the account id** and move every root-level video into
 it. `isAccountRoot` compares the parent's path against `<assetIntegrationPath>/<accountId>`
-for every configured account.
+for every configured account; `syncFolder` asks the wider question,
+`isRootThatMeansNoFolder`, which also covers the integration path root (Trap 6).
 
 **The guard needs OSGi.** `ServiceUtil.getConfigurationGrabber()` goes through
 `FrameworkUtil.getBundle()`, which yields nothing outside a container, so the question
@@ -92,18 +93,18 @@ this stop. The condition is left in place as harmless; nothing pins it. The seam
 `BrcReplicationHandler.accountIdFor(Resource)` exists so the behaviour is testable without
 standing up a replication agent.
 
-## Trap 4: a poisoned account root (fixed, self-repairing)
+## Trap 4: a poisoned root (fixed, self-repairing)
 
-Before the guard existed, the bug in Trap 1 ran to completion on some instances: it
-created the Video Cloud folder named after the account AND wrote its id to the account
-root's `brc_folder_id`. The guard only stops NEW folders. With the brc_folder_id branch
-first, such a root looked like a synced subfolder, and every root-level activation filed
-its video into that folder, indefinitely. On the agent path it did double damage:
-`resolveAccountId` walked up past the root and the asset was skipped as "Account not
-existing".
+Before the guards existed, the bugs in Trap 1 and Trap 6 ran to completion on some
+instances: they created the Video Cloud folder named after the account (or after the
+integration path's last segment) AND wrote its id to that root's `brc_folder_id`. The
+guards only stop NEW folders. With the brc_folder_id branch first, such a root looked like
+a synced subfolder, and every root-level activation filed its video into that folder,
+indefinitely. On the agent path it did double damage: `resolveAccountId` walked up past the
+root and the asset was skipped as "Account not existing".
 
-The rule: **the account root means "no folder"**. When `brc_folder_id` is present and
-`isAccountRoot` says TRUE:
+The rule: **a root means "no folder"**. When `brc_folder_id` is present and
+`isRootThatMeansNoFolder` says TRUE:
 
 - the stored id is ignored (no move, no create);
 - the property is removed from the root and saved, with a WARN naming the path and the
@@ -112,6 +113,11 @@ The rule: **the account root means "no folder"**. When `brc_folder_id` is presen
   videos in it on purpose;
 - `resolveAccountId` returns the root's own name.
 
+The repair covers both kinds of root: the account root (`Trap 1`) and the integration path
+root (`Trap 6`). The second one matters because the old Trap 6 behaviour wrote a
+`brc_folder_id` there whenever it managed to create the folder; without the repair the new
+"integration path root means no folder" rule would be bypassed on exactly those instances.
+
 ⚠️ If the save fails (e.g. the service user cannot write the root), the property is put
 back in the session before returning: the caller commits the BGS-1705 marker on the same
 session, and a pending remove it may not persist would fail that commit. The id stays
@@ -119,6 +125,86 @@ ignored either way. Do not use `refresh(false)` to drop it (Trap 2).
 
 Three states still hold: only TRUE repairs. UNKNOWN (no OSGi) keeps the id and moves,
 which can never create a folder; FALSE is a real subfolder.
+
+## Trap 5: the Video Cloud folder name is already taken
+
+Video Cloud folder names are unique per account, **case-insensitively**: `POST /folders`
+with a name that exists answers `409` and `{"error_code":"FOLDER_NAME_IN_USE","message":
+"Folder names must be unique (case-insensitive.)"}` (measured 2026-11-20). Video Cloud
+folders are also flat, with no parent field (measured: the folder object carries only
+`id, account_id, name, created_at, updated_at, video_count`). The DAM is a tree. So two DAM
+folders called `clips` under different parents can only ever be ONE Video Cloud folder.
+
+**Before the fix** this was a silent data-loss-shaped bug. `ServiceUtil.createFolder` read
+only `id`, so every non-201 arrived as `""`, indistinguishable from a network failure. The
+helper retried the same create, got the same 409, logged `No folder created` and returned.
+The video stayed at the account root while the activation still logged
+`BC: ACTIVATION SUCCESSFUL`. Measured on 7.4.3-cloud: two same-named DAM parents produced
+two videos, one folder, and the second video's `folder_id` was `null`.
+
+**Now** a refused create means the folder probably EXISTS:
+
+1. `ServiceUtil.createFolderResponse` keeps the CMS response, so the reason is available
+   (`FOLDER_NAME_IN_USE: Folder names must be unique (case-insensitive.)`). It replaces the
+   helper's use of `createFolder(String)`, which reads only `id`; that method stays because
+   `com.coresecure.*` is an exported package, so it is public API even with no in-bundle
+   caller left.
+2. `ServiceUtil.findFolderIdByName` looks the name up **case-insensitively** over the
+   account's folder list. Case matters: asking for `Clips` when `clips` exists is the same
+   collision that made the create fail, so a case-sensitive lookup would miss the folder and
+   leave the video unfiled.
+3. A match files the video there and writes its id to the DAM folder, so later publishes
+   skip the create entirely. ⚠️ Two same-named DAM folders therefore store the **same**
+   `brc_folder_id`: that is the flat-namespace consequence, and it is the product question
+   below, not something to invent a fix for.
+4. No match: ERROR naming the DAM folder path, the requested name and the create's error.
+   The video stays at the account root and the DAM folder is left **unmarked**, because a
+   stored id would file later videos into a folder that does not exist.
+5. The retry is unchanged in shape (wait only where the thread is ours, `refresh(true)`,
+   re-read the parent) and now repeats create → lookup, so a folder created concurrently is
+   found either way.
+
+The lookup costs one GET of the account's folder list, on the failure path only. ⚠️ The
+folders endpoint **ignores `limit` and `offset`** and returns the whole list (measured: 110
+folders returned with `limit=2` and with `offset=100`), so a single GET is complete and
+there is no page loop to write; `CmsAPI.getFolders` still sends `offset=0` only. A folder
+list that cannot be read is reported as "no such folder", because the CMS client swallows
+read errors: that degrades to the loud ERROR above, never to a false success.
+
+## Trap 6: the integration path root means "no folder"
+
+`/content/dam/brightcove_assets` (the configured `damIntegrationPath`) holds one folder per
+account, not folders a customer made for videos.
+
+The old behaviour gave an asset sitting directly in it a Video Cloud folder named after the
+path's last segment (`brightcove_assets`). On an account that already has such a folder the
+create was refused, which is Trap 5, and the video was left unfiled (measured 2026-11-20,
+claim C4: `folder_id` null, two 409s). On a clean account it instead created a folder that
+has nothing to do with the asset, and wrote its id onto the integration path root.
+
+**Decision: the integration path root means "no folder", like the account root.** No create,
+no move, no `brc_folder_id`, and a WARN naming the path. Filing the video into a Video Cloud
+folder that merely shares the path segment's name would attach it to an unrelated folder.
+
+`isRootThatMeansNoFolder` answers for both kinds of root in one configuration pass, with the
+same three states as Trap 1: TRUE for either root, FALSE for a customer folder, `null` when
+the configuration cannot be read (warn, skip, create nothing). Because the stored-id branch
+is checked first, a root that already carries `brc_folder_id` takes the Trap 4 self-repair,
+which is what stops this rule being bypassed on instances the old behaviour touched.
+
+⚠️ Not covered here: the listener's path scoping is a substring match
+(`asset.contains(damIntegrationPath)`), so a sibling tree such as
+`/content/dam/brightcove_assets_archive` is treated as managed. That is a separate defect
+(measured 2026-11-20, claim C8) and changing it is out of scope for folder sync.
+
+## Out of scope: same-named DAM folders share one Video Cloud folder
+
+The flat Video Cloud namespace cannot represent two DAM folders with the same name, so today
+they share one Video Cloud folder (Trap 5). The alternative is disambiguating the name with a
+path prefix (e.g. `branchB/same`, or `branchB-same`). That changes every folder name a
+customer sees in Studio, needs a product decision, and needs a migration story for folders
+that already exist. Deliberately **not** done here: do not "fix" Trap 5 by inventing a naming
+scheme without that decision. Recorded 2026-11-20.
 
 ## Default folder properties
 
@@ -229,6 +315,28 @@ is back in the session with its type; it fails if `restore` is skipped or writes
 Live, cloud author, 2026-10-07: a
 root-level activation on the poisoned root left the video in no folder and removed the
 property (`tests/parity/matrix.md` row 31).
+
+Trap 5 and Trap 6 (`utils/FolderSyncUtilCollisionTest`, `sling/ServiceUtilFolderNameTest`,
+and one collision test per caller: `listeners/BrightcovePublishListenerFolderSyncTest`,
+`workflow/BrightcoveSyncAssetWorkflowStepFolderSyncTest` and
+`webservices/BrcReplicationHandlerFolderSyncTest`, each driving its own entry point rather
+than the helper). Red on the pre-fix code: the collision test asserted a `moveVideoToFolder`
+that never happened (the helper retried the refused create and gave up), and the
+integration-root test asserted no create while the old code created a folder named after the
+path segment. Reverting `FolderSyncUtil` to `origin/cloud-master` turns all three callers'
+collision tests red (measured 2026-11-20), so each caller's wiring is pinned, not just the
+helper's. `ServiceUtilFolderNameTest` pins the matching itself
+(case-insensitive, a prefix is not a match, an unreadable list resolves to nothing) because a
+mocked `ServiceUtil` would leave that logic untested. `theRetryFindsAFolderCreatedWhileTheWorkflowWaited`
+proxies the node to make `refresh(boolean)` a no-op: ⚠️ JCR_MOCK cannot do it at all
+(`AbstractItem.refresh` throws whatever the flag), so the retry branch is otherwise unreachable
+in a unit test even though a real Oak session runs it.
+
+Live, 2026-11-20, on the 7.4.3 artifact before the fix (`validation-2026-11-20/`): two
+same-named DAM parents produced one folder and the second video's `folder_id` was `null`, and
+an asset in the integration path root was ingested with `folder_id` null after two 409s. The
+post-fix behaviour is pinned by the unit tests above; re-running those two live scenarios on
+the fixed bundle is not done yet.
 
 Live through the real replication agent, 2026-10-07, 6.5 LTS author with the on-prem
 `/home` read grant: an asset in a never-synced DAM subfolder got a Video Cloud folder

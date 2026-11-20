@@ -63,7 +63,10 @@ class BrcReplicationHandlerFolderSyncTest {
     private static final String SUBFOLDER = ACCOUNT_FOLDER + "/synced-folder";
     private static final String SUBFOLDERED_ASSET = SUBFOLDER + "/sample.mp4";
     private static final String ROOT_LEVEL_ASSET = ACCOUNT_FOLDER + "/root-level.mp4";
+    private static final String UNSYNCED_FOLDER = ACCOUNT_FOLDER + "/same";
+    private static final String UNSYNCED_ASSET = UNSYNCED_FOLDER + "/clip.mp4";
     private static final String BRIGHTCOVE_FOLDER_ID = "bc-folder-1";
+    private static final String EXISTING_FOLDER_ID = "bc-existing-folder";
     private static final String VIDEO_ID = "999111";
 
     private BrcReplicationHandler handler;
@@ -100,7 +103,7 @@ class BrcReplicationHandlerFolderSyncTest {
 
         verify(serviceUtil, times(1)).moveVideoToFolder(BRIGHTCOVE_FOLDER_ID, VIDEO_ID);
         // The folder already exists; nothing should be created.
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
     }
 
     @Test
@@ -109,7 +112,65 @@ class BrcReplicationHandlerFolderSyncTest {
                 metadata(SUBFOLDERED_ASSET));
 
         verify(serviceUtil, times(1)).moveVideoToFolder(BRIGHTCOVE_FOLDER_ID, VIDEO_ID);
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
+    }
+
+    /**
+     * The replication-agent path on a taken name: the create is refused with
+     * {@code FOLDER_NAME_IN_USE}, so the video must be filed into the folder that already
+     * has the name, and the DAM folder marked with its id, through this handler's own
+     * entry point. Without the lookup the handler logged "No folder created" and left the
+     * video at the account root while replication reported OK.
+     * Context: current/docs/core-folder-sync.md "Trap 5".
+     */
+    @Test
+    void collidingFolderNameOnANewVideoFilesItIntoTheExistingFolder() throws Exception {
+        try {
+            FolderSyncUtilSeam.configureAccount("12345", "/content/dam/brightcove_assets");
+            context.create().resource(UNSYNCED_FOLDER, "jcr:primaryType", "sling:OrderedFolder");
+            context.create().asset(UNSYNCED_ASSET,
+                    new ByteArrayInputStream(new byte[] {1, 2, 3, 4}), "video/mp4");
+            context.resourceResolver().commit();
+            when(serviceUtil.createFolderResponse("same")).thenReturn(collision());
+            when(serviceUtil.findFolderIdByName("same")).thenReturn(EXISTING_FOLDER_ID);
+
+            handler.activateNew(asset(UNSYNCED_ASSET), serviceUtil, new Video("clip.mp4"),
+                    metadata(UNSYNCED_ASSET));
+
+            verify(serviceUtil, times(1)).moveVideoToFolder(EXISTING_FOLDER_ID, VIDEO_ID);
+            assertEquals(EXISTING_FOLDER_ID, resource(UNSYNCED_FOLDER).adaptTo(Node.class)
+                            .getProperty(FolderSyncUtil.BRC_FOLDER_ID).getString(),
+                    "the DAM folder must be marked as synced so the next replication skips the create");
+        } finally {
+            FolderSyncUtilSeam.reset();
+        }
+    }
+
+    /**
+     * The same collision on the modified path, which is the branch a re-activation of an
+     * already-ingested asset takes.
+     */
+    @Test
+    void collidingFolderNameOnAModifiedVideoFilesItIntoTheExistingFolder() throws Exception {
+        try {
+            FolderSyncUtilSeam.configureAccount("12345", "/content/dam/brightcove_assets");
+            context.create().resource(UNSYNCED_FOLDER, "jcr:primaryType", "sling:OrderedFolder");
+            context.create().asset(UNSYNCED_ASSET,
+                    new ByteArrayInputStream(new byte[] {1, 2, 3, 4}), "video/mp4");
+            context.resourceResolver().commit();
+            when(serviceUtil.createFolderResponse("same")).thenReturn(collision());
+            when(serviceUtil.findFolderIdByName("same")).thenReturn(EXISTING_FOLDER_ID);
+
+            handler.activateModified(asset(UNSYNCED_ASSET), serviceUtil, new Video("clip.mp4"),
+                    metadata(UNSYNCED_ASSET));
+
+            verify(serviceUtil, times(1)).moveVideoToFolder(EXISTING_FOLDER_ID, VIDEO_ID);
+            assertEquals(EXISTING_FOLDER_ID, resource(UNSYNCED_FOLDER).adaptTo(Node.class)
+                            .getProperty(FolderSyncUtil.BRC_FOLDER_ID).getString(),
+                    "the DAM folder must be marked as synced so the next replication skips the create");
+        } finally {
+            FolderSyncUtilSeam.reset();
+        }
     }
 
     /**
@@ -135,7 +196,7 @@ class BrcReplicationHandlerFolderSyncTest {
         handler.activateNew(asset(ROOT_LEVEL_ASSET), serviceUtil, new Video("root-level.mp4"),
                 metadata(ROOT_LEVEL_ASSET));
 
-        verify(serviceUtil, never()).createFolder(anyString());
+        verify(serviceUtil, never()).createFolderResponse(anyString());
         verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
     }
 
@@ -159,7 +220,7 @@ class BrcReplicationHandlerFolderSyncTest {
                     metadata(ROOT_LEVEL_ASSET));
 
             verify(serviceUtil, never()).moveVideoToFolder(anyString(), anyString());
-            verify(serviceUtil, never()).createFolder(anyString());
+            verify(serviceUtil, never()).createFolderResponse(anyString());
             assertFalse(resource(ACCOUNT_FOLDER).adaptTo(Node.class).hasProperty(FolderSyncUtil.BRC_FOLDER_ID),
                     "the stale brc_folder_id must be removed from the account root");
         } finally {
@@ -209,6 +270,14 @@ class BrcReplicationHandlerFolderSyncTest {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         node.put(Constants.SENT, true);
         node.put(Constants.VIDEOID, videoId);
+        return node;
+    }
+
+    /** The CMS response {@code utils/HttpServices.executePost} builds for a refused create. */
+    private static ObjectNode collision() {
+        ObjectNode node = JsonNodeFactory.instance.objectNode();
+        node.put("error", "FOLDER_NAME_IN_USE");
+        node.put("error_message", "Folder names must be unique (case-insensitive.)");
         return node;
     }
 }

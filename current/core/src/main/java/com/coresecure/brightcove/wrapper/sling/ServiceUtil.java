@@ -367,17 +367,76 @@ public class ServiceUtil {
     }
 
     public String createFolder(String folderName) {
-    	String folderId = "";
+        ObjectNode result = createFolderResponse(folderName);
+        return result.has(Constants.ID) ? result.get(Constants.ID).asText() : "";
+    }
+
+    /**
+     * Create a Video Cloud folder and hand back the CMS response unchanged, so a caller
+     * can tell WHY the create did not produce a folder.
+     *
+     * <p>⚠️ {@link #createFolder(String)} reads only {@code id}, which makes every non-201
+     * look identical. A name that is already taken is the common case and it is not a
+     * failure to report as one: Video Cloud enforces case-insensitive unique folder names,
+     * so {@code POST /folders} answers {@code 409 FOLDER_NAME_IN_USE}. The response then
+     * carries {@code error} and {@code error_message} instead of {@code id}
+     * ({@code utils/HttpServices.executePost} builds it). Callers that must keep the video
+     * filed look the name up with {@link #findFolderIdByName(String)}.
+     * Context: current/docs/core-folder-sync.md "Trap 5".</p>
+     */
+    public ObjectNode createFolderResponse(String folderName) {
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         try {
             result = brAPI.cms.createFolder(folderName);
-            if (result.has("id")) {
-            	folderId = result.get("id").asText();
-            }
         } catch (Exception e) {
             LOGGER.error(e.getClass().getName(), e);
         }
-        return folderId;
+        return result == null ? JsonNodeFactory.instance.objectNode() : result;
+    }
+
+    /**
+     * The id of the Video Cloud folder named {@code folderName}, or {@code ""} when the
+     * account has no such folder.
+     *
+     * <p>Matched case-insensitively because Video Cloud treats folder names as unique
+     * case-insensitively: asking for {@code Clips} when {@code clips} exists is the same
+     * collision that makes the create fail.</p>
+     *
+     * <p>⚠️ A folder list that cannot be read is reported as "no such folder": the CMS
+     * client below swallows read errors and returns an empty array. That degrades to a
+     * loud "could not be found" for the caller, never to a false success.</p>
+     */
+    public String findFolderIdByName(String folderName) {
+        if (folderName == null || folderName.trim().isEmpty()) {
+            return "";
+        }
+        return folderIdByName(getFoldersAsJsonArray(), folderName);
+    }
+
+    /**
+     * Case-insensitive name lookup over an already-fetched folder list. Package-private so
+     * the matching itself is testable without a CMS connection.
+     *
+     * @param folders the folder list, or null when it could not be read
+     * @return the matching id, or {@code ""} when nothing matches
+     */
+    static String folderIdByName(ArrayNode folders, String folderName) {
+        if (folders == null || folderName == null) {
+            return "";
+        }
+        for (JsonNode folder : folders) {
+            JsonNode name = folder.get(Constants.NAME);
+            JsonNode id = folder.get(Constants.ID);
+            if (name == null || id == null || name.isNull()) {
+                continue;
+            }
+            // At most one match can exist: Video Cloud refuses a second folder whose name
+            // differs only by case. If legacy data ever held two, the first wins.
+            if (folderName.equalsIgnoreCase(name.asText())) {
+                return id.asText();
+            }
+        }
+        return "";
     }
 
     public ObjectNode removeVideoFromFolder(String folderId, String videoId) {
